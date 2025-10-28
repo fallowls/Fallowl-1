@@ -207,13 +207,6 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   const fastify = Fastify({
     logger: {
       level: 'info',
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          translateTime: 'HH:MM:ss Z',
-          ignore: 'pid,hostname',
-        },
-      },
     },
     trustProxy: true, // Important for rate limiting and CORS with proxies
     bodyLimit: 50 * 1024 * 1024, // 50MB limit (matches Express config)
@@ -251,9 +244,4 @@ export async function startFastifyServer() {
     log(`❌ Error starting Fastify server: ${error}`);
     process.exit(1);
   }
-}
-
-// Start the server if this file is run directly
-if (require.main === module) {
-  startFastifyServer();
 }
