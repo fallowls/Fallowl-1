@@ -196,14 +196,57 @@
  * ============================================================================
  */
 
+import dotenv from "dotenv";
+
+// Load environment variables from .env file FIRST
+dotenv.config();
+
 import Fastify from 'fastify';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import cors from '@fastify/cors';
+import formbody from '@fastify/formbody';
+import cookie from '@fastify/cookie';
+import fastifySession from '@fastify/session';
+import connectPgSimple from 'connect-pg-simple';
 
 const log = (message: string) => {
   console.log(`[FASTIFY] ${message}`);
 };
 
+// CORS configuration - mirrors Express setup
+function getAllowedOrigins(): string[] {
+  if (process.env.NODE_ENV !== 'production') {
+    return [];
+  }
+  
+  // Collect origins from environment variables and split comma-separated values
+  const originSources = [
+    process.env.CLIENT_ORIGIN,
+    process.env.REPLIT_DOMAINS,
+    process.env.REPLIT_DEV_DOMAIN
+  ].filter((origin): origin is string => Boolean(origin));
+  
+  // Split comma-separated origins and trim whitespace
+  const allowedOrigins = originSources
+    .flatMap(origin => origin.split(','))
+    .map(origin => origin.trim())
+    .filter(origin => origin.length > 0);
+  
+  if (allowedOrigins.length === 0) {
+    console.error('❌ No CORS origins configured for production. Set CLIENT_ORIGIN, REPLIT_DOMAINS, or REPLIT_DEV_DOMAIN environment variable.');
+  } else {
+    console.log('✓ Production CORS origins configured:', allowedOrigins);
+  }
+  
+  return allowedOrigins;
+}
+
 export async function createFastifyServer(): Promise<FastifyInstance> {
+  // Validate required environment variables
+  if (!process.env.SESSION_SECRET) {
+    throw new Error('SESSION_SECRET environment variable must be set for security. Please set SESSION_SECRET before starting the application.');
+  }
+
   const fastify = Fastify({
     logger: {
       level: 'info',
@@ -212,15 +255,127 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
     bodyLimit: 50 * 1024 * 1024, // 50MB limit (matches Express config)
   });
 
-  // Basic health check route to verify Fastify is running
+  // ============================================================================
+  // PHASE 2: CORE MIDDLEWARE
+  // ============================================================================
+
+  // 1. CORS Configuration (mirrors Express setup exactly)
+  const allowedOrigins = getAllowedOrigins();
+  
+  await fastify.register(cors, {
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, Postman)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // In development, allow all origins
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      
+      // In production, check against allowed origins
+      if (allowedOrigins.length === 0) {
+        console.warn(`⚠️ CORS request from ${origin} rejected - no origins configured`);
+        return callback(new Error('CORS not configured'), false);
+      }
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      console.warn(`⚠️ CORS request from ${origin} rejected - not in allowed origins: ${allowedOrigins.join(', ')}`);
+      callback(new Error(`Origin ${origin} not allowed`), false);
+    },
+    credentials: true, // Allow cookies and authorization headers
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  });
+
+  log('✅ CORS configured');
+
+  // 2. Body Parsing
+  // JSON parsing is built-in to Fastify (already configured via bodyLimit)
+  // Register formbody for URL-encoded data (replaces express.urlencoded)
+  await fastify.register(formbody);
+  
+  log('✅ Body parsing configured (JSON built-in, formbody registered)');
+
+  // 3. PostgreSQL Session Management
+  // Must register cookie plugin BEFORE session plugin
+  await fastify.register(cookie);
+  
+  const PgSession = connectPgSimple(fastifySession as any);
+  
+  await fastify.register(fastifySession, {
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+      tableName: 'session',
+    }),
+    secret: process.env.SESSION_SECRET,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  });
+
+  log('✅ PostgreSQL session store configured');
+
+  // 4. Request Logging (mirrors Express logging middleware)
+  fastify.addHook('onRequest', async (request, reply) => {
+    // Store start time for duration calculation
+    (request as any).startTime = Date.now();
+  });
+
+  fastify.addHook('onResponse', async (request, reply) => {
+    const path = request.url;
+    
+    // Only log API routes
+    if (path.startsWith('/api')) {
+      const duration = Date.now() - ((request as any).startTime || Date.now());
+      const method = request.method;
+      const statusCode = reply.statusCode;
+      
+      let logLine = `${method} ${path} ${statusCode} in ${duration}ms`;
+      
+      // Note: In Fastify, capturing response body is more complex
+      // For now, we log without response body (can be added later if needed)
+      
+      // Truncate log lines to prevent log spam
+      if (logLine.length > 200) {
+        logLine = logLine.slice(0, 199) + "…";
+      }
+      
+      log(logLine);
+    }
+  });
+
+  log('✅ Request logging configured');
+
+  // ============================================================================
+  // HEALTH CHECK ROUTE
+  // ============================================================================
+  
   fastify.get('/api/health', async (request: FastifyRequest, reply: FastifyReply) => {
     return {
       status: 'ok',
       server: 'fastify',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
+      middleware: {
+        cors: true,
+        bodyParsing: true,
+        sessions: true,
+        logging: true,
+      }
     };
   });
+
+  log('✅ Core middleware setup complete');
 
   return fastify;
 }
