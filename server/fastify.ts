@@ -331,10 +331,24 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
     (request as any).startTime = Date.now();
   });
 
+  // Capture JSON response body using onSend hook
+  fastify.addHook('onSend', async (request, reply, payload) => {
+    // Store the response payload for logging
+    if (reply.getHeader('content-type')?.toString().includes('application/json')) {
+      try {
+        // Payload is the serialized JSON string
+        (request as any).responsePayload = JSON.parse(payload as string);
+      } catch (e) {
+        // If parsing fails, ignore and continue
+      }
+    }
+    return payload;
+  });
+
   fastify.addHook('onResponse', async (request, reply) => {
     const path = request.url;
     
-    // Only log API routes
+    // Only log API routes (mirrors Express behavior)
     if (path.startsWith('/api')) {
       const duration = Date.now() - ((request as any).startTime || Date.now());
       const method = request.method;
@@ -342,10 +356,12 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
       
       let logLine = `${method} ${path} ${statusCode} in ${duration}ms`;
       
-      // Note: In Fastify, capturing response body is more complex
-      // For now, we log without response body (can be added later if needed)
+      // Add JSON response if captured (mirrors Express logging)
+      if ((request as any).responsePayload) {
+        logLine += ` :: ${JSON.stringify((request as any).responsePayload)}`;
+      }
       
-      // Truncate log lines to prevent log spam
+      // Truncate log lines to prevent log spam (200 chars, same as Express)
       if (logLine.length > 200) {
         logLine = logLine.slice(0, 199) + "…";
       }
@@ -354,7 +370,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
     }
   });
 
-  log('✅ Request logging configured');
+  log('✅ Request logging configured (with JSON response capture)');
 
   // ============================================================================
   // HEALTH CHECK ROUTE
