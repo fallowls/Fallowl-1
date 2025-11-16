@@ -393,22 +393,133 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
 
   log('✅ Core middleware setup complete');
 
+  // ============================================================================
+  // PHASE 3: AUTHENTICATION
+  // ============================================================================
+
+  // Register Auth0 JWT verification plugin
+  await fastify.register(import('fastify-auth0-verify'), {
+    domain: process.env.AUTH0_DOMAIN!,
+    audience: process.env.AUTH0_AUDIENCE,
+    secret: undefined, // Use JWKS for verification
+  });
+
+  log('✅ Auth0 JWT verification configured');
+
+  // Add requireAuth decorator for route protection
+  fastify.decorate('requireAuth', async function requireAuthFastify(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      await request.jwtVerify();
+      const auth = (request as any).user;
+      
+      if (!auth || !auth.sub) {
+        return reply.code(401).send({ message: "Not authenticated" });
+      }
+
+      const auth0UserId = auth.sub;
+      const email = auth['https://app.com/email'] || auth.email || '';
+      let username = auth['https://app.com/name'] || auth.name || auth.nickname || '';
+      
+      if (!username || username.trim() === '') {
+        if (email) {
+          username = email.split('@')[0];
+        } else {
+          username = `user_${auth0UserId.split('|')[1] || auth0UserId}`;
+        }
+      }
+
+      // Import storage (will be injected)
+      const { storage } = await import('./storage');
+      let user = await storage.getUserByAuth0Id(auth0UserId);
+      
+      if (!user) {
+        const firstName = auth.given_name || username;
+        const lastName = auth.family_name || '';
+        
+        try {
+          user = await storage.createUser({
+            auth0Id: auth0UserId,
+            email,
+            username,
+            firstName,
+            lastName,
+            password: '',
+            role: auth['https://app.com/roles']?.[0] || 'user'
+          });
+        } catch (createError: any) {
+          if (createError.code === '23505' && createError.constraint === 'users_auth0_id_unique') {
+            user = await storage.getUserByAuth0Id(auth0UserId);
+          } else {
+            throw createError;
+          }
+        }
+      }
+
+      if (!user) {
+        return reply.code(500).send({ message: "Failed to create or retrieve user" });
+      }
+
+      (request as any).userId = user.id;
+    } catch (error: any) {
+      console.error('Auth helper error:', error);
+      return reply.code(500).send({ message: "Authentication error" });
+    }
+  });
+
+  log('✅ Authentication decorators configured');
+
+  // ============================================================================
+  // PHASE 4: RATE LIMITING
+  // ============================================================================
+
+  // Register rate limit plugin globally
+  await fastify.register(import('@fastify/rate-limit'), {
+    global: false, // We'll apply per-route
+    max: 300,
+    timeWindow: '15 minutes'
+  });
+
+  log('✅ Rate limiting configured');
+
+  // ============================================================================
+  // PHASE 6: WEBSOCKET INTEGRATION
+  // ============================================================================
+
+  // WebSocket support will be handled by wsService.initialize(server)
+  // in the main index.ts file
+  await fastify.register(import('@fastify/websocket'));
+
+  log('✅ WebSocket server configured');
+
+  // ============================================================================
+  // PHASE 7: ERROR HANDLER
+  // ============================================================================
+
+  fastify.setErrorHandler((error, request, reply) => {
+    const status = error.statusCode || 500;
+    const message = error.message || "Internal Server Error";
+    
+    console.error('Fastify error:', error);
+    reply.code(status).send({ message });
+  });
+
+  log('✅ Error handler configured');
+
   return fastify;
 }
 
-// Initialize and start Fastify server on port 5001 (parallel to Express on 5000)
+// Initialize and start Fastify server
 export async function startFastifyServer() {
   try {
     const fastify = await createFastifyServer();
 
-    const port = 5001; // Different port to avoid conflict with Express
+    const port = 5000;
     const host = '0.0.0.0';
 
     await fastify.listen({ port, host });
     
     log(`✅ Fastify server running on http://${host}:${port}`);
     log(`   Health check: http://localhost:${port}/api/health`);
-    log(`   Express server continues on port 5000`);
     
     return fastify;
   } catch (error) {
