@@ -517,7 +517,10 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // Register profile management routes (migrated from Express)
   await fastify.register(import('./plugins/profileRoutes'), { prefix: '/api' });
   
-  log('✅ Fastify routes registered (auth + profile routes migrated)');
+  // Register parallel dialer routes (migrated from Express)
+  await fastify.register(import('./plugins/parallelDialerRoutes'), { prefix: '/api' });
+  
+  log('✅ Fastify routes registered (auth + profile + parallel dialer routes migrated)');
 
   return fastify;
 }
