@@ -505,6 +505,15 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
 
   log('✅ Error handler configured');
 
+  // ============================================================================
+  // ROUTE REGISTRATION - Migrated Fastify Routes
+  // ============================================================================
+  
+  // Register authentication routes (migrated from Express)
+  await fastify.register(import('./plugins/authRoutes'), { prefix: '/api' });
+  
+  log('✅ Fastify routes registered (auth routes migrated)');
+
   return fastify;
 }
 

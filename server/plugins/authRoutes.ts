@@ -1,0 +1,203 @@
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { storage } from '../storage';
+import { clearTwilioCacheOnLogout } from '../userTwilioService';
+import { rateLimitConfigs } from './rateLimiters';
+
+/**
+ * Authentication Routes Plugin for Fastify
+ * Migrated from Express routes
+ */
+
+export default async function authRoutes(fastify: FastifyInstance) {
+  // POST /auth/login - User login with session-based auth
+  fastify.post('/auth/login', {
+    config: {
+      rateLimit: rateLimitConfigs.auth
+    }
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { email, password } = request.body as any;
+      
+      if (!email || !password) {
+        return reply.code(400).send({ message: "Email and password are required" });
+      }
+
+      const user = await storage.authenticateUser(email, password);
+      
+      if (!user) {
+        return reply.code(401).send({ message: "Invalid credentials" });
+      }
+
+      // Create session
+      (request as any).session.userId = user.id;
+      (request as any).session.user = user;
+
+      return reply.send({ 
+        message: "Login successful",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        }
+      });
+    } catch (error: any) {
+      return reply.code(500).send({ message: error.message });
+    }
+  });
+
+  // POST /auth/logout - User logout
+  fastify.post('/auth/logout', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const userId = (request as any).session?.userId;
+      if (userId) {
+        clearTwilioCacheOnLogout(userId);
+      }
+      
+      (request as any).session.destroy((err: any) => {
+        if (err) {
+          return reply.code(500).send({ message: "Could not log out" });
+        }
+        return reply.send({ message: "Logged out successfully" });
+      });
+    } catch (error: any) {
+      return reply.code(500).send({ message: error.message });
+    }
+  });
+
+  // GET /auth/me - Get current user from Auth0 token
+  fastify.get('/auth/me', {
+    preHandler: async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        return reply.code(401).send({ message: "Not authenticated" });
+      }
+    }
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const auth = (request as any).user;
+      if (!auth || !auth.sub) {
+        return reply.code(401).send({ message: "Not authenticated" });
+      }
+
+      const userId = parseInt(auth.sub.split('|')[1] || '0');
+      const email = auth['https://app.com/email'] || auth.email || '';
+      
+      let username = auth['https://app.com/name'] || auth.name || auth.nickname || '';
+      
+      if (!username || username.trim() === '') {
+        if (email) {
+          username = email.split('@')[0];
+        } else {
+          username = `user_${auth.sub.split('|')[1] || auth.sub}`;
+        }
+      }
+      
+      const role = auth['https://app.com/roles']?.[0] || 'user';
+
+      return reply.send({
+        id: userId,
+        username,
+        email,
+        role,
+        status: 'active'
+      });
+    } catch (error: any) {
+      return reply.code(500).send({ message: error.message });
+    }
+  });
+
+  // POST /auth/auth0-session - Create session from Auth0 token
+  fastify.post('/auth/auth0-session', {
+    preHandler: async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        return reply.code(401).send({ message: "Not authenticated" });
+      }
+    }
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const auth = (request as any).user;
+      if (!auth || !auth.sub) {
+        return reply.code(401).send({ message: "Not authenticated" });
+      }
+
+      const auth0UserId = auth.sub;
+      const email = auth['https://app.com/email'] || auth.email || '';
+      
+      let username = auth['https://app.com/name'] || auth.name || auth.nickname || '';
+      
+      if (!username || username.trim() === '') {
+        if (email) {
+          username = email.split('@')[0];
+        } else {
+          username = `user_${auth0UserId.split('|')[1] || auth0UserId}`;
+        }
+      }
+      
+      const role = auth['https://app.com/roles']?.[0] || 'user';
+      const firstName = auth.given_name || '';
+      const lastName = auth.family_name || '';
+      const avatar = auth.picture || '';
+
+      // Get or create user in database by Auth0 ID
+      let user = await storage.getUserByAuth0Id(auth0UserId);
+      
+      if (!user) {
+        // Try to find existing user by email or username
+        if (email) {
+          user = await storage.getUserByEmail(email);
+        }
+        if (!user) {
+          user = await storage.getUserByUsername(username);
+        }
+        
+        if (user) {
+          // Backfill auth0Id for existing user
+          user = await storage.updateUser(user.id, {
+            auth0Id: auth0UserId,
+            username,
+            email,
+            firstName: firstName || user.firstName,
+            lastName: lastName || user.lastName
+          });
+        } else {
+          // Create new user
+          user = await storage.createUser({
+            auth0Id: auth0UserId,
+            email,
+            username,
+            firstName,
+            lastName,
+            password: '', // No password for Auth0 users
+            role
+          });
+        }
+      }
+
+      // Create session
+      (request as any).session.userId = user.id;
+      (request as any).session.user = user;
+
+      return reply.send({
+        message: "Session created",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          status: user.status,
+          twilioConfigured: user.twilioConfigured || false
+        }
+      });
+    } catch (error: any) {
+      console.error('Auth0 session creation error:', error);
+      return reply.code(500).send({ message: error.message });
+    }
+  });
+}
