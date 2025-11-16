@@ -67,7 +67,15 @@ export async function requireAuth(
   }
 }
 
-export function getUserIdFromRequest(req: AuthenticatedRequest): number {
+/**
+ * Structural interface for any request with userId
+ * Works with both Express AuthenticatedRequest and Fastify FastifyRequest
+ */
+export interface HasUserId {
+  userId?: number;
+}
+
+export function getUserIdFromRequest(req: HasUserId): number {
   if (!req.userId) {
     throw new Error("User ID not found. Ensure requireAuth middleware is applied.");
   }

@@ -459,7 +459,9 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
         return reply.code(500).send({ message: "Failed to create or retrieve user" });
       }
 
-      (request as any).userId = user.id;
+      // Set userId on request (now properly typed via module augmentation)
+      request.userId = user.id;
+      request.auth0UserId = auth0UserId;
     } catch (error: any) {
       console.error('Auth helper error:', error);
       return reply.code(500).send({ message: "Authentication error" });
@@ -512,7 +514,10 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // Register authentication routes (migrated from Express)
   await fastify.register(import('./plugins/authRoutes'), { prefix: '/api' });
   
-  log('✅ Fastify routes registered (auth routes migrated)');
+  // Register profile management routes (migrated from Express)
+  await fastify.register(import('./plugins/profileRoutes'), { prefix: '/api' });
+  
+  log('✅ Fastify routes registered (auth + profile routes migrated)');
 
   return fastify;
 }
