@@ -13,7 +13,6 @@ import DashboardPage from "@/pages/DashboardPage";
 import DialerPage from "@/pages/DialerPage";
 import CallLogPage from "@/pages/CallLogPage";
 import SmsPage from "@/pages/SmsPage";
-import RecordingsPage from "@/pages/RecordingsPage";
 import ContactsPage from "@/pages/ContactsPage";
 import VoicemailPage from "@/pages/VoicemailPage";
 import UsersPage from "@/pages/UsersPage";
@@ -39,7 +38,6 @@ const pageComponents = {
   'call-status-overview': CallStatusOverviewPage,
   'call-log': CallLogPage,
   sms: SmsPage,
-  recordings: RecordingsPage,
   contacts: ContactsPage,
   lists: ListsPage,
   leads: LeadsPage,

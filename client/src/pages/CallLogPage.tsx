@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { format, isWithinInterval } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, isWithinInterval, formatDistanceToNow } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { 
   Phone, 
@@ -25,7 +25,13 @@ import {
   MessageSquare,
   TrendingUp,
   TrendingDown,
-  Minus
+  Minus,
+  FileAudio,
+  Play,
+  Trash2,
+  Eye,
+  HardDrive,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,14 +40,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Label } from '@/components/ui/label';
 import { CallLogPageSkeleton } from '@/components/skeletons/CallLogPageSkeleton';
 import { AdvancedFilters } from '@/components/filters/AdvancedFilters';
+import { InlineAudioPlayer } from '@/components/InlineAudioPlayer';
 import { useWebSocket } from '@/hooks/useWebSocket';
-import type { Call } from '@shared/schema';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import type { Call, Recording } from '@shared/schema';
 
 interface CallLogStats {
   totalCalls: number;
@@ -125,7 +137,26 @@ export default function CallLogPage() {
     dateRange: undefined,
     disposition: 'all',
   });
+  const [activeTab, setActiveTab] = useState("calls");
+  const [playingRecording, setPlayingRecording] = useState<{ recording: Recording; audioUrl: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [directionFilter, setDirectionFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRecordings, setSelectedRecordings] = useState<number[]>([]);
   const { isConnected } = useWebSocket();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (playingRecording?.audioUrl) {
+        URL.revokeObjectURL(playingRecording.audioUrl);
+      }
+    };
+  }, [playingRecording]);
   
   const filterConfig = [
     {
@@ -183,6 +214,52 @@ export default function CallLogPage() {
     queryKey: ['/api/calls/stats'],
   });
 
+  // Recordings data
+  const recordingsParams = new URLSearchParams({
+    page: currentPage.toString(),
+    limit: "50",
+    sortBy,
+    sortOrder,
+    ...(searchQuery && { search: searchQuery }),
+    ...(directionFilter !== "all" && { direction: directionFilter })
+  });
+
+  const { data: recordingsData, isLoading: recordingsLoading } = useQuery({
+    queryKey: [`/api/recordings?${recordingsParams.toString()}`],
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: recordingStats } = useQuery({
+    queryKey: ["/api/recordings/stats"],
+    refetchOnWindowFocus: true,
+  });
+
+  const recordings = recordingsData?.recordings || [];
+  const totalRecordings = recordingsData?.total || 0;
+  const totalPages = recordingsData?.totalPages || 1;
+
+  // Recording mutations
+  const deleteRecordingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/recordings/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recordings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/recordings/stats"] });
+      toast({
+        title: "Recording deleted",
+        description: "Recording has been deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete recording",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredCalls = calls.filter(call => {
     const matchesSearch = !filters.search || 
       call.phone.includes(filters.search) || 
@@ -202,55 +279,188 @@ export default function CallLogPage() {
     return matchesSearch && matchesStatus && matchesType && matchesDisposition && matchesDateRange;
   });
 
+  // Recording handlers
+  const handlePlay = async (recording: Recording) => {
+    try {
+      if (playingRecording?.audioUrl) {
+        URL.revokeObjectURL(playingRecording.audioUrl);
+      }
+      const response = await apiRequest("GET", `/api/recordings/${recording.id}/play`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setPlayingRecording({ recording, audioUrl: blobUrl });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to play recording",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClosePlayer = () => {
+    if (playingRecording?.audioUrl) {
+      URL.revokeObjectURL(playingRecording.audioUrl);
+    }
+    setPlayingRecording(null);
+  };
+
+  const handleDownload = async (recording: Recording) => {
+    try {
+      const response = await apiRequest("GET", `/api/recordings/${recording.id}/download`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `recording_${recording.twilioRecordingSid}_${recording.phone}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download recording",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteRecording = (recording: Recording) => {
+    if (window.confirm("Are you sure you want to delete this recording?")) {
+      deleteRecordingMutation.mutate(recording.id);
+    }
+  };
+
+  const formatRecordingDuration = (duration: number) => {
+    const hours = Math.floor(duration / 3600);
+    const minutes = Math.floor((duration % 3600) / 60);
+    const seconds = duration % 60;
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return "Unknown";
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
   if (isLoading || statsLoading) {
     return <CallLogPageSkeleton />;
   }
 
   return (
     <div className="space-y-4">
-      {/* Compact Header */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600 dark:text-gray-400">{filteredCalls.length} calls</p>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-calls">
+      {/* Tabs for Calls and Recordings */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex items-center justify-between mb-4">
+          <TabsList className="grid w-[400px] grid-cols-2">
+            <TabsTrigger value="calls" className="gap-2">
+              <Phone className="h-4 w-4" />
+              Calls ({filteredCalls.length})
+            </TabsTrigger>
+            <TabsTrigger value="recordings" className="gap-2">
+              <FileAudio className="h-4 w-4" />
+              Recordings ({totalRecordings})
+            </TabsTrigger>
+          </TabsList>
+          <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh">
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
-      </div>
 
-      {/* Compact Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="p-3" data-testid="card-total-calls">
-          <div className="text-xs text-gray-600 dark:text-gray-400">Total Calls</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats?.totalCalls || 0}</div>
-        </Card>
+        {/* Stats - show relevant stats based on active tab */}
+        <div className="grid grid-cols-4 gap-3 mb-4">
+          {activeTab === "calls" ? (
+            <>
+              <Card className="p-3" data-testid="card-total-calls">
+                <div className="text-xs text-gray-600 dark:text-gray-400">Total Calls</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats?.totalCalls || 0}</div>
+              </Card>
+              <Card className="p-3" data-testid="card-success-rate">
+                <div className="text-xs text-gray-600 dark:text-gray-400">Success Rate</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {stats?.callSuccessRate ? `${Number(stats.callSuccessRate).toFixed(2)}%` : '0%'}
+                </div>
+              </Card>
+              <Card className="p-3" data-testid="card-avg-duration">
+                <div className="text-xs text-gray-600 dark:text-gray-400">Avg Duration</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {stats?.averageDuration ? formatDuration(Math.round(stats.averageDuration)) : '0:00'}
+                </div>
+              </Card>
+              <Card className="p-3" data-testid="card-total-cost">
+                <div className="text-xs text-gray-600 dark:text-gray-400">Total Cost</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {stats?.totalCost ? formatCost(stats.totalCost) : '$0.00'}
+                </div>
+              </Card>
+            </>
+          ) : (
+            <>
+              <Card className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Total</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{recordingStats?.total || 0}</p>
+                  </div>
+                  <FileAudio className="h-5 w-5 text-gray-400" />
+                </div>
+              </Card>
+              <Card className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Duration</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {recordingStats?.totalDuration ? formatRecordingDuration(recordingStats.totalDuration) : '0:00'}
+                    </p>
+                  </div>
+                  <Clock className="h-5 w-5 text-gray-400" />
+                </div>
+              </Card>
+              <Card className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Storage</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {recordingStats?.totalSize ? formatFileSize(recordingStats.totalSize) : '0 B'}
+                    </p>
+                  </div>
+                  <HardDrive className="h-5 w-5 text-gray-400" />
+                </div>
+              </Card>
+              <Card className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Ready</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {recordingStats?.byStatus?.ready || 0}
+                    </p>
+                  </div>
+                  <Activity className="h-5 w-5 text-gray-400" />
+                </div>
+              </Card>
+            </>
+          )}
+        </div>
 
-        <Card className="p-3" data-testid="card-success-rate">
-          <div className="text-xs text-gray-600 dark:text-gray-400">Success Rate</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {stats?.callSuccessRate ? `${Number(stats.callSuccessRate).toFixed(2)}%` : '0%'}
-          </div>
-        </Card>
+        {/* Calls Tab */}
+        <TabsContent value="calls" className="space-y-4">
+          {/* Advanced Filters */}
+          <AdvancedFilters
+            filters={filters}
+            onChange={setFilters}
+            config={filterConfig}
+            showFilters={showFilters}
+            onToggle={() => setShowFilters(!showFilters)}
+          />
 
-        <Card className="p-3" data-testid="card-avg-duration">
-          <div className="text-xs text-gray-600 dark:text-gray-400">Avg Duration</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {stats?.averageDuration ? formatDuration(Math.round(stats.averageDuration)) : '0:00'}
-          </div>
-        </Card>
-      </div>
-
-      {/* Advanced Filters */}
-      <AdvancedFilters
-        filters={filters}
-        onChange={setFilters}
-        config={filterConfig}
-        showFilters={showFilters}
-        onToggle={() => setShowFilters(!showFilters)}
-      />
-
-      {/* Compact Table */}
-      <Card>
+          {/* Calls Table */}
+          <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
@@ -333,19 +543,223 @@ export default function CallLogPage() {
         </CardContent>
       </Card>
 
-      {/* Call Detail Modal */}
-      {selectedCall && (
-        <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle>Call Details - {selectedCall.phone}</DialogTitle>
-            </DialogHeader>
-            <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
-              <CallDetailModal call={selectedCall} />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          {/* Call Detail Modal */}
+          {selectedCall && (
+            <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
+              <DialogContent className="max-w-4xl max-h-[90vh]">
+                <DialogHeader>
+                  <DialogTitle>Call Details - {selectedCall.phone}</DialogTitle>
+                </DialogHeader>
+                <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+                  <CallDetailModal call={selectedCall} />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </TabsContent>
+
+        {/* Recordings Tab */}
+        <TabsContent value="recordings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="relative md:col-span-2">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search recordings..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-recordings"
+                  />
+                </div>
+                <Select value={directionFilter} onValueChange={setDirectionFilter}>
+                  <SelectTrigger data-testid="select-direction-filter">
+                    <SelectValue placeholder="Direction" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Directions</SelectItem>
+                    <SelectItem value="inbound">Inbound</SelectItem>
+                    <SelectItem value="outbound">Outbound</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recordingsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8">
+                          <div className="flex justify-center">
+                            <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : recordings.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-4">
+                            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                              <FileAudio className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-gray-900 dark:text-gray-100">No recordings found</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Recordings will appear here when calls are recorded
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      recordings.map((recording: any) => (
+                        <>
+                          <TableRow key={recording.id} className="group hover:bg-muted/50" data-testid={`row-recording-${recording.id}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  {recording.direction === 'inbound' ? 
+                                    <span className="text-xs">←</span> : 
+                                    <span className="text-xs">→</span>
+                                  }
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-medium text-sm truncate">{recording.phone}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm font-medium">{formatRecordingDuration(recording.duration)}</span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {recording.createdAt ? formatDistanceToNow(new Date(recording.createdAt), { addSuffix: true }) : 'Unknown'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="default" className="text-xs">
+                                  {recording.status || 'Ready'}
+                                </Badge>
+                                {recording.transcript && (
+                                  <MessageSquare className="h-3 w-3 text-green-500" />
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end space-x-1">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handlePlay(recording)}
+                                      className="h-8 w-8 p-0"
+                                      data-testid={`button-play-${recording.id}`}
+                                    >
+                                      <Play className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Play recording</TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleDownload(recording)}
+                                      className="h-8 w-8 p-0"
+                                      data-testid={`button-download-${recording.id}`}
+                                    >
+                                      <Download className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Download recording</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleDeleteRecording(recording)}
+                                      disabled={deleteRecordingMutation.isPending}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                      data-testid={`button-delete-${recording.id}`}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Delete recording</TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* Inline Audio Player */}
+                          {playingRecording?.recording.id === recording.id && playingRecording && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="p-0 border-0">
+                                <div className="px-4 py-3 bg-muted/30">
+                                  <InlineAudioPlayer
+                                    recording={playingRecording.recording}
+                                    audioUrl={playingRecording.audioUrl}
+                                    onClose={handleClosePlayer}
+                                    onDownload={() => handleDownload(recording)}
+                                  />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages} ({totalRecordings} recordings)
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

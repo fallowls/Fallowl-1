@@ -15,7 +15,6 @@ const viewTitles = {
   'call-dispositions': 'Call Dispositions',
   sms: 'SMS',
   emails: 'Emails',
-  recordings: 'Recordings',
   contacts: 'Contacts',
   lists: 'Lists',
   leads: 'Leads',

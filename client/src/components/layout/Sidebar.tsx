@@ -39,7 +39,6 @@ const menuItems = [
   { id: 'call-status-overview', label: 'Call Status', icon: Activity },
   { id: 'call-log', label: 'Call Log', icon: History },
   { id: 'sms', label: 'SMS', icon: MessageSquare },
-  { id: 'recordings', label: 'Recordings', icon: Mic },
   { id: 'contacts', label: 'Contacts', icon: Users },
   { id: 'lists', label: 'Lists', icon: List },
   { id: 'leads', label: 'Leads', icon: Target },
