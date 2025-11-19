@@ -134,57 +134,57 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Calls Card */}
         <Card className="card-hover stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]" onClick={() => setCurrentView('call-log')} data-testid="card-calls">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-[20px] bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg shadow-blue-500/30">
-                  <Phone className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[16px] bg-gradient-to-br from-blue-400 to-blue-600 shadow-md shadow-blue-500/25">
+                  <Phone className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Calls</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCalls}</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Calls</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalCalls}</p>
                   <p className="text-xs text-teal-600 dark:text-teal-400 font-medium">+{stats.callsToday} today</p>
                 </div>
               </div>
-              <ArrowUpRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              <ArrowUpRight className="h-4 w-4 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
             </div>
           </CardContent>
         </Card>
 
         {/* Messages Card */}
         <Card className="card-hover stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]" onClick={() => setCurrentView('sms')} data-testid="card-messages">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-[20px] bg-gradient-to-br from-teal-400 to-teal-600 shadow-lg shadow-teal-500/30">
-                  <MessageSquare className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[16px] bg-gradient-to-br from-teal-400 to-teal-600 shadow-md shadow-teal-500/25">
+                  <MessageSquare className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Messages</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalMessages}</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Messages</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalMessages}</p>
                   <p className="text-xs text-teal-600 dark:text-teal-400 font-medium">+{stats.messagesThisWeek} this week</p>
                 </div>
               </div>
-              <ArrowUpRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              <ArrowUpRight className="h-4 w-4 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
             </div>
           </CardContent>
         </Card>
 
         {/* Contacts Card */}
         <Card className="card-hover stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]" onClick={() => setCurrentView('contacts')} data-testid="card-contacts">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-[20px] bg-gradient-to-br from-purple-400 to-purple-600 shadow-lg shadow-purple-500/30">
-                  <Users className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[16px] bg-gradient-to-br from-purple-400 to-purple-600 shadow-md shadow-purple-500/25">
+                  <Users className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Contacts</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalContacts}</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Contacts</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalContacts}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total in database</p>
                 </div>
               </div>
-              <ArrowUpRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              <ArrowUpRight className="h-4 w-4 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
             </div>
           </CardContent>
         </Card>
