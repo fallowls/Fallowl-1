@@ -96,8 +96,8 @@ export default function Sidebar() {
         onMouseLeave={() => !isMobile && setSidebarExpanded(false)}
       >
         <div className={cn(
-          "flex items-center border-b border-gray-200 dark:border-gray-800 py-4 transition-all duration-300",
-          (sidebarExpanded || isMobile) ? "h-20 px-4" : "h-20 px-2 justify-center"
+          "flex items-center border-b border-gray-200 dark:border-gray-800 py-3 transition-all duration-300",
+          (sidebarExpanded || isMobile) ? "h-16 px-3" : "h-16 px-2 justify-center"
         )}>
           <div className="transition-all duration-300">
             <img 
@@ -105,13 +105,13 @@ export default function Sidebar() {
               alt="FallOwl" 
               className={cn(
                 "object-contain transition-all duration-300",
-                (sidebarExpanded || isMobile) ? "h-12 w-auto" : "h-9 w-auto"
+                (sidebarExpanded || isMobile) ? "h-10 w-auto" : "h-8 w-auto"
               )}
             />
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
+        <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
           {menuItems
             .filter((item) => canAccessView(user?.email, item.id))
             .map((item) => {
@@ -122,24 +122,24 @@ export default function Sidebar() {
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
                   className={cn(
-                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full relative overflow-hidden",
+                    "group flex items-center gap-2.5 px-3 py-2 rounded-[12px] transition-all duration-200 w-full relative overflow-hidden",
                     isActive 
-                      ? "bg-gradient-to-r from-teal-500 to-teal-400 text-white shadow-lg shadow-teal-500/30 dark:shadow-teal-500/20" 
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:shadow-sm",
+                      ? "bg-gradient-to-r from-teal-500 to-teal-400 text-white shadow-md shadow-teal-500/25 dark:shadow-teal-500/20" 
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50",
                     (sidebarExpanded || isMobile) ? "justify-start" : "justify-center"
                   )}
                 >
                   <div className={cn(
                     "flex items-center justify-center transition-all duration-200",
-                    isActive && "scale-110"
+                    isActive && "scale-105"
                   )}>
                     <Icon className={cn(
-                      "w-5 h-5 flex-shrink-0 transition-all duration-200",
+                      "w-[18px] h-[18px] flex-shrink-0 transition-all duration-200",
                       isActive ? "text-white" : "text-gray-600 dark:text-gray-400 group-hover:text-teal-500 dark:group-hover:text-teal-400"
                     )} />
                   </div>
                   <span className={cn(
-                    "font-medium transition-all duration-300 whitespace-nowrap text-sm",
+                    "font-medium transition-all duration-300 whitespace-nowrap text-[13px]",
                     (sidebarExpanded || isMobile) ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 absolute",
                     isActive ? "text-white" : "text-gray-700 dark:text-gray-300"
                   )}>
