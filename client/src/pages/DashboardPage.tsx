@@ -128,22 +128,22 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 space-y-4">
 
-      {/* Main Stats Grid - Modern 3 column layout with animations */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Main Stats Grid - Compact 3 column layout */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Calls Card */}
-        <Card className="card-hover stagger-item border-0 shadow-md" onClick={() => setCurrentView('call-log')} data-testid="card-calls">
-          <CardContent className="p-6">
+        <Card className="card-hover stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]" onClick={() => setCurrentView('call-log')} data-testid="card-calls">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg shadow-blue-500/30">
-                  <Phone className="h-6 w-6 text-white" />
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-[20px] bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg shadow-blue-500/30">
+                  <Phone className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Calls</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{stats.totalCalls}</p>
-                  <p className="text-xs text-teal-600 dark:text-teal-400 mt-1 font-medium">+{stats.callsToday} today</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCalls}</p>
+                  <p className="text-xs text-teal-600 dark:text-teal-400 font-medium">+{stats.callsToday} today</p>
                 </div>
               </div>
               <ArrowUpRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
@@ -152,17 +152,17 @@ export default function DashboardPage() {
         </Card>
 
         {/* Messages Card */}
-        <Card className="card-hover stagger-item border-0 shadow-md" onClick={() => setCurrentView('sms')} data-testid="card-messages">
-          <CardContent className="p-6">
+        <Card className="card-hover stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]" onClick={() => setCurrentView('sms')} data-testid="card-messages">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-600 shadow-lg shadow-teal-500/30">
-                  <MessageSquare className="h-6 w-6 text-white" />
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-[20px] bg-gradient-to-br from-teal-400 to-teal-600 shadow-lg shadow-teal-500/30">
+                  <MessageSquare className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Messages</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{stats.totalMessages}</p>
-                  <p className="text-xs text-teal-600 dark:text-teal-400 mt-1 font-medium">+{stats.messagesThisWeek} this week</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalMessages}</p>
+                  <p className="text-xs text-teal-600 dark:text-teal-400 font-medium">+{stats.messagesThisWeek} this week</p>
                 </div>
               </div>
               <ArrowUpRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
@@ -171,17 +171,17 @@ export default function DashboardPage() {
         </Card>
 
         {/* Contacts Card */}
-        <Card className="card-hover stagger-item border-0 shadow-md" onClick={() => setCurrentView('contacts')} data-testid="card-contacts">
-          <CardContent className="p-6">
+        <Card className="card-hover stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]" onClick={() => setCurrentView('contacts')} data-testid="card-contacts">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 shadow-lg shadow-purple-500/30">
-                  <Users className="h-6 w-6 text-white" />
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-[20px] bg-gradient-to-br from-purple-400 to-purple-600 shadow-lg shadow-purple-500/30">
+                  <Users className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Contacts</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{stats.totalContacts}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">Total in database</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalContacts}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total in database</p>
                 </div>
               </div>
               <ArrowUpRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
@@ -190,62 +190,62 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Secondary Stats - 4 column modern layout */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="hover-lift stagger-item border-0 shadow-sm cursor-pointer" onClick={() => setCurrentView('recordings')} data-testid="card-recordings">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-800/20">
-                <PlayCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+      {/* Secondary Stats - 4 column compact layout */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="hover-lift stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)] cursor-pointer" onClick={() => setCurrentView('recordings')} data-testid="card-recordings">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-[16px] bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-800/20">
+                <PlayCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Recordings</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalRecordings}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Recordings</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalRecordings}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover-lift stagger-item border-0 shadow-sm cursor-pointer" onClick={() => setCurrentView('voicemail')} data-testid="card-voicemails">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-red-100 to-red-50 dark:from-red-900/30 dark:to-red-800/20">
-                <Voicemail className="h-5 w-5 text-red-600 dark:text-red-400" />
+        <Card className="hover-lift stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)] cursor-pointer" onClick={() => setCurrentView('voicemail')} data-testid="card-voicemails">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-[16px] bg-gradient-to-br from-red-100 to-red-50 dark:from-red-900/30 dark:to-red-800/20">
+                <Voicemail className="h-4 w-4 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Voicemails</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalVoicemails}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Voicemails</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalVoicemails}</p>
                 {stats.unreadVoicemails > 0 && (
-                  <Badge variant="destructive" className="text-xs h-5 px-2 mt-1">{stats.unreadVoicemails} new</Badge>
+                  <Badge variant="destructive" className="text-xs h-4 px-1.5">{stats.unreadVoicemails} new</Badge>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover-lift stagger-item border-0 shadow-sm" data-testid="card-success-rate">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/20">
-                <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+        <Card className="hover-lift stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]" data-testid="card-success-rate">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-[16px] bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/20">
+                <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Success Rate</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.successRate}%</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Success Rate</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.successRate}%</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover-lift stagger-item border-0 shadow-sm" data-testid="card-avg-duration">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20">
-                <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <Card className="hover-lift stagger-item rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]" data-testid="card-avg-duration">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-[16px] bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20">
+                <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Avg Duration</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{Math.floor(stats.averageCallDuration / 60)}m {stats.averageCallDuration % 60}s</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Avg Duration</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{Math.floor(stats.averageCallDuration / 60)}m {stats.averageCallDuration % 60}s</p>
               </div>
             </div>
           </CardContent>
@@ -253,18 +253,18 @@ export default function DashboardPage() {
       </div>
 
       {/* Performance & Activity - 2 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Performance Metrics */}
-        <Card className="border-0 shadow-md animate-fade-in">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2 font-bold text-gray-900 dark:text-white">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/30 dark:to-teal-800/20">
-                <TrendingUp className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+        <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)] animate-fade-in">
+          <CardHeader className="pb-3 px-4 pt-4">
+            <CardTitle className="text-base flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+              <div className="p-2 rounded-[16px] bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/30 dark:to-teal-800/20">
+                <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
               </div>
               Performance
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2.5 px-4 pb-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600 dark:text-gray-400">Call Success Rate</span>
@@ -294,19 +294,19 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Activity */}
-        <Card className="border-0 shadow-md animate-fade-in">
-          <CardHeader className="pb-4">
+        <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)] animate-fade-in">
+          <CardHeader className="pb-3 px-4 pt-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2 font-bold text-gray-900 dark:text-white">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20">
-                  <Phone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <CardTitle className="text-base flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                <div className="p-2 rounded-[16px] bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20">
+                  <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 Recent Calls
               </CardTitle>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-8 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                className="h-9 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg px-3"
                 onClick={() => setCurrentView('call-log')}
                 data-testid="button-view-all-calls"
               >
@@ -361,64 +361,64 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-0 shadow-md animate-fade-in">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">Quick Actions</CardTitle>
-          <CardDescription className="text-sm text-gray-500 dark:text-gray-400">
+      <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)] animate-fade-in">
+        <CardHeader className="pb-3 px-4 pt-4">
+          <CardTitle className="text-base font-bold text-gray-900 dark:text-white">Quick Actions</CardTitle>
+          <CardDescription className="text-xs text-gray-500 dark:text-gray-400">
             Start your most common tasks
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <CardContent className="px-4 pb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             <Button 
               variant="outline" 
-              className="flex items-center gap-2 h-auto p-3 justify-start"
+              className="flex items-center gap-2 h-auto p-2.5 justify-start rounded-[12px] border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
               onClick={() => setCurrentView('dialer')}
               data-testid="button-make-call"
             >
               <PhoneCall className="h-4 w-4" />
               <div className="text-left">
-                <div className="font-medium text-sm">Make Call</div>
-                <div className="text-xs text-gray-500">Start dialing</div>
+                <div className="font-medium text-xs">Make Call</div>
+                <div className="text-[10px] text-gray-500">Start dialing</div>
               </div>
             </Button>
             
             <Button 
               variant="outline" 
-              className="flex items-center gap-2 h-auto p-3 justify-start"
+              className="flex items-center gap-2 h-auto p-2.5 justify-start rounded-[12px] border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
               onClick={() => setCurrentView('sms')}
               data-testid="button-send-sms"
             >
               <MessageCircle className="h-4 w-4" />
               <div className="text-left">
-                <div className="font-medium text-sm">Send SMS</div>
-                <div className="text-xs text-gray-500">Message contacts</div>
+                <div className="font-medium text-xs">Send SMS</div>
+                <div className="text-[10px] text-gray-500">Message contacts</div>
               </div>
             </Button>
             
             <Button 
               variant="outline" 
-              className="flex items-center gap-2 h-auto p-3 justify-start"
+              className="flex items-center gap-2 h-auto p-2.5 justify-start rounded-[12px] border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
               onClick={() => setCurrentView('contacts')}
               data-testid="button-add-contact"
             >
               <UserPlus className="h-4 w-4" />
               <div className="text-left">
-                <div className="font-medium text-sm">Add Contact</div>
-                <div className="text-xs text-gray-500">New contact</div>
+                <div className="font-medium text-xs">Add Contact</div>
+                <div className="text-[10px] text-gray-500">New contact</div>
               </div>
             </Button>
             
             <Button 
               variant="outline" 
-              className="flex items-center gap-2 h-auto p-3 justify-start"
+              className="flex items-center gap-2 h-auto p-2.5 justify-start rounded-[12px] border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
               onClick={() => setCurrentView('recordings')}
               data-testid="button-view-recordings"
             >
               <PlayCircle className="h-4 w-4" />
               <div className="text-left">
-                <div className="font-medium text-sm">Recordings</div>
-                <div className="text-xs text-gray-500">Call recordings</div>
+                <div className="font-medium text-xs">Recordings</div>
+                <div className="text-[10px] text-gray-500">Call recordings</div>
               </div>
             </Button>
           </div>
