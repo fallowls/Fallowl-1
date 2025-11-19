@@ -7,7 +7,6 @@ import TwilioDeviceStatus from "@/components/TwilioDeviceStatus";
 import { 
   Phone, 
   MessageSquare, 
-  Mic, 
   Users, 
   Voicemail, 
   UserCheck, 
@@ -18,7 +17,6 @@ import {
   Sliders,
   LayoutDashboard,
   HelpCircle,
-  User,
   LogOut,
   History,
   Target,
@@ -26,10 +24,10 @@ import {
   Calendar,
   Zap,
   Activity,
-  Briefcase
+  Briefcase,
+  ChevronRight
 } from "lucide-react";
 
-// Import FallOwl logos
 import FallOwlLogo from "@assets/FallOwl_logo_1759278988195.png";
 import FallOwlLogoDark from "@assets/FallOwl_logo_1759339763714.png";
 
@@ -77,32 +75,29 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Overlay */}
       {isMobile && mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 transition-opacity duration-300"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
       
-      {/* Sidebar */}
       <div 
         className={cn(
-          "bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 ease-in-out relative z-30",
+          "bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 shadow-xl transition-all duration-300 ease-in-out relative z-30 border-r border-gray-200 dark:border-gray-800",
           "flex flex-col",
           isMobile ? (
             mobileMenuOpen ? "fixed left-0 top-0 w-64 h-full transform translate-x-0" : "fixed left-0 top-0 w-64 h-full transform -translate-x-full"
           ) : (
-            sidebarExpanded ? "w-64 h-screen" : "w-14 h-screen group"
+            sidebarExpanded ? "w-64 h-screen" : "w-16 h-screen group"
           )
         )}
         onMouseEnter={() => !isMobile && setSidebarExpanded(true)}
         onMouseLeave={() => !isMobile && setSidebarExpanded(false)}
       >
-        {/* Logo */}
         <div className={cn(
-          "flex items-center justify-center border-b border-gray-200 dark:border-gray-700 py-2 transition-all duration-300",
-          (sidebarExpanded || isMobile) ? "h-16 px-3" : "h-16 px-1"
+          "flex items-center border-b border-gray-200 dark:border-gray-800 py-4 transition-all duration-300",
+          (sidebarExpanded || isMobile) ? "h-20 px-4" : "h-20 px-2 justify-center"
         )}>
           <div className="transition-all duration-300">
             <img 
@@ -110,44 +105,56 @@ export default function Sidebar() {
               alt="FallOwl" 
               className={cn(
                 "object-contain transition-all duration-300",
-                (sidebarExpanded || isMobile) ? "h-12 w-auto" : "h-8 w-auto"
+                (sidebarExpanded || isMobile) ? "h-12 w-auto" : "h-9 w-auto"
               )}
             />
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto min-h-0 scrollbar-hide">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
           {menuItems
             .filter((item) => canAccessView(user?.email, item.id))
             .map((item) => {
               const Icon = item.icon;
+              const isActive = currentView === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
                   className={cn(
-                    "flex items-center px-2 py-1.5 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer w-full text-sm",
-                    currentView === item.id && "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
+                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full relative overflow-hidden",
+                    isActive 
+                      ? "bg-gradient-to-r from-teal-500 to-teal-400 text-white shadow-lg shadow-teal-500/30 dark:shadow-teal-500/20" 
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:shadow-sm",
                     (sidebarExpanded || isMobile) ? "justify-start" : "justify-center"
                   )}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <div className={cn(
+                    "flex items-center justify-center transition-all duration-200",
+                    isActive && "scale-110"
+                  )}>
+                    <Icon className={cn(
+                      "w-5 h-5 flex-shrink-0 transition-all duration-200",
+                      isActive ? "text-white" : "text-gray-600 dark:text-gray-400 group-hover:text-teal-500 dark:group-hover:text-teal-400"
+                    )} />
+                  </div>
                   <span className={cn(
-                    "ml-3 font-medium transition-opacity duration-300 whitespace-nowrap",
-                    (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0"
+                    "font-medium transition-all duration-300 whitespace-nowrap text-sm",
+                    (sidebarExpanded || isMobile) ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 absolute",
+                    isActive ? "text-white" : "text-gray-700 dark:text-gray-300"
                   )}>
                     {item.label}
                   </span>
+                  {isActive && (sidebarExpanded || isMobile) && (
+                    <ChevronRight className="w-4 h-4 ml-auto text-white animate-pulse" />
+                  )}
                 </button>
               );
             })}
         </nav>
 
-        {/* Twilio Status */}
-        <div className="border-t border-gray-200 dark:border-gray-700 px-2 py-1.5">
+        <div className="border-t border-gray-200 dark:border-gray-800 px-3 py-3">
           <div className="flex items-center justify-center">
-            {/* Always visible status dot */}
             <div className={cn(
               "transition-opacity duration-300",
               (sidebarExpanded || isMobile) ? "opacity-0 w-0" : "opacity-100 w-auto"
@@ -155,7 +162,6 @@ export default function Sidebar() {
               <TwilioDeviceStatus variant="dot-only" />
             </div>
             
-            {/* Full status when expanded */}
             <div className={cn(
               "transition-opacity duration-300",
               (sidebarExpanded || isMobile) ? "opacity-100 w-full" : "opacity-0 w-0"
@@ -165,50 +171,49 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* User Profile */}
-        <div className="border-t border-gray-200 dark:border-gray-700 px-2 py-1.5">
+        <div className="border-t border-gray-200 dark:border-gray-800 px-3 py-3 bg-white dark:bg-gray-900">
           <div className={cn(
-            "flex items-center",
+            "flex items-center gap-3",
             (sidebarExpanded || isMobile) ? "justify-between" : "justify-center"
           )}>
-            <div className="flex items-center">
+            <div className="flex items-center gap-3 min-w-0">
               <div className={cn(
-                "rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0",
-                (sidebarExpanded || isMobile) ? "w-7 h-7" : "w-6 h-6"
+                "rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0 ring-2 ring-teal-400/30",
+                (sidebarExpanded || isMobile) ? "w-9 h-9" : "w-8 h-8"
               )}>
                 <span className={cn(
-                  "text-blue-600 dark:text-blue-300 font-medium",
-                  (sidebarExpanded || isMobile) ? "text-xs" : "text-[10px]"
+                  "text-white font-semibold",
+                  (sidebarExpanded || isMobile) ? "text-sm" : "text-xs"
                 )}>
                   {user?.username?.substring(0, 2).toUpperCase() || 'U'}
                 </span>
               </div>
               <div className={cn(
-                "ml-3 transition-opacity duration-300",
-                (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0"
+                "transition-all duration-300 min-w-0",
+                (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
               )}>
-                <p className="text-sm font-medium text-gray-800 dark:text-white whitespace-nowrap">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap truncate">
                   {user?.username || 'User'}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap truncate">
                   {user?.role === 'super_admin' ? 'Super Admin' : user?.role || 'User'}
                 </p>
               </div>
             </div>
             <div className={cn(
-              "flex items-center gap-1 transition-opacity duration-300",
-              (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0"
+              "flex items-center gap-1 transition-all duration-300",
+              (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
             )}>
               <button
                 onClick={() => handleItemClick('profile')}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 hover:scale-110"
                 title="Profile Settings"
               >
-                <Settings className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
               <button
                 onClick={() => logout.mutate()}
-                className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900 transition-colors duration-200"
+                className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-110"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4 text-red-600 dark:text-red-400" />

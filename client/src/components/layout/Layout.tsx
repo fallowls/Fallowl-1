@@ -87,11 +87,11 @@ export default function Layout() {
   const showOnCallScreen = ['connecting', 'connected', 'on-hold'].includes(callStatus) && currentView === 'dialer';
 
   return (
-    <div className={cn("flex h-screen overflow-hidden", darkMode && "dark")}>
+    <div className={cn("flex h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950", darkMode && "dark")}>
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-auto px-4 pt-4 pb-2 bg-slate-50 dark:bg-gray-900 border-0">
+        <main className="flex-1 overflow-auto bg-transparent scrollbar-thin">
           {showIncomingCallScreen ? (
             <IncomingCallScreen />
           ) : showOnCallScreen ? (
@@ -101,7 +101,6 @@ export default function Layout() {
           )}
         </main>
       </div>
-      {/* Fixed positioned call notification bar */}
       {showCallBar && <CallNotificationBar />}
     </div>
   );

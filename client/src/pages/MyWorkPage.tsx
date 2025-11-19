@@ -147,13 +147,13 @@ export default function MyWorkPage() {
                         <Badge
                           variant="secondary"
                           className={`text-xs ${
-                            lead.leadScore >= 80 ? "bg-green-100 text-green-800" :
-                            lead.leadScore >= 50 ? "bg-yellow-100 text-yellow-800" :
+                            (lead.leadScore ?? 0) >= 80 ? "bg-green-100 text-green-800" :
+                            (lead.leadScore ?? 0) >= 50 ? "bg-yellow-100 text-yellow-800" :
                             "bg-gray-100 text-gray-800"
                           }`}
                           data-testid={`badge-score-${lead.id}`}
                         >
-                          {lead.leadScore}
+                          {lead.leadScore ?? 0}
                         </Badge>
                       </div>
                       
@@ -328,15 +328,15 @@ export default function MyWorkPage() {
                             stroke="currentColor"
                             strokeWidth="8"
                             fill="none"
-                            strokeDasharray={`${(selectedLead.leadScore / 100) * 440} 440`}
+                            strokeDasharray={`${((selectedLead.leadScore ?? 0) / 100) * 440} 440`}
                             className="text-teal-500"
                           />
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center flex-col">
-                          <div className={`text-4xl font-bold ${getScoreColor(selectedLead.leadScore)}`}>
-                            {selectedLead.leadScore}
+                          <div className={`text-4xl font-bold ${getScoreColor(selectedLead.leadScore ?? 0)}`}>
+                            {selectedLead.leadScore ?? 0}
                           </div>
-                          <div className="text-sm text-gray-500">Grade {getScoreGrade(selectedLead.leadScore)}</div>
+                          <div className="text-sm text-gray-500">Grade {getScoreGrade(selectedLead.leadScore ?? 0)}</div>
                         </div>
                       </div>
                     </div>

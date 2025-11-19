@@ -3,69 +3,231 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(220, 13%, 18%);
-  --muted: hsl(0, 0%, 96%);
+  --background: hsl(0, 0%, 98%);
+  --foreground: hsl(240, 10%, 15%);
+  --muted: hsl(210, 20%, 96%);
   --muted-foreground: hsl(220, 9%, 46%);
   --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(220, 13%, 18%);
+  --popover-foreground: hsl(240, 10%, 15%);
   --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(220, 13%, 18%);
-  --border: hsl(0, 0%, 88%);
-  --input: hsl(0, 0%, 88%);
-  --primary: hsl(60, 100%, 41%);
-  --primary-foreground: hsl(220, 13%, 18%);
-  --secondary: hsl(145, 98%, 73%);
-  --secondary-foreground: hsl(220, 13%, 18%);
-  --accent: hsl(60, 100%, 95%);
-  --accent-foreground: hsl(220, 13%, 18%);
-  --destructive: hsl(0, 84.2%, 60.2%);
+  --card-foreground: hsl(240, 10%, 15%);
+  --border: hsl(220, 13%, 91%);
+  --input: hsl(220, 13%, 91%);
+  --primary: hsl(175, 85%, 45%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(210, 40%, 96%);
+  --secondary-foreground: hsl(240, 10%, 15%);
+  --accent: hsl(84, 81%, 70%);
+  --accent-foreground: hsl(240, 10%, 15%);
+  --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(0, 0%, 100%);
-  --ring: hsl(60, 100%, 41%);
-  --radius: 0.75rem;
+  --ring: hsl(175, 85%, 45%);
+  --radius: 0.875rem;
   
-  /* CRM-specific colors */
-  --lime-accent: hsl(60, 100%, 41%);
-  --teal-accent: hsl(145, 98%, 73%);
-  --teal-progress: hsl(165, 92%, 50%);
-  --gray-light: hsl(0, 0%, 96%);
-  --gray-medium: hsl(0, 0%, 82%);
+  /* Modern CRM color palette */
+  --teal-50: hsl(175, 85%, 96%);
+  --teal-100: hsl(175, 85%, 90%);
+  --teal-200: hsl(175, 85%, 80%);
+  --teal-300: hsl(175, 85%, 65%);
+  --teal-400: hsl(175, 85%, 55%);
+  --teal-500: hsl(175, 85%, 45%);
+  --teal-600: hsl(175, 85%, 38%);
+  --teal-700: hsl(175, 85%, 30%);
+  
+  --lime-50: hsl(84, 81%, 95%);
+  --lime-100: hsl(84, 81%, 88%);
+  --lime-200: hsl(84, 81%, 80%);
+  --lime-300: hsl(84, 81%, 70%);
+  --lime-400: hsl(84, 81%, 62%);
+  --lime-500: hsl(84, 81%, 54%);
+  --lime-600: hsl(84, 81%, 46%);
+  
+  --gray-50: hsl(210, 20%, 98%);
+  --gray-100: hsl(210, 20%, 96%);
+  --gray-200: hsl(210, 16%, 93%);
+  --gray-300: hsl(210, 14%, 89%);
+  --gray-400: hsl(210, 14%, 83%);
+  --gray-500: hsl(210, 11%, 71%);
+  --gray-600: hsl(210, 13%, 50%);
+  --gray-700: hsl(210, 18%, 30%);
+  --gray-800: hsl(210, 24%, 16%);
+  --gray-900: hsl(210, 30%, 8%);
+  
+  --orange-50: hsl(24, 100%, 95%);
+  --orange-400: hsl(24, 100%, 60%);
+  --orange-500: hsl(24, 100%, 50%);
+  
+  --blue-50: hsl(217, 91%, 95%);
+  --blue-400: hsl(217, 91%, 60%);
+  --blue-500: hsl(217, 91%, 50%);
+  
+  --purple-50: hsl(270, 70%, 95%);
+  --purple-400: hsl(270, 70%, 60%);
+  --purple-500: hsl(270, 70%, 50%);
+  
+  --yellow-50: hsl(48, 100%, 95%);
+  --yellow-100: hsl(48, 100%, 88%);
+  --yellow-400: hsl(48, 100%, 60%);
 }
 
 .dark {
-  --background: hsl(220, 15%, 12%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(220, 13%, 18%);
-  --muted-foreground: hsl(220, 9%, 65%);
-  --popover: hsl(220, 15%, 15%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(220, 15%, 15%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(220, 13%, 25%);
-  --input: hsl(220, 13%, 25%);
-  --primary: hsl(60, 100%, 50%);
-  --primary-foreground: hsl(220, 13%, 18%);
-  --secondary: hsl(145, 98%, 73%);
-  --secondary-foreground: hsl(220, 13%, 18%);
-  --accent: hsl(60, 100%, 20%);
-  --accent-foreground: hsl(60, 100%, 90%);
-  --destructive: hsl(0, 62.8%, 50%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(60, 100%, 50%);
-  --radius: 0.75rem;
+  --background: hsl(222, 30%, 7%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 33%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 28%, 12%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 28%, 12%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 33%, 17%);
+  --input: hsl(217, 33%, 17%);
+  --primary: hsl(175, 85%, 45%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(84, 81%, 70%);
+  --accent-foreground: hsl(240, 10%, 15%);
+  --destructive: hsl(0, 63%, 55%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(175, 85%, 45%);
+  --radius: 0.875rem;
   
-  /* CRM-specific colors for dark mode */
-  --lime-accent: hsl(60, 100%, 50%);
-  --teal-accent: hsl(145, 98%, 73%);
-  --teal-progress: hsl(165, 92%, 60%);
-  --gray-light: hsl(220, 13%, 18%);
-  --gray-medium: hsl(220, 13%, 35%);
+  /* Modern CRM color palette - dark mode */
+  --teal-50: hsl(175, 85%, 12%);
+  --teal-100: hsl(175, 85%, 18%);
+  --teal-200: hsl(175, 85%, 25%);
+  --teal-300: hsl(175, 85%, 35%);
+  --teal-400: hsl(175, 85%, 45%);
+  --teal-500: hsl(175, 85%, 55%);
+  --teal-600: hsl(175, 85%, 65%);
+  --teal-700: hsl(175, 85%, 75%);
+  
+  --lime-50: hsl(84, 81%, 15%);
+  --lime-100: hsl(84, 81%, 22%);
+  --lime-200: hsl(84, 81%, 35%);
+  --lime-300: hsl(84, 81%, 50%);
+  --lime-400: hsl(84, 81%, 62%);
+  --lime-500: hsl(84, 81%, 70%);
+  --lime-600: hsl(84, 81%, 80%);
+  
+  --gray-50: hsl(220, 20%, 10%);
+  --gray-100: hsl(220, 20%, 14%);
+  --gray-200: hsl(220, 16%, 20%);
+  --gray-300: hsl(220, 14%, 30%);
+  --gray-400: hsl(220, 14%, 45%);
+  --gray-500: hsl(220, 11%, 60%);
+  --gray-600: hsl(220, 13%, 75%);
+  --gray-700: hsl(220, 18%, 85%);
+  --gray-800: hsl(220, 24%, 92%);
+  --gray-900: hsl(220, 30%, 97%);
+  
+  --orange-50: hsl(24, 100%, 15%);
+  --orange-400: hsl(24, 100%, 60%);
+  --orange-500: hsl(24, 100%, 65%);
+  
+  --blue-50: hsl(217, 91%, 15%);
+  --blue-400: hsl(217, 91%, 60%);
+  --blue-500: hsl(217, 91%, 65%);
+  
+  --purple-50: hsl(270, 70%, 15%);
+  --purple-400: hsl(270, 70%, 60%);
+  --purple-500: hsl(270, 70%, 65%);
+  
+  --yellow-50: hsl(48, 100%, 18%);
+  --yellow-100: hsl(48, 100%, 25%);
+  --yellow-400: hsl(48, 100%, 65%);
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+  
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+}
+
+/* Smooth transitions and animations */
+@layer utilities {
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-fast {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-lift {
+    @apply transition-smooth;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .hover-scale {
+    @apply transition-fast;
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+  
+  .card-modern {
+    @apply bg-card rounded-2xl border border-border shadow-sm;
+  }
+  
+  .card-hover {
+    @apply card-modern hover-lift cursor-pointer;
+  }
+}
+
+/* Smooth fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Animation delays for incoming call ring effect */
@@ -77,12 +239,60 @@
   animation-delay: 300ms;
 }
 
+/* Stagger animations */
+.stagger-item {
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0.05s; }
+.stagger-item:nth-child(2) { animation-delay: 0.1s; }
+.stagger-item:nth-child(3) { animation-delay: 0.15s; }
+.stagger-item:nth-child(4) { animation-delay: 0.2s; }
+.stagger-item:nth-child(5) { animation-delay: 0.25s; }
+.stagger-item:nth-child(6) { animation-delay: 0.3s; }
+
 /* Hide scrollbar while keeping scroll functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+}
+
+/* Custom scrollbar styling */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--gray-300)) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--gray-300));
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--gray-400));
+}
+
+.dark .scrollbar-thin {
+  scrollbar-color: hsl(var(--gray-700)) transparent;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--gray-700));
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--gray-600));
 }
