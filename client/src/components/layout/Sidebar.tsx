@@ -25,7 +25,8 @@ import {
   List,
   Calendar,
   Zap,
-  Activity
+  Activity,
+  Briefcase
 } from "lucide-react";
 
 // Import FallOwl logos
@@ -34,6 +35,7 @@ import FallOwlLogoDark from "@assets/FallOwl_logo_1759339763714.png";
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'my-work', label: 'My Work', icon: Briefcase },
   { id: 'dialer', label: 'Dialer', icon: Phone },
   { id: 'parallel-dialer', label: 'Parallel Dialer', icon: Zap },
   { id: 'call-status-overview', label: 'Call Status', icon: Activity },

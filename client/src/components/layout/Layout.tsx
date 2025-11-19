@@ -29,9 +29,11 @@ import CalendarPage from "@/pages/CalendarPage";
 import ParallelDialerPage from "@/pages/ParallelDialerPage";
 import CallStatusOverviewPage from "@/pages/CallStatusOverviewPage";
 import ParallelDialerVerificationPage from "@/pages/ParallelDialerVerificationPage";
+import MyWorkPage from "@/pages/MyWorkPage";
 
 const pageComponents = {
   dashboard: DashboardPage,
+  'my-work': MyWorkPage,
   dialer: DialerPage,
   'parallel-dialer': ParallelDialerPage,
   'parallel-dialer-verification': ParallelDialerVerificationPage,
