@@ -942,6 +942,175 @@ export const leadNurturing = pgTable("lead_nurturing", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Accounts (Companies) - for B2B CRM
+export const accounts = pgTable("accounts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  
+  // Basic Information
+  name: text("name").notNull(),
+  website: text("website"),
+  industry: text("industry"),
+  description: text("description"),
+  
+  // Contact Information
+  phone: text("phone"),
+  email: text("email"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  country: text("country").default("US"),
+  zipCode: text("zip_code"),
+  
+  // Company Details
+  companySize: text("company_size"), // 1-10, 11-50, 51-200, 201-1000, 1000+
+  annualRevenue: decimal("annual_revenue", { precision: 15, scale: 2 }),
+  numberOfEmployees: integer("number_of_employees"),
+  
+  // Account Management
+  accountOwner: integer("account_owner").references(() => users.id),
+  accountStatus: text("account_status").default("active"), // active, inactive, prospect, customer, partner
+  accountType: text("account_type").default("prospect"), // prospect, customer, partner, vendor
+  priority: text("priority").default("medium"), // high, medium, low
+  
+  // Relationship Status
+  relationshipStage: text("relationship_stage").default("new"), // new, engaged, customer, at-risk, churned
+  healthScore: integer("health_score").default(50), // 0-100
+  
+  // Financial
+  lifetimeValue: decimal("lifetime_value", { precision: 15, scale: 2 }).default("0.00"),
+  totalRevenue: decimal("total_revenue", { precision: 15, scale: 2 }).default("0.00"),
+  
+  // Social & Web
+  linkedinUrl: text("linkedin_url"),
+  twitterHandle: text("twitter_handle"),
+  facebookPage: text("facebook_page"),
+  
+  // Metadata
+  tags: text("tags").array().default([]),
+  customFields: jsonb("custom_fields").default({}),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("accounts_user_id_idx").on(table.userId),
+  accountOwnerIdx: index("accounts_account_owner_idx").on(table.accountOwner),
+  accountStatusIdx: index("accounts_account_status_idx").on(table.accountStatus),
+}));
+
+// Opportunities (Sales Pipeline)
+export const opportunities = pgTable("opportunities", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  accountId: integer("account_id").references(() => accounts.id),
+  contactId: integer("contact_id").references(() => contacts.id),
+  leadId: integer("lead_id").references(() => leads.id),
+  
+  // Basic Information
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Sales Details
+  stage: text("stage").default("prospecting"), // prospecting, qualification, proposal, negotiation, closed-won, closed-lost
+  amount: decimal("amount", { precision: 15, scale: 2 }).default("0.00"),
+  probability: integer("probability").default(0), // 0-100%
+  expectedRevenue: decimal("expected_revenue", { precision: 15, scale: 2 }).default("0.00"),
+  
+  // Timing
+  closeDate: timestamp("close_date"),
+  lastActivityDate: timestamp("last_activity_date"),
+  nextStepDate: timestamp("next_step_date"),
+  nextStep: text("next_step"),
+  
+  // Assignment
+  owner: integer("owner").references(() => users.id),
+  teamId: integer("team_id"),
+  
+  // Classification
+  type: text("type").default("new_business"), // new_business, existing_business, renewal
+  leadSource: text("lead_source"),
+  priority: text("priority").default("medium"), // high, medium, low
+  
+  // Sales Process
+  salesStage: text("sales_stage"), // discovery, demo, proposal, negotiation, closing
+  competitorInfo: text("competitor_info"),
+  painPoints: text("pain_points"),
+  proposalSent: boolean("proposal_sent").default(false),
+  contractSent: boolean("contract_sent").default(false),
+  
+  // Financial
+  discount: decimal("discount", { precision: 5, scale: 2 }).default("0.00"),
+  totalValue: decimal("total_value", { precision: 15, scale: 2 }).default("0.00"),
+  
+  // Status
+  isClosed: boolean("is_closed").default(false),
+  isWon: boolean("is_won").default(false),
+  closedReason: text("closed_reason"),
+  
+  // Metadata
+  tags: text("tags").array().default([]),
+  customFields: jsonb("custom_fields").default({}),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("opportunities_user_id_idx").on(table.userId),
+  accountIdIdx: index("opportunities_account_id_idx").on(table.accountId),
+  stageIdx: index("opportunities_stage_idx").on(table.stage),
+  ownerIdx: index("opportunities_owner_idx").on(table.owner),
+  closeDateIdx: index("opportunities_close_date_idx").on(table.closeDate),
+}));
+
+// Activities (Tasks, Meetings, Calls, Emails)
+export const activities = pgTable("activities", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  
+  // Related Entities
+  contactId: integer("contact_id").references(() => contacts.id),
+  accountId: integer("account_id").references(() => accounts.id),
+  opportunityId: integer("opportunity_id").references(() => opportunities.id),
+  leadId: integer("lead_id").references(() => leads.id),
+  callId: integer("call_id").references(() => calls.id),
+  
+  // Activity Details
+  type: text("type").notNull(), // call, email, meeting, task, note
+  subject: text("subject").notNull(),
+  description: text("description"),
+  status: text("status").default("scheduled"), // scheduled, completed, cancelled
+  priority: text("priority").default("normal"), // high, normal, low
+  
+  // Timing
+  dueDate: timestamp("due_date"),
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  completedAt: timestamp("completed_at"),
+  duration: integer("duration_minutes"),
+  
+  // Assignment
+  assignedTo: integer("assigned_to").references(() => users.id),
+  createdBy: integer("created_by").references(() => users.id),
+  
+  // Outcome
+  outcome: text("outcome"),
+  notes: text("notes"),
+  
+  // Metadata
+  tags: text("tags").array().default([]),
+  customFields: jsonb("custom_fields").default({}),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("activities_user_id_idx").on(table.userId),
+  contactIdIdx: index("activities_contact_id_idx").on(table.contactId),
+  accountIdIdx: index("activities_account_id_idx").on(table.accountId),
+  opportunityIdIdx: index("activities_opportunity_id_idx").on(table.opportunityId),
+  dueDateIdx: index("activities_due_date_idx").on(table.dueDate),
+  statusIdx: index("activities_status_idx").on(table.status),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -1146,6 +1315,25 @@ export const insertContactListMembershipSchema = createInsertSchema(contactListM
   addedAt: true,
 });
 
+// CRM Insert Schemas
+export const insertAccountSchema = createInsertSchema(accounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOpportunitySchema = createInsertSchema(opportunities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertActivitySchema = createInsertSchema(activities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -1203,6 +1391,14 @@ export type ContactList = typeof contactLists.$inferSelect;
 export type InsertContactList = z.infer<typeof insertContactListSchema>;
 export type ContactListMembership = typeof contactListMemberships.$inferSelect;
 export type InsertContactListMembership = z.infer<typeof insertContactListMembershipSchema>;
+
+// CRM Types
+export type Account = typeof accounts.$inferSelect;
+export type InsertAccount = z.infer<typeof insertAccountSchema>;
+export type Opportunity = typeof opportunities.$inferSelect;
+export type InsertOpportunity = z.infer<typeof insertOpportunitySchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
 
 // Phase 3 Feature Types
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
