@@ -190,7 +190,7 @@
   }
   
   .card-modern {
-    @apply bg-card rounded-lg border border-border/60 shadow-sm;
+    @apply bg-card rounded-lg border border-border shadow-sm;
   }
   
   .card-hover {
