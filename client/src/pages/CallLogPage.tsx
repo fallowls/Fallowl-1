@@ -3,38 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, isWithinInterval, formatDistanceToNow } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { 
-  Phone, 
-  PhoneIncoming, 
-  PhoneOutgoing, 
-  PhoneMissed, 
-  Clock, 
-  Star,
-  Search,
-  Download,
-  FileText,
-  AlertCircle,
-  CheckCircle,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  ExternalLink,
-  PlayCircle,
-  Calendar,
-  UserPlus,
-  MessageSquare,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  FileAudio,
-  Play,
-  Trash2,
-  Eye,
-  HardDrive,
-  Activity,
-  Pause,
-  Volume2,
-  VolumeX
+  Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneCall, PhoneOff,
+  Clock, Star, Search, Download, FileText, AlertCircle, CheckCircle,
+  RefreshCw, ChevronDown, ChevronUp, Copy, ExternalLink, PlayCircle,
+  Calendar, UserPlus, MessageSquare, TrendingUp, TrendingDown, Minus,
+  FileAudio, Play, Trash2, Eye, Activity, XCircle, Voicemail as VoicemailIcon,
+  Filter, Users, PhoneForwarded, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,13 +17,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Label } from '@/components/ui/label';
 import { CallLogPageSkeleton } from '@/components/skeletons/CallLogPageSkeleton';
 import { AdvancedFilters } from '@/components/filters/AdvancedFilters';
 import { InlineAudioPlayer } from '@/components/InlineAudioPlayer';
@@ -71,19 +42,54 @@ interface CallLogStats {
   averageCallQuality: number;
 }
 
+interface CallStatusGroups {
+  queued: Call[];
+  initiated: Call[];
+  ringing: Call[];
+  inProgress: Call[];
+  completed: Call[];
+  busy: Call[];
+  failed: Call[];
+  noAnswer: Call[];
+  voicemail: Call[];
+  dropped: Call[];
+  canceled: Call[];
+}
+
+interface CallSummary {
+  totalCalls: number;
+  active: number;
+  connected: number;
+  completed: number;
+  failed: number;
+  voicemail: number;
+  dropped: number;
+}
+
+interface CallStatusData {
+  grouped: CallStatusGroups;
+  summary: CallSummary;
+}
+
 interface CallLogFilters {
   search: string;
   status: string;
   type: string;
   dateRange?: DateRange;
   disposition?: string;
+  quickFilter: 'all' | 'active' | 'completed' | 'failed';
 }
 
 interface CallWithRecordings extends Call {
   recordings?: Recording[];
+  agentName?: string | null;
+  contactName?: string | null;
 }
 
 const getCallIcon = (type: string, status: string) => {
+  if (status === 'in-progress' || status === 'ringing') {
+    return PhoneCall;
+  }
   if (type === 'incoming' || type === 'inbound') {
     return status === 'completed' ? PhoneIncoming : PhoneMissed;
   } else if (type === 'outgoing' || type === 'outbound') {
@@ -95,28 +101,16 @@ const getCallIcon = (type: string, status: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    case 'missed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-    case 'busy': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+    case 'in-progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+    case 'ringing': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+    case 'queued': 
+    case 'initiated': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+    case 'missed':
+    case 'no-answer': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+    case 'busy':
     case 'failed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    case 'voicemail': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
     case 'cancelled': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-  }
-};
-
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-    case 'normal': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-    case 'low': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-  }
-};
-
-const getSentimentColor = (sentiment: string) => {
-  switch (sentiment) {
-    case 'positive': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    case 'negative': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-    case 'neutral': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
   }
 };
@@ -130,12 +124,24 @@ const formatDuration = (seconds: number) => {
 const formatCost = (cost: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'USD',
+    minimumFractionDigits: 4
   }).format(cost);
 };
 
+const formatPhoneNumber = (phone: string) => {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 11 && cleaned.startsWith('1')) {
+    const areaCode = cleaned.substring(1, 4);
+    const prefix = cleaned.substring(4, 7);
+    const lineNumber = cleaned.substring(7);
+    return `+1 (${areaCode}) ${prefix}-${lineNumber}`;
+  }
+  return phone;
+};
+
 export default function CallLogPage() {
-  const [selectedCall, setSelectedCall] = useState<Call | null>(null);
+  const [selectedCall, setSelectedCall] = useState<CallWithRecordings | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CallLogFilters>({
     search: '',
@@ -143,12 +149,79 @@ export default function CallLogPage() {
     type: 'all',
     dateRange: undefined,
     disposition: 'all',
+    quickFilter: 'all',
   });
   const [expandedCallId, setExpandedCallId] = useState<number | null>(null);
   const [playingRecording, setPlayingRecording] = useState<{ recording: Recording; audioUrl: string } | null>(null);
+  const [liveTimers, setLiveTimers] = useState<Record<number, number>>({});
   const { isConnected } = useWebSocket();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch call logs
+  const { data: calls = [], isLoading: callsLoading, refetch: refetchCalls } = useQuery<CallWithRecordings[]>({
+    queryKey: ['/api/calls'],
+  });
+
+  // Fetch call status for live updates
+  const { data: statusData, refetch: refetchStatus } = useQuery<CallStatusData>({
+    queryKey: ['/api/calls/by-status'],
+    refetchInterval: 3000
+  });
+
+  // Fetch stats
+  const { data: stats, isLoading: statsLoading } = useQuery<CallLogStats>({
+    queryKey: ['/api/calls/stats'],
+  });
+
+  // Fetch recordings
+  const { data: allRecordings = [] } = useQuery<Recording[]>({
+    queryKey: ['/api/recordings?limit=1000'],
+    select: (data: any) => data?.recordings || [],
+  });
+
+  // Live timer effect for active calls
+  useEffect(() => {
+    const activeCalls = calls.filter(call => 
+      call.status === 'in-progress' || call.status === 'ringing'
+    );
+
+    if (activeCalls.length === 0) return;
+
+    const interval = setInterval(() => {
+      setLiveTimers(prev => {
+        const newTimers = { ...prev };
+        activeCalls.forEach(call => {
+          newTimers[call.id] = (newTimers[call.id] || call.duration || 0) + 1;
+        });
+        return newTimers;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [calls]);
+
+  // WebSocket event listeners for live updates
+  useEffect(() => {
+    const handleCallUpdate = () => {
+      refetchCalls();
+      refetchStatus();
+    };
+
+    window.addEventListener('call_update', handleCallUpdate);
+    window.addEventListener('new_call', handleCallUpdate);
+    window.addEventListener('parallel_call_status', handleCallUpdate);
+    window.addEventListener('parallel_call_connected', handleCallUpdate);
+    window.addEventListener('parallel_call_ended', handleCallUpdate);
+
+    return () => {
+      window.removeEventListener('call_update', handleCallUpdate);
+      window.removeEventListener('new_call', handleCallUpdate);
+      window.removeEventListener('parallel_call_status', handleCallUpdate);
+      window.removeEventListener('parallel_call_connected', handleCallUpdate);
+      window.removeEventListener('parallel_call_ended', handleCallUpdate);
+    };
+  }, [refetchCalls, refetchStatus]);
 
   useEffect(() => {
     return () => {
@@ -157,67 +230,6 @@ export default function CallLogPage() {
       }
     };
   }, [playingRecording]);
-  
-  const filterConfig = [
-    {
-      type: 'text' as const,
-      label: 'Search',
-      field: 'search',
-      placeholder: 'Search by phone, location, or notes',
-    },
-    {
-      type: 'select' as const,
-      label: 'Status',
-      field: 'status',
-      options: [
-        { value: 'completed', label: 'Completed' },
-        { value: 'missed', label: 'Missed' },
-        { value: 'busy', label: 'Busy' },
-        { value: 'failed', label: 'Failed' },
-        { value: 'cancelled', label: 'Cancelled' },
-      ],
-    },
-    {
-      type: 'select' as const,
-      label: 'Type',
-      field: 'type',
-      options: [
-        { value: 'inbound', label: 'Inbound' },
-        { value: 'outbound', label: 'Outbound' },
-      ],
-    },
-    {
-      type: 'select' as const,
-      label: 'Disposition',
-      field: 'disposition',
-      options: [
-        { value: 'answered', label: 'Answered' },
-        { value: 'voicemail', label: 'Voicemail' },
-        { value: 'no-answer', label: 'No Answer' },
-        { value: 'human', label: 'Human' },
-        { value: 'machine', label: 'Machine' },
-      ],
-    },
-    {
-      type: 'dateRange' as const,
-      label: 'Date Range',
-      field: 'dateRange',
-      placeholder: 'Filter by date range',
-    },
-  ];
-
-  const { data: calls = [], isLoading, refetch } = useQuery<CallWithRecordings[]>({
-    queryKey: ['/api/calls'],
-  });
-
-  const { data: stats, isLoading: statsLoading } = useQuery<CallLogStats>({
-    queryKey: ['/api/calls/stats'],
-  });
-
-  const { data: allRecordings = [] } = useQuery<Recording[]>({
-    queryKey: ['/api/recordings?limit=1000'],
-    select: (data: any) => data?.recordings || [],
-  });
 
   const deleteRecordingMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -240,12 +252,23 @@ export default function CallLogPage() {
     },
   });
 
+  // Merge recordings with calls
   const callsWithRecordings = calls.map(call => ({
     ...call,
     recordings: allRecordings.filter((rec: Recording) => rec.callId === call.id)
   }));
 
+  // Apply filters
   const filteredCalls = callsWithRecordings.filter(call => {
+    // Quick filter
+    if (filters.quickFilter === 'active') {
+      if (!['queued', 'initiated', 'ringing', 'in-progress'].includes(call.status)) return false;
+    } else if (filters.quickFilter === 'completed') {
+      if (call.status !== 'completed') return false;
+    } else if (filters.quickFilter === 'failed') {
+      if (!['failed', 'busy', 'no-answer', 'missed', 'voicemail', 'dropped'].includes(call.status)) return false;
+    }
+
     const matchesSearch = !filters.search || 
       call.phone.includes(filters.search) || 
       call.location?.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -263,6 +286,15 @@ export default function CallLogPage() {
     
     return matchesSearch && matchesStatus && matchesType && matchesDisposition && matchesDateRange;
   });
+
+  // Calculate quick stats from status data
+  const { grouped = {} as CallStatusGroups, summary = {} as CallSummary } = statusData || {};
+  const activeCalls = [
+    ...(grouped.queued || []),
+    ...(grouped.initiated || []),
+    ...(grouped.ringing || []),
+    ...(grouped.inProgress || [])
+  ];
 
   const handlePlay = async (recording: Recording) => {
     try {
@@ -330,76 +362,280 @@ export default function CallLogPage() {
     setExpandedCallId(expandedCallId === callId ? null : callId);
   };
 
-  if (isLoading || statsLoading) {
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: `${label} copied to clipboard`,
+    });
+  };
+
+  if (callsLoading || statsLoading) {
     return <CallLogPageSkeleton />;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="space-y-4 p-6">
+      {/* Header with live status badge */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Call Log</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">View and manage all your calls with recordings</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Call Logs</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Real-time call monitoring and historical logs
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {isConnected && (
+            <Badge variant="outline" className="gap-2">
+              <Activity className="w-3 h-3 animate-pulse text-green-500" />
+              Live Updates
+            </Badge>
+          )}
+          <Button variant="outline" size="sm" onClick={() => { refetchCalls(); refetchStatus(); }} data-testid="button-refresh">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      {/* Quick Stats Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <Card className="p-3" data-testid="card-total-calls">
-          <div className="text-xs text-gray-600 dark:text-gray-400">Total Calls</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats?.totalCalls || 0}</div>
+          <div className="flex items-center gap-2 mb-1">
+            <Phone className="w-4 h-4 text-gray-500" />
+            <div className="text-xs text-gray-600 dark:text-gray-400">Total</div>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats?.totalCalls || 0}</div>
         </Card>
+        
+        <Card className="p-3 border-blue-200 dark:border-blue-800" data-testid="card-active-calls">
+          <div className="flex items-center gap-2 mb-1">
+            <Zap className="w-4 h-4 text-blue-500" />
+            <div className="text-xs text-gray-600 dark:text-gray-400">Active</div>
+          </div>
+          <div className="text-2xl font-bold text-blue-500">{summary.active || 0}</div>
+          <div className="text-[10px] text-gray-500">{summary.connected || 0} connected</div>
+        </Card>
+
+        <Card className="p-3 border-green-200 dark:border-green-800" data-testid="card-completed">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <div className="text-xs text-gray-600 dark:text-gray-400">Completed</div>
+          </div>
+          <div className="text-2xl font-bold text-green-500">{summary.completed || 0}</div>
+        </Card>
+
+        <Card className="p-3 border-red-200 dark:border-red-800" data-testid="card-failed">
+          <div className="flex items-center gap-2 mb-1">
+            <XCircle className="w-4 h-4 text-red-500" />
+            <div className="text-xs text-gray-600 dark:text-gray-400">Failed</div>
+          </div>
+          <div className="text-2xl font-bold text-red-500">{summary.failed || 0}</div>
+          <div className="text-[10px] text-gray-500">{summary.voicemail || 0} VM</div>
+        </Card>
+
         <Card className="p-3" data-testid="card-success-rate">
-          <div className="text-xs text-gray-600 dark:text-gray-400">Success Rate</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {stats?.callSuccessRate ? `${Number(stats.callSuccessRate).toFixed(2)}%` : '0%'}
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="w-4 h-4 text-gray-500" />
+            <div className="text-xs text-gray-600 dark:text-gray-400">Success</div>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {stats?.callSuccessRate ? `${Number(stats.callSuccessRate).toFixed(0)}%` : '0%'}
           </div>
         </Card>
+
         <Card className="p-3" data-testid="card-avg-duration">
-          <div className="text-xs text-gray-600 dark:text-gray-400">Avg Duration</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4 text-gray-500" />
+            <div className="text-xs text-gray-600 dark:text-gray-400">Avg Time</div>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {stats?.averageDuration ? formatDuration(Math.round(stats.averageDuration)) : '0:00'}
           </div>
         </Card>
+
         <Card className="p-3" data-testid="card-total-cost">
-          <div className="text-xs text-gray-600 dark:text-gray-400">Total Cost</div>
+          <div className="flex items-center gap-2 mb-1">
+            <Activity className="w-4 h-4 text-gray-500" />
+            <div className="text-xs text-gray-600 dark:text-gray-400">Cost</div>
+          </div>
           <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {stats?.totalCost ? formatCost(stats.totalCost) : '$0.00'}
+            ${stats?.totalCost ? Number(stats.totalCost).toFixed(2) : '0.00'}
           </div>
         </Card>
       </div>
 
-      <AdvancedFilters
-        filters={filters}
-        onChange={(newFilters) => setFilters(newFilters as CallLogFilters)}
-        config={filterConfig}
-        showFilters={showFilters}
-        onToggle={() => setShowFilters(!showFilters)}
-      />
+      {/* Quick Filter Tabs */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          variant={filters.quickFilter === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilters(prev => ({ ...prev, quickFilter: 'all' }))}
+          data-testid="filter-all"
+        >
+          All Calls
+        </Button>
+        <Button
+          variant={filters.quickFilter === 'active' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilters(prev => ({ ...prev, quickFilter: 'active' }))}
+          data-testid="filter-active"
+          className={filters.quickFilter === 'active' ? 'bg-blue-500 hover:bg-blue-600' : ''}
+        >
+          <Zap className="w-3 h-3 mr-1" />
+          Active ({activeCalls.length})
+        </Button>
+        <Button
+          variant={filters.quickFilter === 'completed' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilters(prev => ({ ...prev, quickFilter: 'completed' }))}
+          data-testid="filter-completed"
+          className={filters.quickFilter === 'completed' ? 'bg-green-500 hover:bg-green-600' : ''}
+        >
+          <CheckCircle className="w-3 h-3 mr-1" />
+          Completed
+        </Button>
+        <Button
+          variant={filters.quickFilter === 'failed' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilters(prev => ({ ...prev, quickFilter: 'failed' }))}
+          data-testid="filter-failed"
+          className={filters.quickFilter === 'failed' ? 'bg-red-500 hover:bg-red-600' : ''}
+        >
+          <XCircle className="w-3 h-3 mr-1" />
+          Failed
+        </Button>
+        
+        <div className="flex-1" />
+        
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search phone, location, notes..."
+            value={filters.search}
+            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            className="pl-9 h-9"
+            data-testid="input-search"
+          />
+        </div>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          data-testid="button-toggle-filters"
+        >
+          <Filter className="w-4 h-4 mr-1" />
+          {showFilters ? 'Hide' : 'More'} Filters
+        </Button>
+      </div>
 
+      {/* Advanced Filters (collapsible) */}
+      {showFilters && (
+        <Card className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label className="text-xs font-medium mb-1 block">Status</label>
+              <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+                <SelectTrigger className="h-9" data-testid="select-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="in-progress">In Progress</SelectItem>
+                  <SelectItem value="ringing">Ringing</SelectItem>
+                  <SelectItem value="missed">Missed</SelectItem>
+                  <SelectItem value="busy">Busy</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="voicemail">Voicemail</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-xs font-medium mb-1 block">Type</label>
+              <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}>
+                <SelectTrigger className="h-9" data-testid="select-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="inbound">Inbound</SelectItem>
+                  <SelectItem value="outbound">Outbound</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-xs font-medium mb-1 block">Disposition</label>
+              <Select value={filters.disposition || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, disposition: value }))}>
+                <SelectTrigger className="h-9" data-testid="select-disposition">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Dispositions</SelectItem>
+                  <SelectItem value="answered">Answered</SelectItem>
+                  <SelectItem value="voicemail">Voicemail</SelectItem>
+                  <SelectItem value="no-answer">No Answer</SelectItem>
+                  <SelectItem value="human">Human</SelectItem>
+                  <SelectItem value="machine">Machine</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFilters({
+                  search: '',
+                  status: 'all',
+                  type: 'all',
+                  disposition: 'all',
+                  quickFilter: 'all',
+                })}
+                className="w-full"
+                data-testid="button-clear-filters"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Compact Call Log Table */}
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40px]"></TableHead>
-                  <TableHead className="w-[200px]">Contact</TableHead>
-                  <TableHead className="w-[80px]">Duration</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead className="w-[100px]">Recording</TableHead>
-                  <TableHead className="w-[120px]">Time</TableHead>
+                <TableRow className="bg-gray-50 dark:bg-gray-900/50">
+                  <TableHead className="w-[30px]"></TableHead>
+                  <TableHead className="w-[40px]">
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Activity className="w-4 h-4 text-gray-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>Status</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="min-w-[180px]">Contact / Phone</TableHead>
+                  <TableHead className="w-[80px]">Time</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="w-[70px]">Type</TableHead>
+                  <TableHead className="w-[80px]">Recording</TableHead>
+                  <TableHead className="w-[100px]">When</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCalls.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      No calls found
+                    <TableCell colSpan={9} className="text-center py-12 text-gray-500 dark:text-gray-400">
+                      <PhoneMissed className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p>No calls found</p>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -407,6 +643,8 @@ export default function CallLogPage() {
                     const CallIcon = getCallIcon(call.type, call.status);
                     const isExpanded = expandedCallId === call.id;
                     const hasRecordings = call.recordings && call.recordings.length > 0;
+                    const isActive = ['in-progress', 'ringing', 'queued', 'initiated'].includes(call.status);
+                    const displayDuration = isActive ? (liveTimers[call.id] || call.duration || 0) : (call.duration || 0);
                     
                     return (
                       <>
@@ -414,11 +652,12 @@ export default function CallLogPage() {
                           key={call.id} 
                           data-testid={`row-call-${call.id}`}
                           className={cn(
-                            "cursor-pointer hover:bg-muted/50",
-                            isExpanded && "bg-muted/30"
+                            "cursor-pointer hover:bg-muted/50 transition-colors",
+                            isExpanded && "bg-muted/30",
+                            isActive && "bg-blue-50/50 dark:bg-blue-950/20"
                           )}
                         >
-                          <TableCell>
+                          <TableCell className="p-2">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -427,202 +666,173 @@ export default function CallLogPage() {
                               data-testid={`button-expand-${call.id}`}
                             >
                               {isExpanded ? (
-                                <ChevronUp className="h-4 w-4" />
+                                <ChevronUp className="h-3 w-3" />
                               ) : (
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-3 w-3" />
                               )}
                             </Button>
                           </TableCell>
-                          <TableCell onClick={() => toggleCallExpanded(call.id)}>
-                            <div className="flex items-center space-x-2">
-                              <CallIcon className={cn("w-4 h-4", 
-                                call.status === 'completed' ? 'text-green-500 dark:text-green-400' : 
-                                call.status === 'missed' ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
-                              )} />
-                              <div className="min-w-0">
-                                <div className="font-medium text-sm truncate text-gray-900 dark:text-gray-100">{call.phone}</div>
-                                {call.location && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{call.location}</div>
-                                )}
+                          
+                          <TableCell className="p-2" onClick={() => toggleCallExpanded(call.id)}>
+                            <CallIcon className={cn(
+                              "w-4 h-4",
+                              call.status === 'completed' ? 'text-green-500' :
+                              isActive ? 'text-blue-500 animate-pulse' :
+                              call.status === 'missed' ? 'text-red-500' : 'text-gray-400'
+                            )} />
+                          </TableCell>
+                          
+                          <TableCell className="p-2" onClick={() => toggleCallExpanded(call.id)}>
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm truncate text-gray-900 dark:text-gray-100">
+                                {call.contactName || formatPhoneNumber(call.phone)}
                               </div>
+                              {call.location && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{call.location}</div>
+                              )}
                             </div>
                           </TableCell>
-                          <TableCell onClick={() => toggleCallExpanded(call.id)}>
-                            <div className="flex items-center space-x-1 text-sm text-gray-900 dark:text-gray-100">
-                              <Clock className="w-3 h-3 text-gray-400" />
-                              <span>{formatDuration(call.duration || 0)}</span>
+                          
+                          <TableCell className="p-2" onClick={() => toggleCallExpanded(call.id)}>
+                            <div className={cn(
+                              "text-sm font-mono",
+                              isActive && "text-blue-600 dark:text-blue-400 font-semibold"
+                            )}>
+                              {formatDuration(displayDuration)}
                             </div>
                           </TableCell>
-                          <TableCell onClick={() => toggleCallExpanded(call.id)}>
-                            <Badge className={getStatusColor(call.status)} data-testid={`badge-status-${call.status}`}>
+                          
+                          <TableCell className="p-2" onClick={() => toggleCallExpanded(call.id)}>
+                            <Badge className={cn("text-xs", getStatusColor(call.status))} data-testid={`badge-status-${call.status}`}>
                               {call.status}
                             </Badge>
                           </TableCell>
-                          <TableCell onClick={() => toggleCallExpanded(call.id)}>
+                          
+                          <TableCell className="p-2" onClick={() => toggleCallExpanded(call.id)}>
+                            <span className="text-xs text-gray-600 dark:text-gray-400 capitalize">{call.type}</span>
+                          </TableCell>
+                          
+                          <TableCell className="p-2" onClick={() => toggleCallExpanded(call.id)}>
                             {hasRecordings ? (
-                              <div className="flex items-center gap-2">
-                                <Badge variant="default" className="text-xs gap-1">
-                                  <FileAudio className="h-3 w-3" />
+                              <div className="flex items-center gap-1">
+                                <Badge variant="default" className="text-xs h-5 px-1.5">
+                                  <FileAudio className="h-3 w-3 mr-0.5" />
                                   {call.recordings!.length}
                                 </Badge>
-                                {call.recordings!.some(r => r.transcript) && (
-                                  <MessageSquare className="h-3 w-3 text-green-500" />
-                                )}
                               </div>
                             ) : (
-                              <span className="text-xs text-gray-400">None</span>
+                              <span className="text-xs text-gray-400">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-sm text-gray-900 dark:text-gray-100" onClick={() => toggleCallExpanded(call.id)}>
-                            {call.createdAt ? format(new Date(call.createdAt), 'MMM d, HH:mm') : '-'}
+                          
+                          <TableCell className="p-2 text-xs text-gray-600 dark:text-gray-400" onClick={() => toggleCallExpanded(call.id)}>
+                            {call.createdAt ? formatDistanceToNow(new Date(call.createdAt), { addSuffix: true }) : '-'}
                           </TableCell>
-                          <TableCell>
+                          
+                          <TableCell className="p-2">
                             <Button 
                               variant="ghost" 
                               size="sm" 
                               onClick={() => setSelectedCall(call)}
-                              className="h-8 text-xs"
+                              className="h-7 text-xs px-2"
                               data-testid={`button-view-call-${call.id}`}
                             >
                               <Eye className="h-3 w-3 mr-1" />
-                              Details
+                              View
                             </Button>
                           </TableCell>
                         </TableRow>
 
-                        {isExpanded && hasRecordings && (
+                        {/* Expanded Row Details */}
+                        {isExpanded && (
                           <TableRow>
-                            <TableCell colSpan={7} className="p-0 bg-muted/20 border-l-4 border-primary">
+                            <TableCell colSpan={9} className="p-0 bg-muted/10 border-l-4 border-primary">
                               <div className="p-4 space-y-3">
-                                <div className="flex items-center gap-2 mb-3">
-                                  <FileAudio className="h-4 w-4 text-primary" />
-                                  <span className="font-medium text-sm">
-                                    {call.recordings!.length} Recording{call.recordings!.length > 1 ? 's' : ''}
-                                  </span>
-                                </div>
-                                
-                                {call.recordings!.map((recording, idx) => (
-                                  <div key={recording.id} className="bg-background rounded-lg border p-3 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs font-medium text-muted-foreground">
-                                            Recording #{idx + 1}
-                                          </span>
-                                          <Badge variant="outline" className="text-xs">
-                                            {recording.direction}
-                                          </Badge>
-                                        </div>
-                                        <span className="text-sm font-medium">
-                                          {formatRecordingDuration(recording.duration)}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {recording.createdAt ? formatDistanceToNow(new Date(recording.createdAt), { addSuffix: true }) : 'Unknown'}
-                                        </span>
+                                {/* Quick Info Grid */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                  {call.sipCallId && (
+                                    <div>
+                                      <span className="text-gray-500">SIP Call ID:</span>
+                                      <div className="font-mono text-gray-900 dark:text-gray-100 truncate" title={call.sipCallId}>
+                                        {call.sipCallId.substring(0, 20)}...
                                       </div>
-                                      
-                                      <div className="flex items-center gap-1">
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
+                                    </div>
+                                  )}
+                                  {call.cost && (
+                                    <div>
+                                      <span className="text-gray-500">Cost:</span>
+                                      <div className="font-semibold text-gray-900 dark:text-gray-100">{formatCost(Number(call.cost))}</div>
+                                    </div>
+                                  )}
+                                  {call.disposition && (
+                                    <div>
+                                      <span className="text-gray-500">Disposition:</span>
+                                      <Badge variant="outline" className="text-xs capitalize">{call.disposition}</Badge>
+                                    </div>
+                                  )}
+                                  {call.outcome && (
+                                    <div>
+                                      <span className="text-gray-500">Outcome:</span>
+                                      <Badge variant="outline" className="text-xs capitalize">{call.outcome}</Badge>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Recordings */}
+                                {hasRecordings && (
+                                  <div className="border-t pt-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <FileAudio className="h-4 w-4 text-primary" />
+                                      <span className="font-medium text-sm">
+                                        Recording{call.recordings!.length > 1 ? 's' : ''}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      {call.recordings!.map((recording, idx) => (
+                                        <div key={recording.id} className="bg-background rounded border p-2 flex items-center justify-between">
+                                          <div className="flex items-center gap-2 text-xs">
+                                            <span className="font-medium">#{idx + 1}</span>
+                                            <Badge variant="outline" className="text-xs">{recording.direction}</Badge>
+                                            <span className="font-mono">{formatRecordingDuration(recording.duration)}</span>
+                                            {recording.transcript && (
+                                              <MessageSquare className="h-3 w-3 text-green-500" />
+                                            )}
+                                          </div>
+                                          
+                                          <div className="flex items-center gap-1">
                                             <Button
                                               variant="outline"
                                               size="sm"
                                               onClick={() => handlePlay(recording)}
-                                              className="h-8 w-8 p-0"
+                                              className="h-7 w-7 p-0"
                                               data-testid={`button-play-${recording.id}`}
                                             >
                                               <Play className="h-3 w-3" />
                                             </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Play recording</TooltipContent>
-                                        </Tooltip>
-                                        
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
                                             <Button
                                               variant="outline"
                                               size="sm"
                                               onClick={() => handleDownload(recording)}
-                                              className="h-8 w-8 p-0"
+                                              className="h-7 w-7 p-0"
                                               data-testid={`button-download-${recording.id}`}
                                             >
                                               <Download className="h-3 w-3" />
                                             </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Download recording</TooltipContent>
-                                        </Tooltip>
-
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => handleDeleteRecording(recording)}
-                                              disabled={deleteRecordingMutation.isPending}
-                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                                              data-testid={`button-delete-${recording.id}`}
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Delete recording</TooltipContent>
-                                        </Tooltip>
-                                      </div>
-                                    </div>
-
-                                    {playingRecording?.recording.id === recording.id && (
-                                      <div className="pt-2 border-t">
-                                        <InlineAudioPlayer
-                                          recording={playingRecording.recording}
-                                          audioUrl={playingRecording.audioUrl}
-                                          onClose={handleClosePlayer}
-                                          onDownload={() => handleDownload(recording)}
-                                        />
-                                      </div>
-                                    )}
-
-                                    {recording.transcript && (
-                                      <div className="pt-2 border-t">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <MessageSquare className="h-3 w-3 text-green-500" />
-                                          <span className="text-xs font-medium">Transcript</span>
+                                          </div>
                                         </div>
-                                        <ScrollArea className="h-32 w-full rounded border bg-muted/20 p-2">
-                                          <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                                            {recording.transcript}
-                                          </p>
-                                        </ScrollArea>
-                                      </div>
-                                    )}
-
-                                  </div>
-                                ))}
-
-                                {call.summary && (
-                                  <div className="mt-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <FileText className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                                      <span className="text-xs font-medium text-purple-900 dark:text-purple-100">Call Summary</span>
+                                      ))}
                                     </div>
-                                    <p className="text-xs text-gray-700 dark:text-gray-300">
-                                      {call.summary}
-                                    </p>
                                   </div>
                                 )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
 
-                        {isExpanded && !hasRecordings && (
-                          <TableRow>
-                            <TableCell colSpan={7} className="p-0 bg-muted/20">
-                              <div className="p-8 text-center">
-                                <FileAudio className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No recordings available</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                  Recording may not have been enabled for this call
-                                </p>
+                                {/* Summary/Notes */}
+                                {call.summary && (
+                                  <div className="border-t pt-3">
+                                    <span className="text-xs font-medium text-gray-500">Summary:</span>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100 mt-1">{call.summary}</p>
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -637,506 +847,136 @@ export default function CallLogPage() {
         </CardContent>
       </Card>
 
+      {/* Audio Player Modal */}
+      {playingRecording && (
+        <InlineAudioPlayer
+          recording={playingRecording.recording}
+          audioUrl={playingRecording.audioUrl}
+          onClose={handleClosePlayer}
+        />
+      )}
+
+      {/* Call Details Dialog */}
       {selectedCall && (
         <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Call Details - {selectedCall.phone}</DialogTitle>
+              <DialogTitle>Call Details</DialogTitle>
             </DialogHeader>
-            <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
-              <CallDetailModal call={selectedCall} />
+            
+            <div className="space-y-4">
+              {/* Basic Info */}
+              <Card className="p-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Phone:</span>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">{formatPhoneNumber(selectedCall.phone)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Status:</span>
+                    <div><Badge className={getStatusColor(selectedCall.status)}>{selectedCall.status}</Badge></div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Duration:</span>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">{formatDuration(selectedCall.duration || 0)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Cost:</span>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">{selectedCall.cost ? formatCost(Number(selectedCall.cost)) : 'N/A'}</div>
+                  </div>
+                  {selectedCall.location && (
+                    <div>
+                      <span className="text-gray-500">Location:</span>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">{selectedCall.location}</div>
+                    </div>
+                  )}
+                  {selectedCall.carrier && (
+                    <div>
+                      <span className="text-gray-500">Carrier:</span>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">{selectedCall.carrier}</div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Summary */}
+              {selectedCall.summary && (
+                <Card className="p-4">
+                  <div className="text-sm font-semibold mb-2">Summary</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{selectedCall.summary}</p>
+                </Card>
+              )}
+
+              {/* Recordings in dialog */}
+              {selectedCall.recordings && selectedCall.recordings.length > 0 && (
+                <Card className="p-4">
+                  <div className="text-sm font-semibold mb-3">Recordings</div>
+                  <div className="space-y-2">
+                    {selectedCall.recordings.map((recording, idx) => (
+                      <div key={recording.id} className="bg-muted/50 rounded p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="font-medium">Recording #{idx + 1}</span>
+                          <Badge variant="outline">{recording.direction}</Badge>
+                          <span className="font-mono">{formatRecordingDuration(recording.duration)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePlay(recording)}
+                            data-testid={`button-play-dialog-${recording.id}`}
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            Play
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownload(recording)}
+                            data-testid={`button-download-dialog-${recording.id}`}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* Technical Details */}
+              {(selectedCall.sipCallId || selectedCall.codec || selectedCall.hangupReason) && (
+                <Card className="p-4">
+                  <div className="text-sm font-semibold mb-3">Technical Details</div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {selectedCall.sipCallId && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500">SIP Call ID:</span>
+                        <div className="font-mono text-xs bg-muted p-2 rounded mt-1 break-all">
+                          {selectedCall.sipCallId}
+                        </div>
+                      </div>
+                    )}
+                    {selectedCall.codec && (
+                      <div>
+                        <span className="text-gray-500">Codec:</span>
+                        <Badge variant="outline" className="mt-1">{selectedCall.codec}</Badge>
+                      </div>
+                    )}
+                    {selectedCall.hangupReason && (
+                      <div>
+                        <span className="text-gray-500">Hangup Reason:</span>
+                        <Badge variant="outline" className="mt-1">{selectedCall.hangupReason}</Badge>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
             </div>
           </DialogContent>
         </Dialog>
       )}
-    </div>
-  );
-}
-
-function CallDetailModal({ call }: { call: Call }) {
-  const getSentimentIcon = (sentiment: string | null) => {
-    if (!sentiment) return <Minus className="w-4 h-4 text-gray-400" />;
-    switch (sentiment) {
-      case 'positive':
-        return <TrendingUp className="w-4 h-4 text-green-500" />;
-      case 'negative':
-        return <TrendingDown className="w-4 h-4 text-red-500" />;
-      default:
-        return <Minus className="w-4 h-4 text-gray-400" />;
-    }
-  };
-
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    alert(`${label} copied to clipboard`);
-  };
-
-  return (
-    <div className="w-full">
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="recording">Recording & Transcript</TabsTrigger>
-          <TabsTrigger value="technical">Technical Details</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-4 mt-4 pb-4">
-        {call.recordingUrl && (
-          <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <PlayCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Call Recording</span>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => window.open(call.recordingUrl!, '_blank')}
-                className="text-xs"
-                data-testid="button-download-recording"
-              >
-                <Download className="w-3 h-3 mr-1" />
-                Download
-              </Button>
-            </div>
-            <audio controls className="w-full" src={call.recordingUrl}>
-              Your browser does not support the audio element.
-            </audio>
-          </Card>
-        )}
-
-        {call.summary && (
-          <Card className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800">
-            <div className="flex items-center space-x-2 mb-2">
-              <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span className="text-sm font-medium text-purple-900 dark:text-purple-100">AI Summary</span>
-            </div>
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{call.summary}</p>
-          </Card>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="p-4">
-            <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">Call Information</div>
-            <div className="space-y-2.5">
-              <div className="flex justify-between text-sm items-center">
-                <span className="text-gray-600 dark:text-gray-400">Phone:</span>
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{call.phone}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => copyToClipboard(call.phone, 'Phone number')}
-                    className="h-6 w-6 p-0"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Type:</span>
-                <Badge variant="outline" className="capitalize">{call.type}</Badge>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Status:</span>
-                <Badge className={getStatusColor(call.status)}>{call.status}</Badge>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Duration:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{formatDuration(call.duration || 0)}</span>
-              </div>
-              {call.answeredBy && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Answered By:</span>
-                  <Badge variant="secondary" className="capitalize">{call.answeredBy.replace('_', ' ')}</Badge>
-                </div>
-              )}
-              {call.disposition && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Disposition:</span>
-                  <Badge variant="outline" className="capitalize">{call.disposition.replace('_', ' ')}</Badge>
-                </div>
-              )}
-              {call.outcome && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Outcome:</span>
-                  <Badge variant="secondary" className="capitalize">{call.outcome.replace('-', ' ')}</Badge>
-                </div>
-              )}
-              {call.createdAt && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Date & Time:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {format(new Date(call.createdAt), 'MMM d, yyyy HH:mm')}
-                  </span>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">Call Metrics</div>
-            <div className="space-y-2.5">
-              <div className="flex justify-between text-sm items-center">
-                <span className="text-gray-600 dark:text-gray-400">Quality Rating:</span>
-                <div className="flex items-center space-x-1">
-                  {call.callQuality ? (
-                    <>
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-3 h-3 ${
-                            i < call.callQuality! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
-                      <span className="ml-1 text-gray-900 dark:text-gray-100">({call.callQuality}/5)</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-500">N/A</span>
-                  )}
-                </div>
-              </div>
-              {call.sentiment && (
-                <div className="flex justify-between text-sm items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Sentiment:</span>
-                  <div className="flex items-center space-x-2">
-                    {getSentimentIcon(call.sentiment)}
-                    <Badge className={cn(getSentimentColor(call.sentiment), "capitalize")}>
-                      {call.sentiment}
-                    </Badge>
-                  </div>
-                </div>
-              )}
-              {call.priority && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Priority:</span>
-                  <Badge className={cn(getPriorityColor(call.priority), "capitalize")}>{call.priority}</Badge>
-                </div>
-              )}
-              {call.location && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Location:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{call.location}</span>
-                </div>
-              )}
-              {call.carrier && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Carrier:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{call.carrier}</span>
-                </div>
-              )}
-              {call.deviceType && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Device Type:</span>
-                  <Badge variant="outline" className="capitalize">{call.deviceType}</Badge>
-                </div>
-              )}
-              {call.ringDuration !== null && call.ringDuration !== undefined && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Ring Duration:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{call.ringDuration}s</span>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {call.keywords && call.keywords.length > 0 && (
-          <Card className="p-4">
-            <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">Keywords</div>
-            <div className="flex flex-wrap gap-2">
-              {call.keywords.map((keyword, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {keyword}
-                </Badge>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {call.actionItems && Array.isArray(call.actionItems) && call.actionItems.length > 0 && (
-          <Card className="p-4">
-            <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">Action Items</div>
-            <div className="space-y-2">
-              {(call.actionItems as any[]).map((item: any, index: number) => (
-                <div key={index} className="flex items-start space-x-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {typeof item === 'string' ? item : (item.description || String(item))}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {call.followUpRequired && (
-          <Card className="p-4 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
-            <div className="flex items-center space-x-2 mb-2">
-              <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-              <span className="text-sm font-semibold text-orange-900 dark:text-orange-100">Follow-up Required</span>
-            </div>
-            {call.followUpDate && (
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                Scheduled: {format(new Date(call.followUpDate), 'MMM d, yyyy')}
-              </p>
-            )}
-            {call.followUpNotes && (
-              <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{call.followUpNotes}</p>
-            )}
-          </Card>
-        )}
-      </TabsContent>
-
-      <TabsContent value="recording" className="space-y-4 mt-4">
-        {call.recordingUrl ? (
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <PlayCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Call Recording</span>
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => window.open(call.recordingUrl!, '_blank')}
-                  data-testid="button-open-recording"
-                >
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  Open
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => window.open(call.recordingUrl!, '_blank')}
-                  data-testid="button-download-recording-tab"
-                >
-                  <Download className="w-3 h-3 mr-1" />
-                  Download
-                </Button>
-              </div>
-            </div>
-            <audio controls className="w-full" src={call.recordingUrl}>
-              Your browser does not support the audio element.
-            </audio>
-          </Card>
-        ) : (
-          <Card className="p-8">
-            <div className="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-              <PlayCircle className="w-12 h-12 mb-3" />
-              <p className="text-sm font-medium">No recording available</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Recording may not have been enabled for this call</p>
-            </div>
-          </Card>
-        )}
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-2">
-              <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Call Transcript</span>
-            </div>
-            {call.transcript && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => copyToClipboard(call.transcript!, 'Transcript')}
-                data-testid="button-copy-transcript"
-              >
-                <Copy className="w-3 h-3 mr-1" />
-                Copy
-              </Button>
-            )}
-          </div>
-          <ScrollArea className="h-96 w-full p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-            {call.transcript ? (
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                {call.transcript}
-              </p>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                <FileText className="w-12 h-12 mb-3" />
-                <p className="text-sm font-medium">No transcript available</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Transcription may not have been enabled</p>
-              </div>
-            )}
-          </ScrollArea>
-        </Card>
-
-        {call.keywords && call.keywords.length > 0 && (
-          <Card className="p-4">
-            <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">Keywords Detected</div>
-            <div className="flex flex-wrap gap-2">
-              {call.keywords.map((keyword, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {keyword}
-                </Badge>
-              ))}
-            </div>
-          </Card>
-        )}
-      </TabsContent>
-
-      <TabsContent value="technical" className="space-y-4 mt-4">
-        <Card className="p-4">
-          <div className="text-sm font-semibold mb-4 text-gray-900 dark:text-gray-100">Network Quality</div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {call.codec && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Codec:</span>
-                <Badge variant="outline" className="font-mono uppercase">{call.codec}</Badge>
-              </div>
-            )}
-            {call.bitrate && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Bitrate:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{call.bitrate} kbps</span>
-              </div>
-            )}
-            {call.jitter !== null && call.jitter !== undefined && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Jitter:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{call.jitter}ms</span>
-              </div>
-            )}
-            {call.packetLoss && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Packet Loss:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{call.packetLoss}%</span>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="text-sm font-semibold mb-4 text-gray-900 dark:text-gray-100">Session Details</div>
-          <div className="grid grid-cols-1 gap-3">
-            {call.sipCallId && (
-              <div className="flex flex-col space-y-1">
-                <span className="text-xs text-gray-600 dark:text-gray-400">SIP Call ID:</span>
-                <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-2 rounded">
-                  <span className="font-mono text-xs text-gray-900 dark:text-gray-100 truncate">{call.sipCallId}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => copyToClipboard(call.sipCallId!, 'SIP Call ID')}
-                    className="h-6 w-6 p-0 ml-2 flex-shrink-0"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            )}
-            {call.conferenceId && (
-              <div className="flex flex-col space-y-1">
-                <span className="text-xs text-gray-600 dark:text-gray-400">Conference ID:</span>
-                <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded">
-                  <span className="font-mono text-xs text-gray-900 dark:text-gray-100">{call.conferenceId}</span>
-                </div>
-              </div>
-            )}
-            {call.userAgent && (
-              <div className="flex flex-col space-y-1">
-                <span className="text-xs text-gray-600 dark:text-gray-400">User Agent:</span>
-                <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded">
-                  <span className="font-mono text-xs text-gray-900 dark:text-gray-100 break-all">{call.userAgent}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="text-sm font-semibold mb-4 text-gray-900 dark:text-gray-100">Advanced Details</div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {call.hangupReason && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Hangup Reason:</span>
-                <Badge variant="outline" className="capitalize">{call.hangupReason.replace('_', ' ')}</Badge>
-              </div>
-            )}
-            {call.dialAttempts && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Dial Attempts:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{call.dialAttempts}</span>
-              </div>
-            )}
-            {call.isParallelDialer !== null && call.isParallelDialer !== undefined && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Parallel Dialer:</span>
-                <Badge variant={call.isParallelDialer ? "default" : "secondary"}>
-                  {call.isParallelDialer ? 'Yes' : 'No'}
-                </Badge>
-              </div>
-            )}
-            {call.lineId && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Line ID:</span>
-                <span className="font-mono text-xs text-gray-900 dark:text-gray-100">{call.lineId}</span>
-              </div>
-            )}
-            {call.transferredFrom && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Transferred From:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{call.transferredFrom}</span>
-              </div>
-            )}
-            {call.transferredTo && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Transferred To:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{call.transferredTo}</span>
-              </div>
-            )}
-            {call.droppedReason && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Dropped Reason:</span>
-                <Badge variant="destructive" className="text-xs">{call.droppedReason}</Badge>
-              </div>
-            )}
-            {call.amdComment && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">AMD Details:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100 text-xs">{call.amdComment}</span>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {(call.createdAt || call.connectionTime || call.updatedAt) && (
-          <Card className="p-4">
-            <div className="text-sm font-semibold mb-4 text-gray-900 dark:text-gray-100">Timestamps</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {call.createdAt && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Call Started:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {format(new Date(call.createdAt), 'MMM d, HH:mm:ss')}
-                  </span>
-                </div>
-              )}
-              {call.connectionTime && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Connected At:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {format(new Date(call.connectionTime), 'MMM d, HH:mm:ss')}
-                  </span>
-                </div>
-              )}
-              {call.updatedAt && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Last Updated:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {format(new Date(call.updatedAt), 'MMM d, HH:mm:ss')}
-                  </span>
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
-      </TabsContent>
-    </Tabs>
     </div>
   );
 }

@@ -27,7 +27,6 @@ import LeadsPage from "@/pages/LeadsPage";
 import ListsPage from "@/pages/ListsPage";
 import CalendarPage from "@/pages/CalendarPage";
 import ParallelDialerPage from "@/pages/ParallelDialerPage";
-import CallStatusOverviewPage from "@/pages/CallStatusOverviewPage";
 import ParallelDialerVerificationPage from "@/pages/ParallelDialerVerificationPage";
 import MyWorkPage from "@/pages/MyWorkPage";
 
@@ -37,7 +36,6 @@ const pageComponents = {
   dialer: DialerPage,
   'parallel-dialer': ParallelDialerPage,
   'parallel-dialer-verification': ParallelDialerVerificationPage,
-  'call-status-overview': CallStatusOverviewPage,
   'call-log': CallLogPage,
   sms: SmsPage,
   contacts: ContactsPage,
