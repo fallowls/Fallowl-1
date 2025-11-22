@@ -315,7 +315,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
       tableName: 'session',
     }),
     secret: process.env.SESSION_SECRET,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
@@ -511,16 +511,23 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // ROUTE REGISTRATION - Migrated Fastify Routes
   // ============================================================================
   
-  // Register authentication routes (migrated from Express)
   await fastify.register(import('./plugins/authRoutes'), { prefix: '/api' });
-  
-  // Register profile management routes (migrated from Express)
   await fastify.register(import('./plugins/profileRoutes'), { prefix: '/api' });
-  
-  // Register parallel dialer routes (migrated from Express)
   await fastify.register(import('./plugins/parallelDialerRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/activityRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/billingRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/callsRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/contactsRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/messagesRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/recordingsRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/rolesRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/settingsRoutes'), { prefix: '/api' });
+  // twilioRoutes temporarily disabled due to duplicate routes with parallelDialerRoutes
+  // await fastify.register(import('./plugins/twilioRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/usersRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/voicemailsRoutes'), { prefix: '/api' });
   
-  log('✅ Fastify routes registered (auth + profile + parallel dialer routes migrated)');
+  log('✅ All Fastify route plugins registered');
 
   return fastify;
 }

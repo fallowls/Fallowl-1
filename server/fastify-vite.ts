@@ -61,6 +61,11 @@ export async function setupViteFastify(fastify: FastifyInstance, server: Server)
 
   // Catch-all route for SPA
   fastify.get('/*', async (request, reply) => {
+    // Check if the response was already sent by Vite middleware
+    if (reply.sent) {
+      return;
+    }
+    
     const url = request.url;
 
     try {
@@ -78,10 +83,10 @@ export async function setupViteFastify(fastify: FastifyInstance, server: Server)
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
       const page = await vite.transformIndexHtml(url, template);
-      reply.type('text/html').send(page);
+      return reply.type('text/html').send(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
-      reply.code(500).send(e);
+      return reply.code(500).send(e);
     }
   });
 }

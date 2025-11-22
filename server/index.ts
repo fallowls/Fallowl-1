@@ -80,27 +80,8 @@ if (!envValidation.isValid) {
   // Get the HTTP server instance for WebSocket and Vite
   const server = fastify.server;
 
-  // Register existing Express routes using @fastify/middie bridge
-  // This allows us to use the 213 existing Express routes while
-  // we incrementally migrate them to Fastify plugins
-  const express = await import('express');
-  const { registerRoutes } = await import('./routes');
-  
-  const expressApp = express.default();
-  
-  // Register all Express routes
-  // Note: registerRoutes() returns an HTTP server, but we ignore it
-  // because we're using Fastify's HTTP server instead
-  const _expressServer = await registerRoutes(expressApp);
-  
-  // We don't use _expressServer - we use Fastify's server instead
-  // WebSocket was already initialized by registerRoutes on _expressServer,
-  // but we need to re-initialize it on our Fastify server
+  // Initialize WebSocket service on Fastify server
   wsService.initialize(server);
-  
-  // Mount Express app in Fastify using middie
-  await fastify.register(import('@fastify/middie'));
-  fastify.use(expressApp);
 
   // Setup Vite or static serving based on environment
   if (process.env.NODE_ENV === "development") {
