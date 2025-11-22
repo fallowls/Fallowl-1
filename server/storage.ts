@@ -874,13 +874,6 @@ export class DatabaseStorage implements IStorage {
     return call || undefined;
   }
 
-  async getCallByTwilioSid(twilioCallSid: string): Promise<Call | undefined> {
-    const [call] = await db.select().from(calls).where(
-      sql`${calls.metadata}->>'twilioCallSid' = ${twilioCallSid}`
-    );
-    return call || undefined;
-  }
-
   async createCall(userId: number, insertCall: InsertCall): Promise<Call> {
     const callData = {
       ...insertCall,
@@ -946,7 +939,7 @@ export class DatabaseStorage implements IStorage {
     return this.getCallsByStatus(userId, activeStatuses);
   }
 
-  async getCallByTwilioSid(callSid: string): Promise<Call | null> {
+  async getCallByTwilioSid(callSid: string): Promise<Call | undefined> {
     const results = await db
       .select()
       .from(calls)
@@ -963,7 +956,7 @@ export class DatabaseStorage implements IStorage {
       .where(sql`${calls.metadata}->>'twilioCallSid' = ${callSid}`)
       .limit(1);
     
-    return metadataResults.length > 0 ? metadataResults[0] : null;
+    return metadataResults.length > 0 ? metadataResults[0] : undefined;
   }
 
   async getCallBySipCallId(sipCallId: string): Promise<Call | null> {
@@ -1360,14 +1353,15 @@ export class DatabaseStorage implements IStorage {
     const whereConditions = [eq(recordings.userId, userId)];
 
     if (filters.search) {
-      whereConditions.push(
-        or(
-          ilike(recordings.phone, `%${filters.search}%`),
-          ilike(recordings.callerName, `%${filters.search}%`),
-          ilike(recordings.transcript, `%${filters.search}%`),
-          ilike(recordings.summary, `%${filters.search}%`)
-        )
+      const searchCondition = or(
+        ilike(recordings.phone, `%${filters.search}%`),
+        ilike(recordings.callerName, `%${filters.search}%`),
+        ilike(recordings.transcript, `%${filters.search}%`),
+        ilike(recordings.summary, `%${filters.search}%`)
       );
+      if (searchCondition) {
+        whereConditions.push(searchCondition);
+      }
     }
 
     if (filters.status) {
@@ -1408,10 +1402,12 @@ export class DatabaseStorage implements IStorage {
 
     const whereClause = and(...whereConditions);
 
-    // Build order by
-    const orderByClause = sortOrder === 'asc' 
-      ? asc(recordings[sortBy as keyof typeof recordings] || recordings.createdAt)
-      : desc(recordings[sortBy as keyof typeof recordings] || recordings.createdAt);
+    // Build order by - use createdAt as default
+    let orderByColumn = recordings.createdAt;
+    if (sortBy && sortBy in recordings) {
+      orderByColumn = (recordings as any)[sortBy];
+    }
+    const orderByClause = sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn);
 
     // Get total count
     const totalResult = await db
@@ -2075,62 +2071,110 @@ export class DatabaseStorage implements IStorage {
 
   // Lead Tasks
   async getLeadTask(userId: number, id: number): Promise<LeadTask | undefined> {
-    const [task] = await db.select().from(leadTasks).where(and(eq(leadTasks.id, id), eq(leadTasks.userId, userId)));
-    return task || undefined;
+    const result = await db
+      .select({ task: leadTasks })
+      .from(leadTasks)
+      .innerJoin(leads, eq(leadTasks.leadId, leads.id))
+      .where(and(eq(leadTasks.id, id), eq(leads.userId, userId)));
+    return result[0]?.task || undefined;
   }
 
   async createLeadTask(userId: number, task: InsertLeadTask): Promise<LeadTask> {
-    const taskData = {
-      ...task,
-      userId: userId
-    };
-    const [created] = await db.insert(leadTasks).values(taskData).returning();
+    const [created] = await db.insert(leadTasks).values(task).returning();
     return created;
   }
 
   async updateLeadTask(userId: number, id: number, task: Partial<InsertLeadTask>): Promise<LeadTask> {
-    const [updated] = await db.update(leadTasks).set(task).where(and(eq(leadTasks.id, id), eq(leadTasks.userId, userId))).returning();
+    const result = await db
+      .select({ task: leadTasks })
+      .from(leadTasks)
+      .innerJoin(leads, eq(leadTasks.leadId, leads.id))
+      .where(and(eq(leadTasks.id, id), eq(leads.userId, userId)));
+    
+    if (!result[0]) {
+      throw new Error('Task not found');
+    }
+    
+    const [updated] = await db.update(leadTasks).set(task).where(eq(leadTasks.id, id)).returning();
     return updated;
   }
 
   async deleteLeadTask(userId: number, id: number): Promise<void> {
-    await db.delete(leadTasks).where(and(eq(leadTasks.id, id), eq(leadTasks.userId, userId)));
+    const result = await db
+      .select({ task: leadTasks })
+      .from(leadTasks)
+      .innerJoin(leads, eq(leadTasks.leadId, leads.id))
+      .where(and(eq(leadTasks.id, id), eq(leads.userId, userId)));
+    
+    if (result[0]) {
+      await db.delete(leadTasks).where(eq(leadTasks.id, id));
+    }
   }
 
   async getLeadTasks(userId: number, leadId: number): Promise<LeadTask[]> {
-    return await db.select().from(leadTasks).where(and(eq(leadTasks.leadId, leadId), eq(leadTasks.userId, userId))).orderBy(desc(leadTasks.createdAt));
+    const result = await db
+      .select({ task: leadTasks })
+      .from(leadTasks)
+      .innerJoin(leads, eq(leadTasks.leadId, leads.id))
+      .where(and(eq(leadTasks.leadId, leadId), eq(leads.userId, userId)))
+      .orderBy(desc(leadTasks.createdAt));
+    return result.map(r => r.task);
   }
 
   async getLeadTasksByAssignee(userId: number, assigneeId: number): Promise<LeadTask[]> {
-    return await db.select().from(leadTasks).where(and(eq(leadTasks.assignedTo, assigneeId), eq(leadTasks.userId, userId))).orderBy(desc(leadTasks.createdAt));
+    const result = await db
+      .select({ task: leadTasks })
+      .from(leadTasks)
+      .innerJoin(leads, eq(leadTasks.leadId, leads.id))
+      .where(and(eq(leadTasks.assignedTo, assigneeId), eq(leads.userId, userId)))
+      .orderBy(desc(leadTasks.createdAt));
+    return result.map(r => r.task);
   }
 
   async getLeadTasksByStatus(userId: number, status: string): Promise<LeadTask[]> {
-    return await db.select().from(leadTasks).where(and(eq(leadTasks.status, status), eq(leadTasks.userId, userId))).orderBy(desc(leadTasks.createdAt));
+    const result = await db
+      .select({ task: leadTasks })
+      .from(leadTasks)
+      .innerJoin(leads, eq(leadTasks.leadId, leads.id))
+      .where(and(eq(leadTasks.status, status), eq(leads.userId, userId)))
+      .orderBy(desc(leadTasks.createdAt));
+    return result.map(r => r.task);
   }
 
   async getOverdueTasks(userId: number): Promise<LeadTask[]> {
-    return await db.select().from(leadTasks).where(
-      and(
-        eq(leadTasks.status, 'pending'),
-        lt(leadTasks.dueDate, new Date()),
-        eq(leadTasks.userId, userId)
+    const result = await db
+      .select({ task: leadTasks })
+      .from(leadTasks)
+      .innerJoin(leads, eq(leadTasks.leadId, leads.id))
+      .where(
+        and(
+          eq(leadTasks.status, 'pending'),
+          lt(leadTasks.dueDate, new Date()),
+          eq(leads.userId, userId)
+        )
       )
-    ).orderBy(asc(leadTasks.dueDate));
+      .orderBy(asc(leadTasks.dueDate));
+    return result.map(r => r.task);
   }
 
   async getUpcomingTasks(userId: number, days: number = 7): Promise<LeadTask[]> {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + days);
     
-    return await db.select().from(leadTasks).where(
-      and(
-        eq(leadTasks.status, 'pending'),
-        gte(leadTasks.dueDate, new Date()),
-        lte(leadTasks.dueDate, futureDate),
-        eq(leadTasks.userId, userId)
+    const result = await db
+      .select({ task: leadTasks })
+      .from(leadTasks)
+      .innerJoin(leads, eq(leadTasks.leadId, leads.id))
+      .where(
+        and(
+          eq(leadTasks.status, 'pending'),
+          gte(leadTasks.dueDate, new Date()),
+          lte(leadTasks.dueDate, futureDate),
+          eq(leads.userId, userId)
+        )
       )
-    ).orderBy(asc(leadTasks.dueDate));
+      .orderBy(asc(leadTasks.dueDate));
+    return result.map(r => r.task);
   }
 
   // Lead Scoring
@@ -2324,6 +2368,7 @@ export class DatabaseStorage implements IStorage {
 
     // Create new membership
     return await this.createContactListMembership(userId, {
+      userId,
       contactId,
       listId,
       addedBy,
@@ -2354,58 +2399,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getContactsInList(userId: number, listId: number): Promise<Contact[]> {
-    const result = await db.select({
-      id: contacts.id,
-      name: contacts.name,
-      phone: contacts.phone,
-      email: contacts.email,
-      alternatePhone: contacts.alternatePhone,
-      company: contacts.company,
-      industry: contacts.industry,
-      revenue: contacts.revenue,
-      employeeSize: contacts.employeeSize,
-      jobTitle: contacts.jobTitle,
-      address: contacts.address,
-      city: contacts.city,
-      state: contacts.state,
-      zipCode: contacts.zipCode,
-      country: contacts.country,
-      timezone: contacts.timezone,
-      birthdate: contacts.birthdate,
-      tags: contacts.tags,
-      notes: contacts.notes,
-      priority: contacts.priority,
-      leadStatus: contacts.leadStatus,
-      leadSource: contacts.leadSource,
-      disposition: contacts.disposition,
-      assignedTo: contacts.assignedTo,
-      nextFollowUpAt: contacts.nextFollowUpAt,
-      meetingDate: contacts.meetingDate,
-      meetingTimezone: contacts.meetingTimezone,
-      socialProfiles: contacts.socialProfiles,
-      customFields: contacts.customFields,
-      communicationPreferences: contacts.communicationPreferences,
-      lastContactedAt: contacts.lastContactedAt,
-      avatar: contacts.avatar,
-      isActive: contacts.isActive,
-      doNotCall: contacts.doNotCall,
-      doNotEmail: contacts.doNotEmail,
-      doNotSms: contacts.doNotSms,
-      primaryListId: contacts.primaryListId,
-      listCount: contacts.listCount,
-      createdAt: contacts.createdAt,
-      updatedAt: contacts.updatedAt
-    })
-    .from(contacts)
-    .innerJoin(contactListMemberships, eq(contacts.id, contactListMemberships.contactId))
-    .where(and(
-      eq(contactListMemberships.listId, listId),
-      eq(contactListMemberships.status, 'active'),
-      eq(contacts.userId, userId)
-    ))
-    .orderBy(asc(contacts.name));
+    const result = await db
+      .select()
+      .from(contacts)
+      .innerJoin(contactListMemberships, eq(contacts.id, contactListMemberships.contactId))
+      .where(and(
+        eq(contactListMemberships.listId, listId),
+        eq(contactListMemberships.status, 'active'),
+        eq(contacts.userId, userId)
+      ))
+      .orderBy(asc(contacts.name));
 
-    return result;
+    return result.map(r => r.contacts);
   }
 }
 
