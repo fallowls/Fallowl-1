@@ -84,31 +84,31 @@ export default function Sidebar() {
       
       <div 
         className={cn(
-          "bg-white dark:bg-gray-950 shadow-sm transition-all duration-300 ease-in-out relative z-30 border-r border-gray-200/60 dark:border-gray-800/60",
-          "flex flex-col",
+          "bg-white dark:bg-gray-950 shadow-sm transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] relative z-30 border-r border-gray-200/60 dark:border-gray-800/60",
+          "flex flex-col will-change-[width]",
           isMobile ? (
-            mobileMenuOpen ? "fixed left-0 top-0 w-64 h-full transform translate-x-0" : "fixed left-0 top-0 w-64 h-full transform -translate-x-full"
+            mobileMenuOpen ? "fixed left-0 top-0 w-56 h-full transform translate-x-0" : "fixed left-0 top-0 w-56 h-full transform -translate-x-full"
           ) : (
-            sidebarExpanded ? "w-64 h-screen" : "w-16 h-screen group"
+            sidebarExpanded ? "w-56 h-screen" : "w-14 h-screen group"
           )
         )}
         onMouseEnter={() => !isMobile && setSidebarExpanded(true)}
         onMouseLeave={() => !isMobile && setSidebarExpanded(false)}
       >
         <div className={cn(
-          "flex items-center border-b border-gray-200/60 dark:border-gray-800/60 py-3 transition-all duration-300",
-          (sidebarExpanded || isMobile) ? "h-16 px-3" : "h-16 px-2 justify-center"
+          "flex items-center border-b border-gray-200/60 dark:border-gray-800/60 py-2.5 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          (sidebarExpanded || isMobile) ? "h-14 px-3" : "h-14 px-2 justify-center"
         )}>
-          <div className="transition-all duration-300">
+          <div className="transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]">
             <img 
               src={darkMode ? FallOwlLogoDark : FallOwlLogo} 
               alt="FallOwl" 
-              className="h-9 w-auto object-contain"
+              className="h-8 w-auto object-contain"
             />
           </div>
         </div>
 
-        <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {menuItems
             .filter((item) => canAccessView(user?.email, item.id))
             .map((item) => {
@@ -120,7 +120,7 @@ export default function Sidebar() {
                   onClick={() => handleItemClick(item.id)}
                   data-testid={`sidebar-${item.id}`}
                   className={cn(
-                    "group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 w-full relative overflow-hidden",
+                    "group flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-full relative overflow-hidden",
                     isActive 
                       ? "bg-gray-900 dark:bg-gray-800 text-white shadow-sm" 
                       : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-800/50",
@@ -129,12 +129,12 @@ export default function Sidebar() {
                 >
                   <div className="flex items-center justify-center flex-shrink-0">
                     <Icon className={cn(
-                      "w-[18px] h-[18px] transition-colors duration-200",
+                      "w-[17px] h-[17px] transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
                       isActive ? "text-white" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200"
                     )} />
                   </div>
                   <span className={cn(
-                    "font-medium transition-all duration-300 whitespace-nowrap text-[13px]",
+                    "font-medium transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] whitespace-nowrap text-[13px]",
                     (sidebarExpanded || isMobile) ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 absolute",
                     isActive ? "text-white" : "text-gray-700 dark:text-gray-300"
                   )}>
@@ -145,17 +145,17 @@ export default function Sidebar() {
             })}
         </nav>
 
-        <div className="border-t border-gray-200/60 dark:border-gray-800/60 px-3 py-3">
+        <div className="border-t border-gray-200/60 dark:border-gray-800/60 px-2.5 py-2.5">
           <div className="flex items-center justify-center">
             <div className={cn(
-              "transition-opacity duration-300",
+              "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
               (sidebarExpanded || isMobile) ? "opacity-0 w-0" : "opacity-100 w-auto"
             )}>
               <TwilioDeviceStatus variant="dot-only" />
             </div>
             
             <div className={cn(
-              "transition-opacity duration-300",
+              "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
               (sidebarExpanded || isMobile) ? "opacity-100 w-full" : "opacity-0 w-0"
             )}>
               <TwilioDeviceStatus variant="inline" />
@@ -163,46 +163,46 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <div className="border-t border-gray-200/60 dark:border-gray-800/60 px-3 py-3 bg-white dark:bg-gray-950">
+        <div className="border-t border-gray-200/60 dark:border-gray-800/60 px-2.5 py-2.5 bg-white dark:bg-gray-950">
           <div className={cn(
-            "flex items-center gap-3",
+            "flex items-center gap-2.5",
             (sidebarExpanded || isMobile) ? "justify-between" : "justify-center"
           )}>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-gray-900 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-full bg-gray-900 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-semibold text-xs">
                   {user?.username?.substring(0, 2).toUpperCase() || 'U'}
                 </span>
               </div>
               <div className={cn(
-                "transition-all duration-300 min-w-0",
+                "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] min-w-0",
                 (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
               )}>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap truncate">
+                <p className="text-xs font-semibold text-gray-900 dark:text-white whitespace-nowrap truncate">
                   {user?.username || 'User'}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap truncate">
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap truncate">
                   {user?.role === 'super_admin' ? 'Super Admin' : user?.role || 'User'}
                 </p>
               </div>
             </div>
             <div className={cn(
-              "flex items-center gap-1 transition-all duration-300",
+              "flex items-center gap-0.5 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
               (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
             )}>
               <button
                 onClick={() => handleItemClick('profile')}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 hover:scale-110"
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-110"
                 title="Profile Settings"
               >
-                <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <Settings className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
               </button>
               <button
                 onClick={() => logout.mutate()}
-                className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-110"
+                className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-110"
                 title="Logout"
               >
-                <LogOut className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <LogOut className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
               </button>
             </div>
           </div>
