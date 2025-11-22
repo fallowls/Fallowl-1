@@ -111,7 +111,7 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
+        <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {menuItems
             .filter((item) => canAccessView(user?.email, item.id))
             .map((item) => {
