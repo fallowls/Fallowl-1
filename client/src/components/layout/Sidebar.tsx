@@ -84,7 +84,7 @@ export default function Sidebar() {
       
       <div 
         className={cn(
-          "bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 shadow-xl transition-all duration-300 ease-in-out relative z-30 border-r border-gray-200 dark:border-gray-800",
+          "bg-white dark:bg-gray-950 shadow-sm transition-all duration-300 ease-in-out relative z-30 border-r border-gray-200/60 dark:border-gray-800/60",
           "flex flex-col",
           isMobile ? (
             mobileMenuOpen ? "fixed left-0 top-0 w-64 h-full transform translate-x-0" : "fixed left-0 top-0 w-64 h-full transform -translate-x-full"
@@ -96,17 +96,14 @@ export default function Sidebar() {
         onMouseLeave={() => !isMobile && setSidebarExpanded(false)}
       >
         <div className={cn(
-          "flex items-center border-b border-gray-200 dark:border-gray-800 py-3 transition-all duration-300",
+          "flex items-center border-b border-gray-200/60 dark:border-gray-800/60 py-3 transition-all duration-300",
           (sidebarExpanded || isMobile) ? "h-16 px-3" : "h-16 px-2 justify-center"
         )}>
           <div className="transition-all duration-300">
             <img 
               src={darkMode ? FallOwlLogoDark : FallOwlLogo} 
               alt="FallOwl" 
-              className={cn(
-                "object-contain transition-all duration-300",
-                (sidebarExpanded || isMobile) ? "h-10 w-auto" : "h-8 w-auto"
-              )}
+              className="h-9 w-auto object-contain"
             />
           </div>
         </div>
@@ -121,21 +118,19 @@ export default function Sidebar() {
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
+                  data-testid={`sidebar-${item.id}`}
                   className={cn(
-                    "group flex items-center gap-2.5 px-3 py-2 rounded-[12px] transition-all duration-200 w-full relative overflow-hidden",
+                    "group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 w-full relative overflow-hidden",
                     isActive 
-                      ? "bg-gradient-to-r from-teal-500 to-teal-400 text-white shadow-md shadow-teal-500/25 dark:shadow-teal-500/20" 
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50",
+                      ? "bg-gray-900 dark:bg-gray-800 text-white shadow-sm" 
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-800/50",
                     (sidebarExpanded || isMobile) ? "justify-start" : "justify-center"
                   )}
                 >
-                  <div className={cn(
-                    "flex items-center justify-center transition-all duration-200",
-                    isActive && "scale-105"
-                  )}>
+                  <div className="flex items-center justify-center flex-shrink-0">
                     <Icon className={cn(
-                      "w-[18px] h-[18px] flex-shrink-0 transition-all duration-200",
-                      isActive ? "text-white" : "text-gray-600 dark:text-gray-400 group-hover:text-teal-500 dark:group-hover:text-teal-400"
+                      "w-[18px] h-[18px] transition-colors duration-200",
+                      isActive ? "text-white" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200"
                     )} />
                   </div>
                   <span className={cn(
@@ -145,15 +140,12 @@ export default function Sidebar() {
                   )}>
                     {item.label}
                   </span>
-                  {isActive && (sidebarExpanded || isMobile) && (
-                    <ChevronRight className="w-4 h-4 ml-auto text-white animate-pulse" />
-                  )}
                 </button>
               );
             })}
         </nav>
 
-        <div className="border-t border-gray-200 dark:border-gray-800 px-3 py-3">
+        <div className="border-t border-gray-200/60 dark:border-gray-800/60 px-3 py-3">
           <div className="flex items-center justify-center">
             <div className={cn(
               "transition-opacity duration-300",
@@ -171,20 +163,14 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-800 px-3 py-3 bg-white dark:bg-gray-900">
+        <div className="border-t border-gray-200/60 dark:border-gray-800/60 px-3 py-3 bg-white dark:bg-gray-950">
           <div className={cn(
             "flex items-center gap-3",
             (sidebarExpanded || isMobile) ? "justify-between" : "justify-center"
           )}>
             <div className="flex items-center gap-3 min-w-0">
-              <div className={cn(
-                "rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0 ring-2 ring-teal-400/30",
-                (sidebarExpanded || isMobile) ? "w-9 h-9" : "w-8 h-8"
-              )}>
-                <span className={cn(
-                  "text-white font-semibold",
-                  (sidebarExpanded || isMobile) ? "text-sm" : "text-xs"
-                )}>
+              <div className="w-8 h-8 rounded-full bg-gray-900 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-semibold text-xs">
                   {user?.username?.substring(0, 2).toUpperCase() || 'U'}
                 </span>
               </div>
