@@ -13,9 +13,7 @@ export default async function rolesRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const roles = await storage.getAllRoles();
@@ -30,9 +28,7 @@ export default async function rolesRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const roleData = insertRoleSchema.parse(request.body);
@@ -48,9 +44,7 @@ export default async function rolesRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string };
@@ -68,9 +62,7 @@ export default async function rolesRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string };

@@ -17,9 +17,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -80,9 +78,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -104,9 +100,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -148,9 +142,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -187,9 +179,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -231,9 +221,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -358,9 +346,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -484,9 +470,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -512,9 +496,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -551,9 +533,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.download
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -639,9 +619,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.download
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -714,9 +692,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -742,9 +718,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -781,9 +755,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -819,9 +791,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -925,9 +895,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -962,9 +930,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;
@@ -1023,9 +989,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any as HasUserId).userId;

@@ -13,9 +13,7 @@ export default async function voicemailsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId;
@@ -34,9 +32,7 @@ export default async function voicemailsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId;
@@ -55,9 +51,7 @@ export default async function voicemailsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId;
@@ -77,9 +71,7 @@ export default async function voicemailsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId;
@@ -101,9 +93,7 @@ export default async function voicemailsRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId;
