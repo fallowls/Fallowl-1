@@ -1111,6 +1111,152 @@ export const activities = pgTable("activities", {
   statusIdx: index("activities_status_idx").on(table.status),
 }));
 
+// AI-Powered Features Tables
+export const aiLeadScores = pgTable("ai_lead_scores", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  contactId: integer("contact_id").references(() => contacts.id).notNull(),
+  
+  // AI-Generated Scores
+  overallScore: integer("overall_score").default(0), // 0-100 score
+  answerProbability: decimal("answer_probability", { precision: 5, scale: 2 }).default("0.00"), // 0-1 probability of answering
+  conversionProbability: decimal("conversion_probability", { precision: 5, scale: 2 }).default("0.00"),
+  engagementScore: integer("engagement_score").default(0),
+  
+  // Optimal Timing Predictions
+  bestCallTimes: jsonb("best_call_times").default([]), // [{hour: 14, day: 'Tuesday', probability: 0.85}]
+  timezone: text("timezone"),
+  localTime: text("local_time"), // Current local time when score was calculated
+  
+  // Behavioral Insights
+  callPatterns: jsonb("call_patterns").default({}), // Historical answer patterns
+  responseRate: decimal("response_rate", { precision: 5, scale: 2 }).default("0.00"),
+  avgCallDuration: integer("avg_call_duration"), // seconds
+  
+  // AI Reasoning
+  scoringFactors: jsonb("scoring_factors").default({}), // What influenced the score
+  recommendations: jsonb("recommendations").default([]), // AI suggestions
+  confidence: decimal("confidence", { precision: 5, scale: 2 }).default("0.00"), // 0-1 confidence in score
+  
+  // Metadata
+  modelVersion: text("model_version").default("1.0"),
+  lastCalculated: timestamp("last_calculated").defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("ai_lead_scores_user_id_idx").on(table.userId),
+  contactIdIdx: index("ai_lead_scores_contact_id_idx").on(table.contactId),
+  scoreIdx: index("ai_lead_scores_score_idx").on(table.overallScore),
+  userContactIdx: uniqueIndex("ai_lead_scores_user_contact_idx").on(table.userId, table.contactId),
+}));
+
+export const callIntelligence = pgTable("call_intelligence", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  callId: integer("call_id").references(() => calls.id).notNull(),
+  contactId: integer("contact_id").references(() => contacts.id),
+  
+  // Transcription
+  transcript: text("transcript"),
+  transcriptStatus: text("transcript_status").default("pending"), // pending, processing, completed, failed
+  
+  // AI Analysis
+  summary: text("summary"),
+  sentiment: text("sentiment"), // positive, neutral, negative, mixed
+  sentimentScore: decimal("sentiment_score", { precision: 5, scale: 2 }).default("0.00"), // -1 to 1
+  
+  // Key Information
+  actionItems: jsonb("action_items").default([]), // [{action: "...", priority: "high", dueDate: "..."}]
+  keywords: text("keywords").array().default([]),
+  topics: text("topics").array().default([]),
+  objections: jsonb("objections").default([]), // [{objection: "...", response: "..."}]
+  
+  // Conversation Analysis
+  talkRatio: decimal("talk_ratio", { precision: 5, scale: 2 }).default("0.50"), // Agent vs Contact talk time
+  interruptionCount: integer("interruption_count").default(0),
+  questionCount: integer("question_count").default(0),
+  silenceDuration: integer("silence_duration").default(0), // Total silence in seconds
+  
+  // Quality Metrics
+  callQuality: integer("call_quality").default(0), // 1-5 rating
+  complianceScore: integer("compliance_score").default(0), // 1-100
+  complianceIssues: jsonb("compliance_issues").default([]),
+  
+  // Next Steps
+  recommendedDisposition: text("recommended_disposition"),
+  suggestedFollowUp: text("suggested_follow_up"),
+  nextBestAction: text("next_best_action"),
+  followUpDate: timestamp("follow_up_date"),
+  
+  // Coaching Insights
+  coachingTips: jsonb("coaching_tips").default([]), // [{tip: "...", category: "..."}]
+  strengths: text("strengths").array().default([]),
+  improvements: text("improvements").array().default([]),
+  
+  // Metadata
+  processingTime: integer("processing_time"), // milliseconds
+  modelVersion: text("model_version").default("1.0"),
+  confidence: decimal("confidence", { precision: 5, scale: 2 }).default("0.00"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("call_intelligence_user_id_idx").on(table.userId),
+  callIdIdx: index("call_intelligence_call_id_idx").on(table.callId),
+  contactIdIdx: index("call_intelligence_contact_id_idx").on(table.contactId),
+  sentimentIdx: index("call_intelligence_sentiment_idx").on(table.sentiment),
+  statusIdx: index("call_intelligence_status_idx").on(table.transcriptStatus),
+}));
+
+export const aiInsights = pgTable("ai_insights", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  
+  // Insight Details
+  type: text("type").notNull(), // campaign_optimization, timing_recommendation, script_suggestion, performance_alert
+  category: text("category").default("general"), // performance, quality, timing, messaging, strategy
+  priority: text("priority").default("medium"), // high, medium, low
+  
+  // Content
+  title: text("title").notNull(),
+  description: text("description"),
+  recommendation: text("recommendation"),
+  impact: text("impact"), // Potential impact of following the recommendation
+  
+  // Supporting Data
+  data: jsonb("data").default({}), // Charts, metrics, comparisons
+  evidence: jsonb("evidence").default([]), // Supporting evidence for the insight
+  
+  // Related Entities
+  contactId: integer("contact_id").references(() => contacts.id),
+  campaignId: integer("campaign_id"),
+  relatedEntities: jsonb("related_entities").default({}),
+  
+  // Action Tracking
+  status: text("status").default("active"), // active, dismissed, applied, archived
+  appliedAt: timestamp("applied_at"),
+  dismissedAt: timestamp("dismissed_at"),
+  
+  // Metrics
+  confidence: decimal("confidence", { precision: 5, scale: 2 }).default("0.00"),
+  potentialImpact: text("potential_impact"), // high, medium, low
+  estimatedLift: decimal("estimated_lift", { precision: 5, scale: 2 }), // Expected improvement percentage
+  
+  // Metadata
+  validUntil: timestamp("valid_until"), // When this insight expires
+  modelVersion: text("model_version").default("1.0"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("ai_insights_user_id_idx").on(table.userId),
+  typeIdx: index("ai_insights_type_idx").on(table.type),
+  statusIdx: index("ai_insights_status_idx").on(table.status),
+  priorityIdx: index("ai_insights_priority_idx").on(table.priority),
+  createdAtIdx: index("ai_insights_created_at_idx").on(table.createdAt),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -1334,6 +1480,26 @@ export const insertActivitySchema = createInsertSchema(activities).omit({
   updatedAt: true,
 });
 
+// AI Features Insert Schemas
+export const insertAiLeadScoreSchema = createInsertSchema(aiLeadScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastCalculated: true,
+});
+
+export const insertCallIntelligenceSchema = createInsertSchema(callIntelligence).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiInsightSchema = createInsertSchema(aiInsights).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -1403,6 +1569,14 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 // Phase 3 Feature Types
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
 export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
+
+// AI Features Types
+export type AiLeadScore = typeof aiLeadScores.$inferSelect;
+export type InsertAiLeadScore = z.infer<typeof insertAiLeadScoreSchema>;
+export type CallIntelligence = typeof callIntelligence.$inferSelect;
+export type InsertCallIntelligence = z.infer<typeof insertCallIntelligenceSchema>;
+export type AiInsight = typeof aiInsights.$inferSelect;
+export type InsertAiInsight = z.infer<typeof insertAiInsightSchema>;
 
 // WebSocket Event Types for Parallel Dialer
 export interface ParallelDialerContact {

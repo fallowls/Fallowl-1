@@ -3,6 +3,7 @@ import {
   roles, loginHistory, userActivity, subscriptionPlans, invoices, callNotes,
   smsTemplates, smsCampaigns, conversationThreads, contactLists, contactListMemberships,
   leadSources, leadStatuses, leadCampaigns, leads, leadActivities, leadTasks, leadScoring, leadNurturing,
+  aiLeadScores, callIntelligence, aiInsights,
   type User, type InsertUser, type Contact, type InsertContact,
   type Call, type InsertCall, type Message, type InsertMessage,
   type Recording, type InsertRecording, type Voicemail, type InsertVoicemail,
@@ -15,7 +16,9 @@ import {
   type LeadSource, type InsertLeadSource, type LeadStatus, type InsertLeadStatus,
   type LeadCampaign, type InsertLeadCampaign, type Lead, type InsertLead,
   type LeadActivity, type InsertLeadActivity, type LeadTask, type InsertLeadTask,
-  type LeadScoring, type InsertLeadScoring, type LeadNurturing, type InsertLeadNurturing
+  type LeadScoring, type InsertLeadScoring, type LeadNurturing, type InsertLeadNurturing,
+  type AiLeadScore, type InsertAiLeadScore, type CallIntelligence, type InsertCallIntelligence,
+  type AiInsight, type InsertAiInsight
 } from "@shared/schema";
 import { normalizePhoneNumber, arePhoneNumbersEqual } from "@shared/phoneUtils";
 import { eq, and, or, desc, asc, count, sum, gte, lte, lt, gt, ilike, isNotNull, sql, inArray } from "drizzle-orm";
@@ -352,6 +355,23 @@ export interface IStorage {
   addContactToList(userId: number, contactId: number, listId: number, addedBy?: number): Promise<ContactListMembership>;
   removeContactFromList(userId: number, contactId: number, listId: number): Promise<void>;
   getContactsInList(userId: number, listId: number): Promise<Contact[]>;
+
+  // AI Lead Scoring
+  getAiLeadScore(userId: number, contactId: number): Promise<AiLeadScore | undefined>;
+  upsertAiLeadScore(userId: number, score: Omit<InsertAiLeadScore, 'userId'>): Promise<AiLeadScore>;
+  getTopScoredContacts(userId: number, limit: number): Promise<Array<Contact & { aiScore: AiLeadScore }>>;
+
+  // Call Intelligence
+  getCallIntelligence(userId: number, callId: number): Promise<CallIntelligence | undefined>;
+  createCallIntelligence(userId: number, intelligence: Omit<InsertCallIntelligence, 'userId'>): Promise<CallIntelligence>;
+  updateCallIntelligence(userId: number, id: number, intelligence: Partial<InsertCallIntelligence>): Promise<CallIntelligence>;
+
+  // AI Insights
+  getAiInsight(userId: number, id: number): Promise<AiInsight | undefined>;
+  getAiInsights(userId: number, filters: { status?: string; type?: string }): Promise<AiInsight[]>;
+  createAiInsight(userId: number, insight: Omit<InsertAiInsight, 'userId'>): Promise<AiInsight>;
+  updateAiInsight(userId: number, id: number, insight: Partial<InsertAiInsight>): Promise<AiInsight>;
+  deleteAiInsight(userId: number, id: number): Promise<void>;
 }
 
 
@@ -2411,6 +2431,163 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(contacts.name));
 
     return result.map(r => r.contacts);
+  }
+
+  // AI Lead Scoring
+  async getAiLeadScore(userId: number, contactId: number): Promise<AiLeadScore | undefined> {
+    const [score] = await db.select()
+      .from(aiLeadScores)
+      .where(and(
+        eq(aiLeadScores.userId, userId),
+        eq(aiLeadScores.contactId, contactId)
+      ))
+      .orderBy(desc(aiLeadScores.lastCalculated))
+      .limit(1);
+    return score || undefined;
+  }
+
+  async upsertAiLeadScore(userId: number, score: Omit<InsertAiLeadScore, 'userId'>): Promise<AiLeadScore> {
+    // Check if score exists for this contact
+    const existing = await this.getAiLeadScore(userId, score.contactId);
+
+    if (existing) {
+      // Update existing score
+      const [updated] = await db.update(aiLeadScores)
+        .set({
+          ...score,
+          updatedAt: new Date(),
+          lastCalculated: new Date(),
+        })
+        .where(and(
+          eq(aiLeadScores.userId, userId),
+          eq(aiLeadScores.contactId, score.contactId)
+        ))
+        .returning();
+      return updated;
+    } else {
+      // Create new score
+      const [newScore] = await db.insert(aiLeadScores)
+        .values({
+          ...score,
+          userId,
+        })
+        .returning();
+      return newScore;
+    }
+  }
+
+  async getTopScoredContacts(userId: number, limit: number): Promise<Array<Contact & { aiScore: AiLeadScore }>> {
+    const result = await db
+      .select()
+      .from(contacts)
+      .innerJoin(aiLeadScores, and(
+        eq(contacts.id, aiLeadScores.contactId),
+        eq(aiLeadScores.userId, userId)
+      ))
+      .where(eq(contacts.userId, userId))
+      .orderBy(desc(aiLeadScores.overallScore))
+      .limit(limit);
+
+    return result.map(r => ({
+      ...r.contacts,
+      aiScore: r.ai_lead_scores
+    }));
+  }
+
+  // Call Intelligence
+  async getCallIntelligence(userId: number, callId: number): Promise<CallIntelligence | undefined> {
+    const [intelligence] = await db.select()
+      .from(callIntelligence)
+      .where(and(
+        eq(callIntelligence.userId, userId),
+        eq(callIntelligence.callId, callId)
+      ));
+    return intelligence || undefined;
+  }
+
+  async createCallIntelligence(userId: number, intelligence: Omit<InsertCallIntelligence, 'userId'>): Promise<CallIntelligence> {
+    const [newIntelligence] = await db.insert(callIntelligence)
+      .values({
+        ...intelligence,
+        userId,
+      })
+      .returning();
+    return newIntelligence;
+  }
+
+  async updateCallIntelligence(userId: number, id: number, intelligence: Partial<InsertCallIntelligence>): Promise<CallIntelligence> {
+    const [updated] = await db.update(callIntelligence)
+      .set({
+        ...intelligence,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(callIntelligence.id, id),
+        eq(callIntelligence.userId, userId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  // AI Insights
+  async getAiInsight(userId: number, id: number): Promise<AiInsight | undefined> {
+    const [insight] = await db.select()
+      .from(aiInsights)
+      .where(and(
+        eq(aiInsights.id, id),
+        eq(aiInsights.userId, userId)
+      ));
+    return insight || undefined;
+  }
+
+  async getAiInsights(userId: number, filters: { status?: string; type?: string }): Promise<AiInsight[]> {
+    const conditions = [eq(aiInsights.userId, userId)];
+    
+    if (filters.status) {
+      conditions.push(eq(aiInsights.status, filters.status));
+    }
+    if (filters.type) {
+      conditions.push(eq(aiInsights.type, filters.type));
+    }
+
+    const insights = await db.select()
+      .from(aiInsights)
+      .where(and(...conditions))
+      .orderBy(desc(aiInsights.createdAt));
+    
+    return insights;
+  }
+
+  async createAiInsight(userId: number, insight: Omit<InsertAiInsight, 'userId'>): Promise<AiInsight> {
+    const [newInsight] = await db.insert(aiInsights)
+      .values({
+        ...insight,
+        userId,
+      })
+      .returning();
+    return newInsight;
+  }
+
+  async updateAiInsight(userId: number, id: number, insight: Partial<InsertAiInsight>): Promise<AiInsight> {
+    const [updated] = await db.update(aiInsights)
+      .set({
+        ...insight,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(aiInsights.id, id),
+        eq(aiInsights.userId, userId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async deleteAiInsight(userId: number, id: number): Promise<void> {
+    await db.delete(aiInsights)
+      .where(and(
+        eq(aiInsights.id, id),
+        eq(aiInsights.userId, userId)
+      ));
   }
 }
 

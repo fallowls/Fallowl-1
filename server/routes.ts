@@ -32,8 +32,10 @@ import {
   insertContactListSchema, insertContactListMembershipSchema,
   insertLeadSourceSchema, insertLeadStatusSchema, insertLeadCampaignSchema,
   insertLeadSchema, insertLeadActivitySchema, insertLeadTaskSchema,
-  insertLeadScoringSchema, insertLeadNurturingSchema
+  insertLeadScoringSchema, insertLeadNurturingSchema,
+  insertAiLeadScoreSchema, insertCallIntelligenceSchema, insertAiInsightSchema
 } from "@shared/schema";
+import { openaiService } from "./services/openaiService";
 
 // Auth0 JWT validation middleware
 const auth0Domain = process.env.AUTH0_DOMAIN;
@@ -7007,6 +7009,326 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { parallelDialerVerification } = await import('./services/parallelDialerVerification');
       const result = await parallelDialerVerification.cleanupStaleCalls(userId);
       res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== AI-Powered Features ====================
+
+  // Check OpenAI configuration status
+  app.get("/api/ai/config", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const config = openaiService.checkConfiguration();
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Generate AI lead score for a contact
+  app.post("/api/ai/contacts/:id/score", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const contactId = parseInt(req.params.id);
+
+      // Check if OpenAI is configured
+      const config = openaiService.checkConfiguration();
+      if (!config.configured) {
+        return res.status(503).json({ 
+          message: "OpenAI API key not configured", 
+          hint: "Add OPENAI_API_KEY environment variable to enable AI features" 
+        });
+      }
+
+      // Get contact and call history
+      const contact = await storage.getContact(userId, contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      const callHistory = await storage.getCallsByContact(userId, contactId);
+
+      // Generate AI score
+      const scoreData = await openaiService.scoreContact(contact, callHistory);
+      
+      // Save to database
+      const leadScore = await storage.upsertAiLeadScore(userId, {
+        contactId,
+        overallScore: scoreData.overallScore,
+        answerProbability: scoreData.answerProbability.toString(),
+        conversionProbability: scoreData.conversionProbability.toString(),
+        engagementScore: scoreData.engagementScore,
+        scoringFactors: scoreData.scoringFactors,
+        recommendations: scoreData.recommendations,
+        confidence: scoreData.confidence.toString(),
+        timezone: contact.timezone,
+        bestCallTimes: [],
+        callPatterns: {},
+        responseRate: "0.00",
+      });
+
+      res.json({
+        ...scoreData,
+        id: leadScore.id,
+        lastCalculated: leadScore.lastCalculated,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get AI lead score for a contact
+  app.get("/api/ai/contacts/:id/score", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const contactId = parseInt(req.params.id);
+
+      const score = await storage.getAiLeadScore(userId, contactId);
+      if (!score) {
+        return res.status(404).json({ message: "Lead score not found. Generate one first." });
+      }
+
+      res.json(score);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Predict best call times for a contact
+  app.post("/api/ai/contacts/:id/timing", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const contactId = parseInt(req.params.id);
+
+      const config = openaiService.checkConfiguration();
+      if (!config.configured) {
+        return res.status(503).json({ 
+          message: "OpenAI API key not configured", 
+          hint: "Add OPENAI_API_KEY environment variable to enable AI features" 
+        });
+      }
+
+      const contact = await storage.getContact(userId, contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      const callHistory = await storage.getCallsByContact(userId, contactId);
+      const timingData = await openaiService.predictBestCallTimes(contact, callHistory);
+
+      // Update or create lead score with timing data
+      await storage.upsertAiLeadScore(userId, {
+        contactId,
+        bestCallTimes: timingData.bestCallTimes,
+        timezone: timingData.timezone,
+        callPatterns: timingData.callPatterns,
+        overallScore: 0,
+        answerProbability: "0.00",
+        conversionProbability: "0.00",
+        engagementScore: 0,
+        scoringFactors: {},
+        recommendations: [],
+        confidence: "0.00",
+        responseRate: "0.00",
+      });
+
+      res.json(timingData);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Generate personalized opening script for a contact
+  app.post("/api/ai/contacts/:id/script", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const contactId = parseInt(req.params.id);
+
+      const config = openaiService.checkConfiguration();
+      if (!config.configured) {
+        return res.status(503).json({ 
+          message: "OpenAI API key not configured", 
+          hint: "Add OPENAI_API_KEY environment variable to enable AI features" 
+        });
+      }
+
+      const contact = await storage.getContact(userId, contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      const callHistory = await storage.getCallsByContact(userId, contactId);
+      const scriptData = await openaiService.generateOpeningScript(contact, callHistory);
+
+      res.json(scriptData);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Analyze call transcript and generate intelligence
+  app.post("/api/ai/calls/:id/analyze", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const callId = parseInt(req.params.id);
+
+      const config = openaiService.checkConfiguration();
+      if (!config.configured) {
+        return res.status(503).json({ 
+          message: "OpenAI API key not configured", 
+          hint: "Add OPENAI_API_KEY environment variable to enable AI features" 
+        });
+      }
+
+      const call = await storage.getCall(userId, callId);
+      if (!call) {
+        return res.status(404).json({ message: "Call not found" });
+      }
+
+      const { transcript } = req.body;
+      if (!transcript) {
+        return res.status(400).json({ message: "Transcript is required" });
+      }
+
+      const contact = call.contactId ? await storage.getContact(userId, call.contactId) : null;
+      const contactName = contact?.name || "Unknown";
+
+      const analysis = await openaiService.analyzeCallTranscript(transcript, contactName);
+
+      // Save call intelligence
+      const intelligence = await storage.createCallIntelligence(userId, {
+        callId,
+        contactId: call.contactId || null,
+        transcript,
+        transcriptStatus: "completed",
+        summary: analysis.summary,
+        sentiment: analysis.sentiment,
+        sentimentScore: analysis.sentimentScore.toString(),
+        actionItems: analysis.actionItems,
+        keywords: analysis.keywords,
+        topics: analysis.topics,
+        objections: analysis.objections,
+        recommendedDisposition: analysis.recommendedDisposition,
+        suggestedFollowUp: analysis.suggestedFollowUp,
+        nextBestAction: analysis.nextBestAction,
+        coachingTips: analysis.coachingTips,
+        strengths: analysis.strengths,
+        improvements: analysis.improvements,
+        confidence: analysis.confidence.toString(),
+      });
+
+      res.json({ ...analysis, id: intelligence.id });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get call intelligence for a specific call
+  app.get("/api/ai/calls/:id/intelligence", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const callId = parseInt(req.params.id);
+
+      const intelligence = await storage.getCallIntelligence(userId, callId);
+      if (!intelligence) {
+        return res.status(404).json({ message: "Call intelligence not found. Analyze the call first." });
+      }
+
+      res.json(intelligence);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Analyze campaign performance
+  app.post("/api/ai/campaigns/:id/analyze", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const campaignId = parseInt(req.params.id);
+
+      const config = openaiService.checkConfiguration();
+      if (!config.configured) {
+        return res.status(503).json({ 
+          message: "OpenAI API key not configured", 
+          hint: "Add OPENAI_API_KEY environment variable to enable AI features" 
+        });
+      }
+
+      // Get campaign stats (you'll need to implement this)
+      const campaignStats = {
+        name: `Campaign ${campaignId}`,
+        totalCalls: 100,
+        answeredCalls: 65,
+        conversions: 12,
+        avgCallDuration: 180,
+        commonDispositions: [
+          { disposition: "interested", count: 15 },
+          { disposition: "callback-requested", count: 10 },
+          { disposition: "not-interested", count: 20 },
+        ]
+      };
+
+      const analysis = await openaiService.analyzeCampaignPerformance(campaignStats);
+
+      // Save as AI insight
+      await storage.createAiInsight(userId, {
+        type: "campaign_optimization",
+        category: "performance",
+        priority: "high",
+        title: `Campaign ${campaignId} Performance Analysis`,
+        description: analysis.insights.join(". "),
+        recommendation: analysis.recommendations.join(". "),
+        impact: "AI-powered campaign optimization",
+        data: { estimatedImprovements: analysis.estimatedImprovements },
+        evidence: analysis.priorityActions,
+        campaignId,
+        confidence: "0.80",
+        potentialImpact: "high",
+      });
+
+      res.json(analysis);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all AI insights for a user
+  app.get("/api/ai/insights", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const status = req.query.status as string || 'active';
+      const type = req.query.type as string;
+
+      const insights = await storage.getAiInsights(userId, { status, type });
+      res.json(insights);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update AI insight status
+  app.patch("/api/ai/insights/:id", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const insightId = parseInt(req.params.id);
+      const { status } = req.body;
+
+      const insight = await storage.updateAiInsight(userId, insightId, { status });
+      res.json(insight);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get top scored contacts for parallel dialer
+  app.get("/api/ai/contacts/top-scored", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const topContacts = await storage.getTopScoredContacts(userId, limit);
+      res.json(topContacts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
