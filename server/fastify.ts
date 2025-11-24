@@ -522,8 +522,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   await fastify.register(import('./plugins/recordingsRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/rolesRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/settingsRoutes'), { prefix: '/api' });
-  // twilioRoutes temporarily disabled due to duplicate routes with parallelDialerRoutes
-  // await fastify.register(import('./plugins/twilioRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/twilioRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/usersRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/voicemailsRoutes'), { prefix: '/api' });
   
