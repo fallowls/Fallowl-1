@@ -121,6 +121,10 @@ Provide a JSON response with:
       recommendations: result.recommendations || [],
       confidence: Math.max(0, Math.min(1, result.confidence || 0.5)),
     };
+    } catch (error) {
+      console.error("Error scoring contact:", error);
+      throw error;
+    }
   }
 
   /**
