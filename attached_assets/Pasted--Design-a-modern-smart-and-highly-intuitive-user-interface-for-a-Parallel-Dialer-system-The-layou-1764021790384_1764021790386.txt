@@ -1,0 +1,114 @@
+“Design a modern, smart, and highly intuitive user interface for a Parallel Dialer system. The layout should provide complete real-time visibility of all dialer activities, including queued calls, ringing calls, connected calls, and call outcomes. The design must focus on clarity, speed, and agent productivity, while maintaining an organized and visually appealing structure. Use color-coded indicators, clean spacing, and intelligent grouping of elements.
+
+Key Requirements:
+1. Dashboard Overview
+
+Display total queued calls, active ringing calls, number of connected calls, and recently completed calls.
+
+Include a real-time call funnel visualization.
+
+Show current dialer speed/pacing rate, connection rate, and system usage capacity.
+
+2. Call-Level Visibility
+
+For each call (queued, ringing, or connected), show:
+
+Customer name, phone number, lead ID, and campaign name.
+
+Call direction and status (queued, ringing, connected, failed, busy, voicemail).
+
+Attempt count and time of last attempt.
+
+Call duration timer (for ringing and connected calls).
+
+Agent handling the call (if applicable).
+
+3. Lead/CRM Quick View Panel
+
+When clicking on any call card, expand a panel showing:
+
+Lead status and segmentation tags.
+
+Previous interaction history and notes.
+
+Past call attempts and outcomes.
+
+Scheduled call-backs or tasks.
+
+Editable notes and disposition options.
+
+4. Agent Controls & Interaction Buttons
+
+Provide easy access to:
+
+Start/Stop Dialing
+
+Pause/Resume
+
+Manual Dial
+
+Call controls: Mute, Unmute, Hold, Resume, Transfer (warm/cold), End call
+
+Add Notes and Select Disposition
+
+Schedule Callback
+
+Shortcut keys for fast operations.
+
+5. Dialer Management & Settings
+
+Add a smart settings panel with:
+
+Dialing mode selection (Predictive, Power, Preview).
+
+Adjustable parallel call limit per agent.
+
+Auto-pacing settings based on performance metrics.
+
+Retry rules (attempt limits, retry intervals).
+
+Time-zone based dialing restrictions.
+
+DNC list management.
+
+Priority lead filters and custom rules.
+
+6. Campaign Controls
+
+Start/stop campaigns.
+
+Assign/unassign agents.
+
+View campaign performance metrics in real time.
+
+Import or sync leads from CRM.
+
+Filter calls by queue, priority, or agent.
+
+7. Smart UI/UX Features
+
+Color-coded call cards (Queued = Yellow, Ringing = Blue, Connected = Green, Failed = Red).
+
+Collapsible side panels for lead details.
+
+A card/grid view for active calls.
+
+Real-time pop-up notifications for new queued or connected calls.
+
+A floating action button (FAB) for core controls.
+
+Fast search bar (numbers, agents, tags, lead ID).
+
+Filters by agent, status, campaign, priority, or outcome.
+
+8. Supervisor Tools (optional if needed)
+
+Live listening/monitoring.
+
+Whisper mode.
+
+Barge-in/takeover capability.
+
+Agent performance metrics.
+
+Real-time call quality indicators.
