@@ -487,11 +487,14 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // PHASE 6: WEBSOCKET INTEGRATION
   // ============================================================================
 
-  // WebSocket support will be handled by wsService.initialize(server)
-  // in the main index.ts file
-  await fastify.register(import('@fastify/websocket'));
+  // NOTE: WebSocket is handled by the standalone WebSocketServer in websocketService.ts
+  // which is initialized via wsService.initialize(server) in index.ts.
+  // Do NOT register @fastify/websocket here as it would conflict with the standalone
+  // WebSocketServer (causing "server.handleUpgrade() was called more than once" errors).
+  // The standalone implementation provides Auth0 JWT verification, user-to-client
+  // mapping, heartbeat, and broadcast capabilities.
 
-  log('✅ WebSocket server configured');
+  log('✅ WebSocket will be handled by standalone WebSocketServer');
 
   // ============================================================================
   // PHASE 7: ERROR HANDLER
