@@ -219,6 +219,50 @@ export default function ParallelDialerPage() {
     initializeDialer();
   }, [initializeDialer]);
 
+  // Track processed calls to prevent double-counting
+  const processedCallSidsRef = useRef<Set<string>>(new Set());
+
+  // Helper to record a completed call (single source of truth)
+  const recordCompletedCall = useCallback((
+    callSid: string,
+    contact: Contact,
+    status: DialedContact['status'],
+    duration: number,
+    answeredBy?: 'human' | 'machine' | 'fax' | 'unknown'
+  ) => {
+    // Skip if already processed this callSid
+    if (processedCallSidsRef.current.has(callSid)) {
+      console.log('[ParallelDialer] Call already processed:', callSid);
+      return;
+    }
+    processedCallSidsRef.current.add(callSid);
+    
+    // Add to dialed contacts
+    setDialedContacts(prev => [...prev, {
+      contact,
+      status,
+      duration,
+      dialedAt: new Date()
+    }]);
+    
+    // Update stats
+    setStats(prev => {
+      const updates = { ...prev };
+      if (status === 'connected' || answeredBy === 'human') {
+        updates.connected = prev.connected + 1;
+        updates.talkTime = prev.talkTime + duration;
+      } else if (status === 'voicemail' || answeredBy === 'machine') {
+        updates.voicemails = prev.voicemails + 1;
+      } else {
+        updates.failed = prev.failed + 1;
+      }
+      return updates;
+    });
+    
+    // Advance queue - remove this contact and move to next
+    setCurrentContactIndex(prev => prev + 1);
+  }, []);
+
   // Handle WebSocket events for parallel call status updates
   useEffect(() => {
     const handleCallStarted = (event: CustomEvent) => {
@@ -249,6 +293,9 @@ export default function ParallelDialerPage() {
       const { lineId, status, callSid, answeredBy, duration } = event.detail;
       console.log('[ParallelDialer] Call status update:', event.detail);
       
+      // Check if this is a terminal state
+      const isTerminal = ['completed', 'failed', 'busy', 'no-answer', 'canceled', 'voicemail', 'machine-detected'].includes(status);
+      
       setCallLines(prev => prev.map(line => {
         if (line.id === lineId || (callSid && line.callSid === callSid)) {
           const newLine = { 
@@ -258,39 +305,18 @@ export default function ParallelDialerPage() {
             answeredBy
           };
           
-          // Handle terminal states - add to dialed contacts
-          if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(status)) {
+          // Handle terminal states - record the completed call
+          if (isTerminal && line.callSid) {
             const contact = filteredContacts.find(c => c.id === line.contactId);
             if (contact) {
               const dialedStatus: DialedContact['status'] = 
-                status === 'completed' ? 'connected' :
-                status === 'failed' ? 'failed' :
+                (answeredBy === 'human' || status === 'completed') ? 'connected' :
+                (answeredBy === 'machine' || status === 'voicemail' || status === 'machine-detected') ? 'voicemail' :
                 status === 'busy' ? 'busy' :
-                'no-answer';
+                status === 'no-answer' ? 'no-answer' :
+                'failed';
               
-              setDialedContacts(prev => {
-                if (prev.find(d => d.contact.id === contact.id)) return prev;
-                return [...prev, {
-                  contact,
-                  status: dialedStatus,
-                  duration: duration || line.duration,
-                  dialedAt: new Date()
-                }];
-              });
-              
-              // Update stats based on outcome
-              setStats(prev => {
-                const updates = { ...prev };
-                if (status === 'completed' && answeredBy === 'human') {
-                  updates.connected = prev.connected + 1;
-                  updates.talkTime = prev.talkTime + (duration || 0);
-                } else if (answeredBy === 'machine' || status === 'voicemail') {
-                  updates.voicemails = prev.voicemails + 1;
-                } else if (['failed', 'busy', 'no-answer'].includes(status)) {
-                  updates.failed = prev.failed + 1;
-                }
-                return updates;
-              });
+              recordCompletedCall(line.callSid, contact, dialedStatus, duration || line.duration, answeredBy);
             }
             
             // Reset line after a short delay
@@ -334,38 +360,19 @@ export default function ParallelDialerPage() {
       
       setCallLines(prev => prev.map(line => {
         if (line.id === lineId || (callSid && line.callSid === callSid)) {
-          const contact = filteredContacts.find(c => c.id === line.contactId);
-          if (contact) {
-            const dialedStatus: DialedContact['status'] = 
-              answeredBy === 'human' ? 'connected' :
-              answeredBy === 'machine' ? 'voicemail' :
-              status === 'busy' ? 'busy' :
-              status === 'no-answer' ? 'no-answer' :
-              'failed';
-            
-            setDialedContacts(prev => {
-              if (prev.find(d => d.contact.id === contact.id)) return prev;
-              return [...prev, {
-                contact,
-                status: dialedStatus,
-                duration: duration || line.duration,
-                dialedAt: new Date()
-              }];
-            });
-            
-            // Update stats
-            setStats(prev => {
-              const updates = { ...prev };
-              if (answeredBy === 'human') {
-                updates.connected = prev.connected + 1;
-                updates.talkTime = prev.talkTime + (duration || 0);
-              } else if (answeredBy === 'machine') {
-                updates.voicemails = prev.voicemails + 1;
-              } else {
-                updates.failed = prev.failed + 1;
-              }
-              return updates;
-            });
+          // Record if not already processed
+          if (line.callSid && !processedCallSidsRef.current.has(line.callSid)) {
+            const contact = filteredContacts.find(c => c.id === line.contactId);
+            if (contact) {
+              const dialedStatus: DialedContact['status'] = 
+                answeredBy === 'human' ? 'connected' :
+                answeredBy === 'machine' ? 'voicemail' :
+                status === 'busy' ? 'busy' :
+                status === 'no-answer' ? 'no-answer' :
+                'failed';
+              
+              recordCompletedCall(line.callSid, contact, dialedStatus, duration || line.duration, answeredBy);
+            }
           }
           
           // Reset line after delay
@@ -392,7 +399,7 @@ export default function ParallelDialerPage() {
       window.removeEventListener('parallel_call_connected', handleCallConnected as EventListener);
       window.removeEventListener('parallel_call_ended', handleCallEnded as EventListener);
     };
-  }, [filteredContacts, firstConnectTime]);
+  }, [filteredContacts, firstConnectTime, recordCompletedCall]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
