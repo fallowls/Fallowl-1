@@ -219,6 +219,181 @@ export default function ParallelDialerPage() {
     initializeDialer();
   }, [initializeDialer]);
 
+  // Handle WebSocket events for parallel call status updates
+  useEffect(() => {
+    const handleCallStarted = (event: CustomEvent) => {
+      const { lineId, phone, contactId, callSid } = event.detail;
+      console.log('[ParallelDialer] Call started:', event.detail);
+      
+      const contact = filteredContacts.find(c => c.id === contactId);
+      
+      setCallLines(prev => prev.map(line => 
+        line.id === lineId ? {
+          ...line,
+          phone,
+          name: contact?.name || 'Unknown',
+          company: contact?.company || undefined,
+          email: contact?.email || undefined,
+          contactId,
+          callSid,
+          status: 'dialing',
+          startTime: Date.now()
+        } : line
+      ));
+      
+      // Update stats
+      setStats(prev => ({ ...prev, totalDialed: prev.totalDialed + 1 }));
+    };
+
+    const handleCallStatus = (event: CustomEvent) => {
+      const { lineId, status, callSid, answeredBy, duration } = event.detail;
+      console.log('[ParallelDialer] Call status update:', event.detail);
+      
+      setCallLines(prev => prev.map(line => {
+        if (line.id === lineId || (callSid && line.callSid === callSid)) {
+          const newLine = { 
+            ...line, 
+            status: status as ParallelCallLine['status'],
+            duration: duration || line.duration,
+            answeredBy
+          };
+          
+          // Handle terminal states - add to dialed contacts
+          if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(status)) {
+            const contact = filteredContacts.find(c => c.id === line.contactId);
+            if (contact) {
+              const dialedStatus: DialedContact['status'] = 
+                status === 'completed' ? 'connected' :
+                status === 'failed' ? 'failed' :
+                status === 'busy' ? 'busy' :
+                'no-answer';
+              
+              setDialedContacts(prev => {
+                if (prev.find(d => d.contact.id === contact.id)) return prev;
+                return [...prev, {
+                  contact,
+                  status: dialedStatus,
+                  duration: duration || line.duration,
+                  dialedAt: new Date()
+                }];
+              });
+              
+              // Update stats based on outcome
+              setStats(prev => {
+                const updates = { ...prev };
+                if (status === 'completed' && answeredBy === 'human') {
+                  updates.connected = prev.connected + 1;
+                  updates.talkTime = prev.talkTime + (duration || 0);
+                } else if (answeredBy === 'machine' || status === 'voicemail') {
+                  updates.voicemails = prev.voicemails + 1;
+                } else if (['failed', 'busy', 'no-answer'].includes(status)) {
+                  updates.failed = prev.failed + 1;
+                }
+                return updates;
+              });
+            }
+            
+            // Reset line after a short delay
+            setTimeout(() => {
+              setCallLines(prev => prev.map(l => 
+                l.id === lineId ? { ...l, status: 'idle', phone: '', name: '', callSid: undefined, contactId: undefined, duration: 0 } : l
+              ));
+            }, 3000);
+          }
+          
+          return newLine;
+        }
+        return line;
+      }));
+    };
+
+    const handleCallConnected = (event: CustomEvent) => {
+      const { lineId, callSid, answeredBy, duration } = event.detail;
+      console.log('[ParallelDialer] Call connected:', event.detail);
+      
+      if (!firstConnectTime) {
+        setFirstConnectTime(Date.now());
+      }
+      
+      setCallLines(prev => prev.map(line => {
+        if (line.id === lineId || (callSid && line.callSid === callSid)) {
+          return { 
+            ...line, 
+            status: answeredBy === 'machine' ? 'machine-detected' : 'human-detected',
+            answeredBy,
+            duration: duration || line.duration
+          };
+        }
+        return line;
+      }));
+    };
+
+    const handleCallEnded = (event: CustomEvent) => {
+      const { lineId, callSid, status, duration, answeredBy } = event.detail;
+      console.log('[ParallelDialer] Call ended:', event.detail);
+      
+      setCallLines(prev => prev.map(line => {
+        if (line.id === lineId || (callSid && line.callSid === callSid)) {
+          const contact = filteredContacts.find(c => c.id === line.contactId);
+          if (contact) {
+            const dialedStatus: DialedContact['status'] = 
+              answeredBy === 'human' ? 'connected' :
+              answeredBy === 'machine' ? 'voicemail' :
+              status === 'busy' ? 'busy' :
+              status === 'no-answer' ? 'no-answer' :
+              'failed';
+            
+            setDialedContacts(prev => {
+              if (prev.find(d => d.contact.id === contact.id)) return prev;
+              return [...prev, {
+                contact,
+                status: dialedStatus,
+                duration: duration || line.duration,
+                dialedAt: new Date()
+              }];
+            });
+            
+            // Update stats
+            setStats(prev => {
+              const updates = { ...prev };
+              if (answeredBy === 'human') {
+                updates.connected = prev.connected + 1;
+                updates.talkTime = prev.talkTime + (duration || 0);
+              } else if (answeredBy === 'machine') {
+                updates.voicemails = prev.voicemails + 1;
+              } else {
+                updates.failed = prev.failed + 1;
+              }
+              return updates;
+            });
+          }
+          
+          // Reset line after delay
+          setTimeout(() => {
+            setCallLines(prev => prev.map(l => 
+              l.id === lineId ? { ...l, status: 'idle', phone: '', name: '', callSid: undefined, contactId: undefined, duration: 0 } : l
+            ));
+          }, 3000);
+          
+          return { ...line, status: 'completed', duration: duration || line.duration };
+        }
+        return line;
+      }));
+    };
+
+    window.addEventListener('parallel_call_started', handleCallStarted as EventListener);
+    window.addEventListener('parallel_call_status', handleCallStatus as EventListener);
+    window.addEventListener('parallel_call_connected', handleCallConnected as EventListener);
+    window.addEventListener('parallel_call_ended', handleCallEnded as EventListener);
+
+    return () => {
+      window.removeEventListener('parallel_call_started', handleCallStarted as EventListener);
+      window.removeEventListener('parallel_call_status', handleCallStatus as EventListener);
+      window.removeEventListener('parallel_call_connected', handleCallConnected as EventListener);
+      window.removeEventListener('parallel_call_ended', handleCallEnded as EventListener);
+    };
+  }, [filteredContacts, firstConnectTime]);
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
