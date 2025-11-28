@@ -1,9 +1,14 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useEffect } from "react";
 
 export function ParallelDialerSkeleton() {
+  useEffect(() => {
+    console.log('[ParallelDialerSkeleton] Skeleton is rendering - Twilio device initializing');
+  }, []);
+
   return (
-    <div className="h-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl">
         {/* Header skeleton */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 text-white shadow-2xl">

@@ -108,7 +108,12 @@ export default function ParallelDialerPage() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { makeCall, isReady } = useTwilioDeviceV2();
+  const { makeCall, isReady, deviceStatus, error: twilioError } = useTwilioDeviceV2();
+  
+  // Debug: Log isReady state changes
+  useEffect(() => {
+    console.log('[ParallelDialerPage] Device state:', { isReady, deviceStatus, twilioError });
+  }, [isReady, deviceStatus, twilioError]);
   
   // Keep refs in sync
   useEffect(() => { isDialingRef.current = isDialing; }, [isDialing]);
@@ -311,7 +316,7 @@ export default function ParallelDialerPage() {
   }
 
   return (
-    <div className="h-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-full w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl">
         {/* Modern Header */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 text-white shadow-2xl">
