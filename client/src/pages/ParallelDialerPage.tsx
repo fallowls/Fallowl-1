@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -9,7 +9,6 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -18,10 +17,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { 
-  Phone, PhoneCall, PhoneOff, Play, Pause, SkipForward, Settings,
-  Activity, TrendingUp, Clock, CheckCircle, XCircle, Users,
-  Zap, Target, BarChart3, Mic, MicOff, AlertCircle, Info, Mail, Building2, Briefcase,
-  Radio, Sparkles, ChevronDown, ChevronUp, Save, Volume2, Timer
+  Phone, PhoneCall, PhoneOff, Play, Pause, Settings,
+  CheckCircle, XCircle, Users, ListOrdered,
+  Zap, BarChart3, Mic, MicOff, AlertCircle, Building2,
+  ChevronDown, ChevronUp, Save, Volume2, Timer, Clock,
+  ArrowRight, SkipForward, PhoneOutgoing, PhoneIncoming,
+  CircleDot, Loader2, CheckCircle2, XOctagon, Voicemail
 } from "lucide-react";
 import { ParallelDialerSkeleton } from "@/components/skeletons/ParallelDialerSkeleton";
 import { useTwilioDeviceV2 } from "@/hooks/useTwilioDeviceV2";
@@ -61,6 +62,13 @@ interface DialerStats {
   skippedMaxAttempts: number;
 }
 
+interface DialedContact {
+  contact: Contact;
+  status: 'connected' | 'voicemail' | 'no-answer' | 'busy' | 'failed';
+  duration: number;
+  dialedAt: Date;
+}
+
 export default function ParallelDialerPage() {
   const [isDialing, setIsDialing] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -69,6 +77,7 @@ export default function ParallelDialerPage() {
   const [callsPerSecond, setCallsPerSecond] = useState(3);
   const [callLines, setCallLines] = useState<ParallelCallLine[]>([]);
   const [queuedContacts, setQueuedContacts] = useState<Contact[]>([]);
+  const [dialedContacts, setDialedContacts] = useState<DialedContact[]>([]);
   const [currentContactIndex, setCurrentContactIndex] = useState(0);
   const [amdEnabled, setAmdEnabled] = useState(true);
   const [amdTimeout, setAmdTimeout] = useState(5);
@@ -94,7 +103,6 @@ export default function ParallelDialerPage() {
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [firstConnectTime, setFirstConnectTime] = useState<number | null>(null);
   
-  // Refs
   const isDialingBatchRef = useRef(false);
   const dialRequestedRef = useRef(false);
   const lineResetTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -110,18 +118,15 @@ export default function ParallelDialerPage() {
   const queryClient = useQueryClient();
   const { makeCall, isReady, deviceStatus, error: twilioError } = useTwilioDeviceV2();
   
-  // Debug: Log isReady state changes
   useEffect(() => {
     console.log('[ParallelDialerPage] Device state:', { isReady, deviceStatus, twilioError });
   }, [isReady, deviceStatus, twilioError]);
   
-  // Keep refs in sync
   useEffect(() => { isDialingRef.current = isDialing; }, [isDialing]);
   useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
   useEffect(() => { autoSkipVoicemailRef.current = autoSkipVoicemail; }, [autoSkipVoicemail]);
   useEffect(() => { toastRef.current = toast; }, [toast]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -133,7 +138,6 @@ export default function ParallelDialerPage() {
     };
   }, []);
 
-  // Agent status updates
   useEffect(() => {
     const updateAgentStatus = async () => {
       try {
@@ -215,7 +219,12 @@ export default function ParallelDialerPage() {
     initializeDialer();
   }, [initializeDialer]);
 
-  // Placeholder functions - implement as needed
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const startDialing = () => {
     if (!selectedListId && filteredContacts.length === 0) {
       toast({
@@ -225,138 +234,233 @@ export default function ParallelDialerPage() {
       });
       return;
     }
-    
     setIsDialing(true);
-    setIsPaused(false);
     setSessionStartTime(Date.now());
-    setQueuedContacts(filteredContacts);
-    setCurrentContactIndex(0);
-    dialedPhonesRef.current.clear();
-    statsRecordedLinesRef.current.clear();
-    
+    setQueuedContacts([...filteredContacts]);
     toast({
-      title: "Dialing started",
-      description: `Starting parallel dialer with ${parallelLines} lines`,
+      title: "Dialer started",
+      description: `Starting to dial ${filteredContacts.length} contacts.`,
     });
   };
 
   const stopDialing = () => {
     setIsDialing(false);
     setIsPaused(false);
-    lineResetTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
-    lineResetTimeoutsRef.current.clear();
-    
+    setQueuedContacts([]);
+    setCurrentContactIndex(0);
+    dialedPhonesRef.current.clear();
     toast({
-      title: "Dialing stopped",
-      description: "All active calls will complete",
+      title: "Dialer stopped",
+      description: "All dialing activity has been stopped.",
     });
   };
 
   const togglePause = () => {
     setIsPaused(!isPaused);
     toast({
-      title: isPaused ? "Resumed" : "Paused",
-      description: isPaused ? "Dialing resumed" : "Dialing paused",
+      title: isPaused ? "Dialer resumed" : "Dialer paused",
+      description: isPaused ? "Dialing has resumed." : "Dialing is paused.",
     });
   };
 
-  const skipToNext = () => {
-    setCurrentContactIndex(prev => prev + 1);
+  const addToDialedContacts = useCallback((line: ParallelCallLine, status: DialedContact['status']) => {
+    if (!line.contactId) return;
+    
+    const contact = filteredContacts.find(c => c.id === line.contactId);
+    if (!contact) return;
+    
+    setDialedContacts(prev => {
+      const existing = prev.find(d => d.contact.id === contact.id);
+      if (existing) return prev;
+      
+      return [...prev, {
+        contact,
+        status,
+        duration: line.duration,
+        dialedAt: new Date()
+      }];
+    });
+  }, [filteredContacts]);
+
+  const markLineCompleted = useCallback((lineId: string, status: DialedContact['status'] = 'connected') => {
+    setCallLines(prev => prev.map(line => {
+      if (line.id === lineId) {
+        addToDialedContacts(line, status);
+        return { ...line, status: 'completed' };
+      }
+      return line;
+    }));
+  }, [addToDialedContacts]);
+
+  const disconnectCall = async (callSid: string, lineId: string) => {
+    try {
+      await apiRequest('POST', '/api/twilio/parallel-dialer/disconnect', { callSid });
+      markLineCompleted(lineId, 'connected');
+    } catch (error) {
+      console.error('Failed to disconnect call:', error);
+    }
   };
 
-  const disconnectCall = (callSid: string, lineId: string) => {
-    // Implement disconnect logic
-  };
-
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      idle: 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800',
-      dialing: 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800',
-      ringing: 'bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800',
-      'human-detected': 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800',
-      connected: 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800',
-      'in-progress': 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800',
-      'machine-detected': 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800',
-      voicemail: 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800',
-      failed: 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800',
-      busy: 'bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800',
-      'no-answer': 'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700',
-      completed: 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800',
+  const getStatusConfig = (status: string) => {
+    const configs: Record<string, { bg: string; border: string; icon: JSX.Element; label: string }> = {
+      idle: { 
+        bg: 'bg-gray-50 dark:bg-gray-900/50', 
+        border: 'border-gray-200 dark:border-gray-800',
+        icon: <CircleDot className="w-4 h-4 text-gray-400" />,
+        label: 'Ready'
+      },
+      dialing: { 
+        bg: 'bg-blue-50 dark:bg-blue-950/50', 
+        border: 'border-blue-300 dark:border-blue-700',
+        icon: <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />,
+        label: 'Dialing'
+      },
+      ringing: { 
+        bg: 'bg-purple-50 dark:bg-purple-950/50', 
+        border: 'border-purple-300 dark:border-purple-700',
+        icon: <PhoneOutgoing className="w-4 h-4 text-purple-500 animate-pulse" />,
+        label: 'Ringing'
+      },
+      'human-detected': { 
+        bg: 'bg-teal-50 dark:bg-teal-950/50', 
+        border: 'border-teal-400 dark:border-teal-600',
+        icon: <CheckCircle2 className="w-4 h-4 text-teal-600" />,
+        label: 'Human'
+      },
+      connected: { 
+        bg: 'bg-emerald-50 dark:bg-emerald-950/50', 
+        border: 'border-emerald-400 dark:border-emerald-600',
+        icon: <PhoneCall className="w-4 h-4 text-emerald-600" />,
+        label: 'Connected'
+      },
+      'in-progress': { 
+        bg: 'bg-emerald-50 dark:bg-emerald-950/50', 
+        border: 'border-emerald-400 dark:border-emerald-600',
+        icon: <PhoneCall className="w-4 h-4 text-emerald-600" />,
+        label: 'In Progress'
+      },
+      'machine-detected': { 
+        bg: 'bg-amber-50 dark:bg-amber-950/50', 
+        border: 'border-amber-400 dark:border-amber-600',
+        icon: <Voicemail className="w-4 h-4 text-amber-600" />,
+        label: 'Machine'
+      },
+      voicemail: { 
+        bg: 'bg-amber-50 dark:bg-amber-950/50', 
+        border: 'border-amber-400 dark:border-amber-600',
+        icon: <Volume2 className="w-4 h-4 text-amber-600" />,
+        label: 'Voicemail'
+      },
+      failed: { 
+        bg: 'bg-red-50 dark:bg-red-950/50', 
+        border: 'border-red-400 dark:border-red-600',
+        icon: <XOctagon className="w-4 h-4 text-red-600" />,
+        label: 'Failed'
+      },
+      busy: { 
+        bg: 'bg-yellow-50 dark:bg-yellow-950/50', 
+        border: 'border-yellow-400 dark:border-yellow-600',
+        icon: <PhoneOff className="w-4 h-4 text-yellow-600" />,
+        label: 'Busy'
+      },
+      'no-answer': { 
+        bg: 'bg-gray-100 dark:bg-gray-800', 
+        border: 'border-gray-300 dark:border-gray-700',
+        icon: <XCircle className="w-4 h-4 text-gray-500" />,
+        label: 'No Answer'
+      },
+      completed: { 
+        bg: 'bg-sky-50 dark:bg-sky-950/50', 
+        border: 'border-sky-300 dark:border-sky-700',
+        icon: <CheckCircle className="w-4 h-4 text-sky-600" />,
+        label: 'Completed'
+      },
     };
-    return colors[status] || colors.idle;
-  };
-
-  const getStatusIcon = (status: string) => {
-    const iconClass = "w-5 h-5 flex-shrink-0";
-    const icons: Record<string, JSX.Element> = {
-      idle: <Radio className={cn(iconClass, "text-gray-400")} />,
-      dialing: <Phone className={cn(iconClass, "text-blue-500 animate-pulse")} />,
-      ringing: <PhoneCall className={cn(iconClass, "text-purple-500 animate-bounce")} />,
-      'human-detected': <CheckCircle className={cn(iconClass, "text-green-500")} />,
-      connected: <PhoneCall className={cn(iconClass, "text-green-500")} />,
-      'in-progress': <PhoneCall className={cn(iconClass, "text-green-500")} />,
-      'machine-detected': <Mic className={cn(iconClass, "text-orange-500")} />,
-      voicemail: <MicOff className={cn(iconClass, "text-orange-500")} />,
-      failed: <XCircle className={cn(iconClass, "text-red-500")} />,
-      busy: <PhoneOff className={cn(iconClass, "text-yellow-500")} />,
-      'no-answer': <PhoneOff className={cn(iconClass, "text-gray-500")} />,
-      completed: <CheckCircle className={cn(iconClass, "text-blue-500")} />,
-    };
-    return icons[status] || icons.idle;
+    return configs[status] || configs.idle;
   };
 
   if (!isReady) {
     return <ParallelDialerSkeleton />;
   }
 
+  const remainingContacts = queuedContacts.slice(currentContactIndex);
+  const connectRate = stats.totalDialed > 0 ? Math.round((stats.connected / stats.totalDialed) * 100) : 0;
+
   return (
-    <div className="min-h-full w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl">
-        {/* Modern Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 text-white shadow-2xl">
-          <div className="absolute inset-0 bg-black/10" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-3">
-                  <Sparkles className="w-8 h-8" />
-                  Parallel Dialer
-                </h1>
-                <p className="text-blue-100 text-sm md:text-base">
-                  AI-powered multi-line outbound calling system
-                </p>
+    <div className="min-h-full w-full bg-background">
+      <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-[16px] bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg shadow-teal-500/25">
+              <Phone className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Parallel Dialer</h1>
+              <p className="text-sm text-muted-foreground">Multi-line outbound calling system</p>
+            </div>
+            <Badge 
+              className={cn(
+                "ml-2 px-3 py-1",
+                isReady 
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400" 
+                  : "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400"
+              )}
+            >
+              <span className={cn(
+                "w-2 h-2 rounded-full mr-2",
+                isReady ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+              )} />
+              {isReady ? 'Ready' : 'Connecting'}
+            </Badge>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-2 text-sm">
-                  <Radio className="w-4 h-4 mr-2 animate-pulse" />
-                  {isReady ? 'Ready' : 'Connecting...'}
-                </Badge>
+              <div>
+                <span className="font-bold text-lg text-gray-900 dark:text-white">{stats.totalDialed}</span>
+                <span className="text-muted-foreground ml-1">dialed</span>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <span className="font-bold text-lg text-gray-900 dark:text-white">{stats.connected}</span>
+                <span className="text-muted-foreground ml-1">connected</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-teal-100 dark:bg-teal-900/30">
+                <BarChart3 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div>
+                <span className="font-bold text-lg text-gray-900 dark:text-white">{connectRate}%</span>
+                <span className="text-muted-foreground ml-1">rate</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            {/* Control Panel */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Control Bar */}
+        <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-4">
               {/* List Selection */}
-              <div className="space-y-2">
-                <Label className="text-white/90 text-xs font-medium uppercase tracking-wide">
-                  Contact List
-                </Label>
+              <div className="flex items-center gap-2 min-w-[200px]">
+                <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap">List:</Label>
                 <Select
                   value={selectedListId || "all"}
                   onValueChange={(value) => setSelectedListId(value === "all" ? "" : value)}
                   disabled={isDialing}
                 >
-                  <SelectTrigger 
-                    className="bg-white/10 border-white/20 text-white backdrop-blur-sm hover:bg-white/20 transition-all"
-                    data-testid="select-contact-list"
-                  >
-                    <SelectValue placeholder="Select a list..." />
+                  <SelectTrigger className="h-9" data-testid="select-contact-list">
+                    <SelectValue placeholder="Select list..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Contacts ({contacts.length})</SelectItem>
@@ -370,13 +474,8 @@ export default function ParallelDialerPage() {
               </div>
 
               {/* Lines Control */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-white/90 text-xs font-medium uppercase tracking-wide">
-                    Parallel Lines
-                  </Label>
-                  <span className="text-white font-bold text-lg">{parallelLines}</span>
-                </div>
+              <div className="flex items-center gap-3 min-w-[180px]">
+                <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Lines:</Label>
                 <Slider
                   min={1}
                   max={10}
@@ -384,39 +483,46 @@ export default function ParallelDialerPage() {
                   value={[parallelLines]}
                   onValueChange={(value) => setParallelLines(value[0])}
                   disabled={isDialing}
-                  className="bg-white/20"
+                  className="w-24"
                   data-testid="slider-parallel-lines"
                 />
+                <Badge variant="secondary" className="min-w-[28px] justify-center">{parallelLines}</Badge>
               </div>
 
+              {/* Spacer */}
+              <div className="flex-1" />
+
               {/* Actions */}
-              <div className="flex items-end gap-2">
+              <div className="flex items-center gap-2">
                 {!isDialing ? (
                   <Button
                     onClick={startDialing}
                     disabled={!isReady || filteredContacts.length === 0}
-                    className="flex-1 bg-white text-blue-600 hover:bg-white/90 font-semibold shadow-lg h-12"
+                    className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-lg shadow-teal-500/25 px-6"
                     data-testid="button-start-dialing"
                   >
-                    <Play className="w-5 h-5 mr-2" />
+                    <Play className="w-4 h-4 mr-2" />
                     Start Dialing
                   </Button>
                 ) : (
                   <>
                     <Button
                       onClick={togglePause}
-                      variant="secondary"
-                      className="flex-1 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 h-12"
+                      variant="outline"
+                      className={cn(
+                        "px-4",
+                        isPaused && "bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-400"
+                      )}
                       data-testid="button-pause-resume"
                     >
                       {isPaused ? (
                         <>
-                          <Play className="w-5 h-5 mr-2" />
+                          <Play className="w-4 h-4 mr-2" />
                           Resume
                         </>
                       ) : (
                         <>
-                          <Pause className="w-5 h-5 mr-2" />
+                          <Pause className="w-4 h-4 mr-2" />
                           Pause
                         </>
                       )}
@@ -424,385 +530,564 @@ export default function ParallelDialerPage() {
                     <Button
                       onClick={stopDialing}
                       variant="destructive"
-                      className="flex-1 bg-red-500 hover:bg-red-600 h-12"
+                      className="px-4"
                       data-testid="button-stop-dialing"
                     >
-                      <PhoneOff className="w-5 h-5 mr-2" />
+                      <PhoneOff className="w-4 h-4 mr-2" />
                       Stop
                     </Button>
                   </>
                 )}
                 <Button
                   onClick={() => setShowSettings(!showSettings)}
-                  variant="secondary"
-                  className="bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm border border-white/20 h-12 px-4"
+                  variant="outline"
+                  size="icon"
+                  className={cn(showSettings && "bg-gray-100 dark:bg-gray-800")}
                   data-testid="button-settings"
                 >
-                  <Settings className="w-5 h-5" />
+                  <Settings className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Stats Dashboard */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-none shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Phone className="w-8 h-8 opacity-80" />
-                <Badge className="bg-white/20 text-white border-none">Total</Badge>
-              </div>
-              <div className="text-4xl font-bold mb-1">{stats.totalDialed}</div>
-              <p className="text-sm text-blue-100">Calls Dialed</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <CheckCircle className="w-8 h-8 opacity-80" />
-                <Badge className="bg-white/20 text-white border-none">
-                  {stats.totalDialed > 0 ? Math.round((stats.connected / stats.totalDialed) * 100) : 0}%
-                </Badge>
-              </div>
-              <div className="text-4xl font-bold mb-1">{stats.connected}</div>
-              <p className="text-sm text-green-100">Connected</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Volume2 className="w-8 h-8 opacity-80" />
-                <Badge className="bg-white/20 text-white border-none">VM</Badge>
-              </div>
-              <div className="text-4xl font-bold mb-1">{stats.voicemails}</div>
-              <p className="text-sm text-orange-100">Voicemails</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Timer className="w-8 h-8 opacity-80" />
-                <Badge className="bg-white/20 text-white border-none">Avg</Badge>
-              </div>
-              <div className="text-4xl font-bold mb-1">{stats.avgConnectTime}s</div>
-              <p className="text-sm text-purple-100">Connect Time</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Settings Panel */}
+        {/* Settings Panel (Collapsible) */}
         {showSettings && (
-          <Card className="border-none shadow-xl">
-            <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b">
+          <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)] animate-in slide-in-from-top-2 duration-200">
+            <CardHeader className="pb-3 px-4 pt-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Settings className="w-6 h-6" />
-                  Advanced Settings
+                <CardTitle className="text-base flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                  <div className="p-2 rounded-[12px] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900">
+                    <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  Dialer Settings
                 </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSettings(false)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setShowSettings(false)}>
                   <ChevronUp className="w-4 h-4" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* AMD Settings */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border">
-                    <div className="flex items-center gap-3">
-                      <Mic className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      <div>
-                        <Label className="font-semibold">Answering Machine Detection</Label>
-                        <p className="text-xs text-muted-foreground">Auto-detect voicemails</p>
-                      </div>
+            <CardContent className="px-4 pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* AMD Toggle */}
+                <div className="flex items-center justify-between p-3 rounded-[12px] border bg-card">
+                  <div className="flex items-center gap-2">
+                    <Mic className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <div>
+                      <Label className="text-sm font-medium">AMD Detection</Label>
+                      <p className="text-xs text-muted-foreground">Auto-detect voicemails</p>
                     </div>
-                    <Switch
-                      checked={amdEnabled}
-                      onCheckedChange={setAmdEnabled}
-                      disabled={isDialing}
-                      data-testid="switch-amd-enabled"
-                    />
                   </div>
-
-                  {amdEnabled && (
-                    <div className="pl-4 space-y-3 border-l-2 border-blue-200 dark:border-blue-800">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm">Timeout</Label>
-                          <span className="text-sm font-bold">{amdTimeout}s</span>
-                        </div>
-                        <Slider
-                          min={5}
-                          max={60}
-                          step={5}
-                          value={[amdTimeout]}
-                          onValueChange={(value) => setAmdTimeout(value[0])}
-                          disabled={isDialing}
-                          data-testid="slider-amd-timeout"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm">Sensitivity</Label>
-                        <Select
-                          value={amdSensitivity}
-                          onValueChange={(value: 'standard' | 'high' | 'low') => setAmdSensitivity(value)}
-                          disabled={isDialing}
-                        >
-                          <SelectTrigger data-testid="select-amd-sensitivity">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="standard">Standard</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  )}
+                  <Switch
+                    checked={amdEnabled}
+                    onCheckedChange={setAmdEnabled}
+                    disabled={isDialing}
+                    data-testid="switch-amd-enabled"
+                  />
                 </div>
 
-                {/* Other Settings */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border">
-                    <div className="flex items-center gap-3">
-                      <SkipForward className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      <div>
-                        <Label className="font-semibold">Auto-Skip Voicemail</Label>
-                        <p className="text-xs text-muted-foreground">Skip to next on VM</p>
-                      </div>
+                {/* Auto-Skip Voicemail */}
+                <div className="flex items-center justify-between p-3 rounded-[12px] border bg-card">
+                  <div className="flex items-center gap-2">
+                    <SkipForward className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <div>
+                      <Label className="text-sm font-medium">Auto-Skip VM</Label>
+                      <p className="text-xs text-muted-foreground">Skip voicemails</p>
                     </div>
-                    <Switch
-                      checked={autoSkipVoicemail}
-                      onCheckedChange={setAutoSkipVoicemail}
-                      disabled={isDialing}
-                      data-testid="switch-auto-skip-voicemail"
-                    />
                   </div>
+                  <Switch
+                    checked={autoSkipVoicemail}
+                    onCheckedChange={setAutoSkipVoicemail}
+                    disabled={isDialing}
+                    data-testid="switch-auto-skip-voicemail"
+                  />
+                </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border">
-                    <div className="flex items-center gap-3">
-                      <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                      <div>
-                        <Label className="font-semibold">Aggressive Mode (2x)</Label>
-                        <p className="text-xs text-muted-foreground">Dial double contacts</p>
-                      </div>
+                {/* Aggressive Mode */}
+                <div className="flex items-center justify-between p-3 rounded-[12px] border bg-card">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <Label className="text-sm font-medium">Aggressive (2x)</Label>
+                      <p className="text-xs text-muted-foreground">Double dial rate</p>
                     </div>
-                    <Switch
-                      checked={aggressiveDialing}
-                      onCheckedChange={setAggressiveDialing}
-                      disabled={isDialing}
-                      data-testid="switch-aggressive-dialing"
-                    />
                   </div>
+                  <Switch
+                    checked={aggressiveDialing}
+                    onCheckedChange={setAggressiveDialing}
+                    disabled={isDialing}
+                    data-testid="switch-aggressive-dialing"
+                  />
+                </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Pre-recorded Greeting URL</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={greetingUrl}
-                        onChange={(e) => setGreetingUrl(e.target.value)}
-                        placeholder="https://your-cdn.com/greeting.mp3"
-                        className="flex-1"
-                        data-testid="input-greeting-url"
-                      />
-                      <Button
-                        onClick={() => saveGreetingMutation.mutate(greetingUrl)}
-                        disabled={saveGreetingMutation.isPending}
-                        size="sm"
-                        data-testid="button-save-greeting"
-                      >
-                        <Save className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Plays before connecting to agent. Leave empty to skip.
-                    </p>
+                {/* AMD Sensitivity */}
+                {amdEnabled && (
+                  <div className="p-3 rounded-[12px] border bg-card">
+                    <Label className="text-sm font-medium mb-2 block">AMD Sensitivity</Label>
+                    <Select
+                      value={amdSensitivity}
+                      onValueChange={(value: 'standard' | 'high' | 'low') => setAmdSensitivity(value)}
+                      disabled={isDialing}
+                    >
+                      <SelectTrigger className="h-8" data-testid="select-amd-sensitivity">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                )}
+              </div>
+
+              {/* Greeting URL */}
+              <div className="mt-4 p-3 rounded-[12px] border bg-card">
+                <Label className="text-sm font-medium mb-2 block">Pre-recorded Greeting URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={greetingUrl}
+                    onChange={(e) => setGreetingUrl(e.target.value)}
+                    placeholder="https://your-cdn.com/greeting.mp3"
+                    className="flex-1 h-9"
+                    data-testid="input-greeting-url"
+                  />
+                  <Button
+                    onClick={() => saveGreetingMutation.mutate(greetingUrl)}
+                    disabled={saveGreetingMutation.isPending}
+                    size="sm"
+                    className="px-4"
+                    data-testid="button-save-greeting"
+                  >
+                    <Save className="w-4 h-4 mr-1" />
+                    Save
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Active Call Lines */}
-        <Card className="border-none shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Activity className="w-6 h-6" />
-                Active Lines
-              </CardTitle>
-              <Badge variant="secondary" className="text-sm px-3 py-1">
-                {currentContactIndex}/{queuedContacts.length}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            <TooltipProvider>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {callLines.map((line, index) => (
-                  <Card
-                    key={line.id}
-                    className={cn(
-                      "border-2 transition-all duration-300 hover:shadow-lg",
-                      getStatusColor(line.status)
+        {/* Main Content - Three Panel Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Queue Panel */}
+          <Card className="lg:col-span-3 rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardHeader className="pb-3 px-4 pt-4 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                  <div className="p-2 rounded-[12px] bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20">
+                    <ListOrdered className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  Queue
+                </CardTitle>
+                <Badge variant="secondary" className="text-xs">
+                  {remainingContacts.length} waiting
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[400px]">
+                {remainingContacts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <div className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
+                      <Users className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {isDialing ? "All contacts have been dialed" : "Select a list and start dialing"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {remainingContacts.slice(0, 50).map((contact, idx) => (
+                      <div 
+                        key={contact.id} 
+                        className={cn(
+                          "px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
+                          idx === 0 && isDialing && "bg-blue-50 dark:bg-blue-950/30"
+                        )}
+                        data-testid={`queue-contact-${contact.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
+                            idx === 0 && isDialing 
+                              ? "bg-blue-500 text-white" 
+                              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                          )}>
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate text-gray-900 dark:text-white">
+                              {contact.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {contact.phone}
+                            </p>
+                          </div>
+                          {idx === 0 && isDialing && (
+                            <Badge className="bg-blue-500 text-white text-xs">Next</Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {remainingContacts.length > 50 && (
+                      <div className="px-4 py-3 text-center text-sm text-muted-foreground">
+                        +{remainingContacts.length - 50} more contacts
+                      </div>
                     )}
-                    data-testid={`call-line-${index}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(line.status)}
-                          <div>
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Active Lines Panel */}
+          <Card className="lg:col-span-6 rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardHeader className="pb-3 px-4 pt-4 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                  <div className="p-2 rounded-[12px] bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/30 dark:to-teal-800/20">
+                    <Phone className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  Active Lines
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {isDialing && (
+                    <Badge className={cn(
+                      "text-xs",
+                      isPaused 
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400" 
+                        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400"
+                    )}>
+                      {isPaused ? 'Paused' : 'Active'}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <TooltipProvider>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {callLines.map((line, index) => {
+                    const config = getStatusConfig(line.status);
+                    return (
+                      <Card
+                        key={line.id}
+                        className={cn(
+                          "border-2 transition-all duration-300",
+                          config.border,
+                          config.bg
+                        )}
+                        data-testid={`call-line-${index}`}
+                      >
+                        <CardContent className="p-3">
+                          {/* Line Header */}
+                          <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm">Line {index + 1}</span>
-                              {line.isAnsweringMachine && (
-                                <Badge variant="outline" className="text-xs bg-orange-100 dark:bg-orange-900">
-                                  VM
-                                </Badge>
-                              )}
+                              {config.icon}
+                              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Line {index + 1}
+                              </span>
                             </div>
-                            <Badge variant="outline" className="text-xs mt-1">
-                              {line.status}
+                            <Badge variant="outline" className="text-[10px] font-medium px-2 py-0.5">
+                              {config.label}
                             </Badge>
                           </div>
-                        </div>
-                        {line.duration > 0 && (
-                          <span className="text-sm font-mono font-bold">
-                            {formatDuration(line.duration)}
-                          </span>
-                        )}
-                      </div>
 
-                      {line.status !== 'idle' && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="space-y-1.5 cursor-help">
-                              <div className="flex items-center gap-2">
-                                <Users className="w-4 h-4 text-muted-foreground" />
-                                <p className="font-semibold text-sm truncate">{line.name || 'Unknown'}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Phone className="w-4 h-4 text-muted-foreground" />
-                                <p className="text-xs text-muted-foreground truncate">{line.phone}</p>
-                              </div>
-                              {line.company && (
-                                <div className="flex items-center gap-2">
-                                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                                  <p className="text-xs text-muted-foreground truncate">{line.company}</p>
+                          {/* Contact Info */}
+                          {line.status !== 'idle' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="space-y-1 cursor-help">
+                                  <p className="text-sm font-semibold truncate text-gray-900 dark:text-white">
+                                    {line.name || 'Unknown'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {line.phone}
+                                  </p>
+                                  {line.company && (
+                                    <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                      <Building2 className="w-3 h-3" />
+                                      {line.company}
+                                    </p>
+                                  )}
                                 </div>
-                              )}
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-1">
+                                  <div className="font-semibold border-b pb-1 mb-1">Contact Details</div>
+                                  {line.name && <div className="text-xs"><span className="text-muted-foreground">Name:</span> {line.name}</div>}
+                                  {line.phone && <div className="text-xs"><span className="text-muted-foreground">Phone:</span> {line.phone}</div>}
+                                  {line.email && <div className="text-xs"><span className="text-muted-foreground">Email:</span> {line.email}</div>}
+                                  {line.jobTitle && <div className="text-xs"><span className="text-muted-foreground">Title:</span> {line.jobTitle}</div>}
+                                  {line.company && <div className="text-xs"><span className="text-muted-foreground">Company:</span> {line.company}</div>}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <div className="py-4 text-center">
+                              <p className="text-xs text-muted-foreground">Waiting for call...</p>
                             </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs">
-                            <div className="space-y-2">
-                              <div className="font-semibold border-b pb-1 mb-2">Contact Details</div>
-                              {line.name && <div><span className="text-muted-foreground text-xs">Name:</span> <span className="font-medium">{line.name}</span></div>}
-                              {line.phone && <div><span className="text-muted-foreground text-xs">Phone:</span> <span className="font-medium">{line.phone}</span></div>}
-                              {line.email && <div><span className="text-muted-foreground text-xs">Email:</span> <span className="font-medium break-all">{line.email}</span></div>}
-                              {line.jobTitle && <div><span className="text-muted-foreground text-xs">Title:</span> <span className="font-medium">{line.jobTitle}</span></div>}
-                              {line.company && <div><span className="text-muted-foreground text-xs">Company:</span> <span className="font-medium">{line.company}</span></div>}
+                          )}
+
+                          {/* Duration & Progress */}
+                          {line.duration > 0 && (
+                            <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Timer className="w-3 h-3" />
+                                Duration
+                              </span>
+                              <span className="text-sm font-mono font-bold text-gray-900 dark:text-white">
+                                {formatDuration(line.duration)}
+                              </span>
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                          )}
 
-                      {line.status === 'ringing' && (
-                        <Progress value={33} className="mt-3 h-1.5" />
-                      )}
-                      {(line.status === 'connected' || line.status === 'in-progress') && (
-                        <Progress value={100} className="mt-3 h-1.5 bg-green-200 dark:bg-green-900" />
-                      )}
+                          {/* Progress Indicator */}
+                          {(line.status === 'ringing' || line.status === 'dialing') && (
+                            <Progress value={line.status === 'ringing' ? 60 : 30} className="mt-2 h-1" />
+                          )}
+                          {(line.status === 'connected' || line.status === 'in-progress' || line.status === 'human-detected') && (
+                            <Progress value={100} className="mt-2 h-1 bg-emerald-200 dark:bg-emerald-900" />
+                          )}
 
-                      {line.status !== 'idle' && line.status !== 'completed' && line.status !== 'failed' && line.callSid && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => disconnectCall(line.callSid!, line.id)}
-                          className="w-full mt-3"
-                          data-testid={`button-disconnect-${line.id}`}
-                        >
-                          <PhoneOff className="w-4 h-4 mr-2" />
-                          Disconnect
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                          {/* Disconnect Button */}
+                          {line.status !== 'idle' && line.status !== 'completed' && line.status !== 'failed' && line.callSid && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => disconnectCall(line.callSid!, line.id)}
+                              className="w-full mt-2 h-7 text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:hover:bg-red-950"
+                              data-testid={`button-disconnect-${line.id}`}
+                            >
+                              <PhoneOff className="w-3 h-3 mr-1" />
+                              End Call
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </TooltipProvider>
+            </CardContent>
+          </Card>
+
+          {/* Completed Panel */}
+          <Card className="lg:col-span-3 rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardHeader className="pb-3 px-4 pt-4 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                  <div className="p-2 rounded-[12px] bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/20">
+                    <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  Completed
+                </CardTitle>
+                <Badge variant="secondary" className="text-xs">
+                  {stats.totalDialed} total
+                </Badge>
               </div>
-            </TooltipProvider>
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[400px]">
+                {dialedContacts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <div className="p-3 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
+                      <Phone className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Dialed contacts will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {dialedContacts.slice(-50).reverse().map((item, idx) => {
+                      const statusColors: Record<string, string> = {
+                        connected: "bg-emerald-500",
+                        voicemail: "bg-amber-500",
+                        'no-answer': "bg-gray-400",
+                        busy: "bg-yellow-500",
+                        failed: "bg-red-500"
+                      };
+                      return (
+                        <div 
+                          key={`${item.contact.id}-${idx}`} 
+                          className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-2 h-2 rounded-full flex-shrink-0",
+                              statusColors[item.status] || "bg-gray-400"
+                            )} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate text-gray-900 dark:text-white">
+                                {item.contact.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {item.status} • {formatDuration(item.duration)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Performance Insights */}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[12px] bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20">
+                  <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total Dialed</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalDialed}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[12px] bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/20">
+                  <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Connected</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.connected}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[12px] bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/20">
+                  <Volume2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Voicemails</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.voicemails}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[12px] bg-gradient-to-br from-red-100 to-red-50 dark:from-red-900/30 dark:to-red-800/20">
+                  <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Failed</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.failed}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[12px] bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/30 dark:to-teal-800/20">
+                  <BarChart3 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Connect Rate</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{connectRate}%</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[12px] bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/30 dark:to-purple-800/20">
+                  <Timer className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Avg Connect</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.avgConnectTime}s</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Performance Insights - Only shown during active session */}
         {sessionStartTime && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-none shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+              <CardHeader className="pb-3 px-4 pt-4">
+                <CardTitle className="text-base flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                  <div className="p-2 rounded-[12px] bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/30 dark:to-teal-800/20">
+                    <BarChart3 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  </div>
                   Performance Metrics
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border-2 border-blue-200 dark:border-blue-800">
-                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+              <CardContent className="px-4 pb-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-[12px] border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {(() => {
                         const sessionDurationHours = (Date.now() - sessionStartTime) / (1000 * 60 * 60);
                         return sessionDurationHours > 0 ? Math.round(stats.connected / sessionDurationHours) : 0;
                       })()}
                     </div>
-                    <div className="text-xs text-muted-foreground font-medium uppercase">Connects/Hour</div>
+                    <div className="text-xs text-muted-foreground font-medium">Connects/Hour</div>
                   </div>
-                  <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border-2 border-purple-200 dark:border-purple-800">
-                    <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                  <div className="p-3 rounded-[12px] border bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                       {firstConnectTime ? `${Math.round((firstConnectTime - sessionStartTime) / 1000)}s` : '-'}
                     </div>
-                    <div className="text-xs text-muted-foreground font-medium uppercase">First Connect</div>
+                    <div className="text-xs text-muted-foreground font-medium">First Connect</div>
                   </div>
-                  <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border-2 border-green-200 dark:border-green-800">
-                    <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
+                  <div className="p-3 rounded-[12px] border bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800">
+                    <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                       {stats.connected > 0 ? `${Math.round(stats.talkTime / stats.connected)}s` : '0s'}
                     </div>
-                    <div className="text-xs text-muted-foreground font-medium uppercase">Avg Talk Time</div>
+                    <div className="text-xs text-muted-foreground font-medium">Avg Talk Time</div>
                   </div>
-                  <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border-2 border-orange-200 dark:border-orange-800">
-                    <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                  <div className="p-3 rounded-[12px] border bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                       {(() => {
                         const sessionDurationMins = (Date.now() - sessionStartTime) / (1000 * 60);
                         return sessionDurationMins > 0 ? (stats.totalDialed / sessionDurationMins).toFixed(1) : '0';
                       })()}
                     </div>
-                    <div className="text-xs text-muted-foreground font-medium uppercase">Dials/Minute</div>
+                    <div className="text-xs text-muted-foreground font-medium">Dials/Minute</div>
                   </div>
                 </div>
 
-                {/* Insights */}
+                {/* Performance Insights */}
                 {stats.totalDialed >= 10 && (
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-3 space-y-2">
                     {stats.connected / stats.totalDialed < 0.15 && (
-                      <div className="flex items-start gap-2 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                        <AlertCircle className="w-4 h-4 mt-0.5 text-yellow-600 dark:text-yellow-400" />
-                        <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                      <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-[12px] border border-amber-200 dark:border-amber-800">
+                        <AlertCircle className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
                           Low connect rate. Consider adjusting call times or list quality.
                         </p>
                       </div>
                     )}
                     {stats.connected / stats.totalDialed >= 0.25 && (
-                      <div className="flex items-start gap-2 p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-                        <CheckCircle className="w-4 h-4 mt-0.5 text-green-600 dark:text-green-400" />
-                        <p className="text-sm text-green-700 dark:text-green-300">
+                      <div className="flex items-start gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-[12px] border border-emerald-200 dark:border-emerald-800">
+                        <CheckCircle className="w-4 h-4 mt-0.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300">
                           Excellent connect rate! Keep up the momentum.
                         </p>
                       </div>
@@ -812,42 +1097,41 @@ export default function ParallelDialerPage() {
               </CardContent>
             </Card>
 
-            {/* Tips */}
-            <Card className="border-none shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Info className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <Card className="rounded-[16px] border border-gray-200 dark:border-gray-800 shadow-[0_4px_14px_rgba(0,0,0,0.06)]">
+              <CardHeader className="pb-3 px-4 pt-4">
+                <CardTitle className="text-base flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                  <div className="p-2 rounded-[12px] bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/30 dark:to-purple-800/20">
+                    <Zap className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
                   Quick Tips
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                    <Target className="w-5 h-5 mt-0.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <div>
-                      <p className="font-semibold text-sm mb-1">Simultaneous Dialing</p>
-                      <p className="text-xs text-muted-foreground">
-                        Dials {parallelLines} contacts at the same time for maximum efficiency
-                      </p>
-                    </div>
+              <CardContent className="px-4 pb-4 space-y-2">
+                <div className="flex items-start gap-3 p-3 rounded-[12px] border bg-blue-50/50 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900">
+                  <Phone className="w-4 h-4 mt-0.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Simultaneous Dialing</p>
+                    <p className="text-xs text-muted-foreground">
+                      Dials {parallelLines} contacts at the same time for maximum efficiency
+                    </p>
                   </div>
-                  <div className="flex items-start gap-3 p-4 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                    <Zap className="w-5 h-5 mt-0.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                    <div>
-                      <p className="font-semibold text-sm mb-1">Smart Detection</p>
-                      <p className="text-xs text-muted-foreground">
-                        AMD automatically detects and skips voicemails
-                      </p>
-                    </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-[12px] border bg-purple-50/50 dark:bg-purple-950/20 border-purple-100 dark:border-purple-900">
+                  <Mic className="w-4 h-4 mt-0.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Smart Detection</p>
+                    <p className="text-xs text-muted-foreground">
+                      AMD automatically detects and skips voicemails
+                    </p>
                   </div>
-                  <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950 rounded-lg">
-                    <TrendingUp className="w-5 h-5 mt-0.5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                    <div>
-                      <p className="font-semibold text-sm mb-1">Productivity Boost</p>
-                      <p className="text-xs text-muted-foreground">
-                        Up to {parallelLines}x more efficient than manual dialing
-                      </p>
-                    </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-[12px] border bg-teal-50/50 dark:bg-teal-950/20 border-teal-100 dark:border-teal-900">
+                  <BarChart3 className="w-4 h-4 mt-0.5 text-teal-600 dark:text-teal-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Productivity Boost</p>
+                    <p className="text-xs text-muted-foreground">
+                      Up to {parallelLines}x more efficient than manual dialing
+                    </p>
                   </div>
                 </div>
               </CardContent>
