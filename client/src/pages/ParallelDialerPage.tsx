@@ -348,8 +348,8 @@ export default function ParallelDialerPage() {
                   Contact List
                 </Label>
                 <Select
-                  value={selectedListId}
-                  onValueChange={setSelectedListId}
+                  value={selectedListId || "all"}
+                  onValueChange={(value) => setSelectedListId(value === "all" ? "" : value)}
                   disabled={isDialing}
                 >
                   <SelectTrigger 
@@ -359,7 +359,7 @@ export default function ParallelDialerPage() {
                     <SelectValue placeholder="Select a list..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Contacts ({contacts.length})</SelectItem>
+                    <SelectItem value="all">All Contacts ({contacts.length})</SelectItem>
                     {contactLists.map((list) => (
                       <SelectItem key={list.id} value={list.id.toString()}>
                         {list.name} ({list.contactCount || 0})
