@@ -39,7 +39,7 @@ export default function SmartContactCard({
   const [showNotesModal, setShowNotesModal] = useState(false);
   const { toast } = useToast();
   const saveNotesMutation = useSaveCallNotes();
-  const { data: callNotes = [] } = useContactCallNotes(contact.id);
+  const { data: callNotes = [] } = useContactCallNotes(contact.id, showNotesModal);
 
   const combinedNotes = useMemo(() => {
     if (!callNotes.length) return '';

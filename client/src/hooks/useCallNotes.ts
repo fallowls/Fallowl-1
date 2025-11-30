@@ -63,9 +63,9 @@ export const useUpdateCallNotes = () => {
   });
 };
 
-export const useContactCallNotes = (contactId: number) => {
+export const useContactCallNotes = (contactId: number, enabled: boolean = true) => {
   return useQuery<CallNote[]>({
     queryKey: ['/api/call-notes/contact', contactId],
-    enabled: !!contactId,
+    enabled: !!contactId && enabled,
   });
 };
