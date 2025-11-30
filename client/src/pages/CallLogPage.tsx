@@ -349,37 +349,29 @@ export default function CallLogPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-3">
+      <div className="w-full px-4 sm:px-6 py-3 space-y-3">
         
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Call History</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Monitor and review all your call activity
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {isConnected && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-full">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Live</span>
-              </div>
-            )}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => { refetchCalls(); refetchStatus(); }}
-              className="h-9"
-              data-testid="button-refresh"
-            >
-              <RefreshCw className="w-4 h-4 mr-1.5" />
-              Refresh
-            </Button>
-          </div>
+        {/* Action Bar */}
+        <div className="flex items-center justify-end gap-2">
+          {isConnected && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-full">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Live</span>
+            </div>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => { refetchCalls(); refetchStatus(); }}
+            className="h-8"
+            data-testid="button-refresh"
+          >
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            Refresh
+          </Button>
         </div>
 
         {/* Stats Cards */}
