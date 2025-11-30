@@ -9,8 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Plus, Grid, List, Download, Upload, Phone, Mail, MessageSquare, 
   Star, BarChart3, Filter, Calendar, Users, Building, MapPin,
-  TrendingUp, Eye, Edit, Trash2, MoreHorizontal
+  TrendingUp, Eye, Edit, Trash2, MoreHorizontal, Settings, FolderPlus
 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import type { ContactList, InsertContactList } from "@shared/schema";
 import SmartContactCard from "@/components/contacts/SmartContactCard";
 import SmartContactModal from "@/components/contacts/SmartContactModal";
 import ContactFilters from "@/components/contacts/ContactFilters";
@@ -25,6 +31,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import type { Contact } from "@shared/schema";
 
+const colorOptions = [
+  { value: "#3B82F6", name: "Blue" },
+  { value: "#10B981", name: "Green" },
+  { value: "#F59E0B", name: "Yellow" },
+  { value: "#EF4444", name: "Red" },
+  { value: "#8B5CF6", name: "Purple" },
+  { value: "#F97316", name: "Orange" },
+];
+
 export default function ContactsPage() {
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -34,6 +49,17 @@ export default function ContactsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filters, setFilters] = useState<any>({});
   const [selectedListId, setSelectedListId] = useState<string>('all');
+  const [showCreateListDialog, setShowCreateListDialog] = useState(false);
+  const [showEditListDialog, setShowEditListDialog] = useState(false);
+  const [editingList, setEditingList] = useState<ContactList | null>(null);
+  const [listFormData, setListFormData] = useState<Partial<InsertContactList>>({
+    name: "",
+    description: "",
+    color: "#3B82F6",
+    type: "custom",
+    category: "general",
+    visibility: "private",
+  });
   const { setCurrentView, setSelectedContact: setSelectedContactId } = useStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -334,6 +360,120 @@ export default function ContactsPage() {
     }
   });
 
+  // List management mutations
+  const createListMutation = useMutation({
+    mutationFn: async (data: InsertContactList) => {
+      const response = await apiRequest("POST", "/api/lists", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      toast({
+        title: "List created",
+        description: "Your new contact list has been created successfully.",
+      });
+      setShowCreateListDialog(false);
+      resetListForm();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create list. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editListMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertContactList> }) => {
+      const response = await apiRequest("PATCH", `/api/lists/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      toast({
+        title: "List updated",
+        description: "The contact list has been updated successfully.",
+      });
+      setShowEditListDialog(false);
+      setEditingList(null);
+      resetListForm();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update list. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteListMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/lists/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      if (editingList && selectedListId === editingList.id.toString()) {
+        setSelectedListId('all');
+      }
+      toast({
+        title: "List deleted",
+        description: "The contact list has been deleted successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete list. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetListForm = () => {
+    setListFormData({
+      name: "",
+      description: "",
+      color: "#3B82F6",
+      type: "custom",
+      category: "general",
+      visibility: "private",
+    });
+  };
+
+  const handleCreateList = () => {
+    if (listFormData.name) {
+      createListMutation.mutate(listFormData as InsertContactList);
+    }
+  };
+
+  const handleEditList = (list: ContactList) => {
+    setEditingList(list);
+    setListFormData({
+      name: list.name,
+      description: list.description || "",
+      color: list.color || "#3B82F6",
+      type: list.type || "custom",
+      category: list.category || "general",
+      visibility: list.visibility || "private",
+    });
+    setShowEditListDialog(true);
+  };
+
+  const handleUpdateList = () => {
+    if (editingList && listFormData.name) {
+      editListMutation.mutate({ id: editingList.id, data: listFormData });
+    }
+  };
+
+  const handleDeleteList = (list: ContactList) => {
+    if (confirm(`Are you sure you want to delete "${list.name}"? This action cannot be undone.`)) {
+      deleteListMutation.mutate(list.id);
+    }
+  };
+
   const handleExport = () => {
     exportMutation.mutate();
   };
@@ -482,21 +622,70 @@ export default function ContactsPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <CardTitle className="text-xl">Contacts</CardTitle>
               <Select value={selectedListId} onValueChange={setSelectedListId}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-40 h-8">
                   <SelectValue placeholder="Select list" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Contacts</SelectItem>
-                  {contactLists.map((list: any) => (
+                  {contactLists.map((list: ContactList) => (
                     <SelectItem key={list.id} value={list.id.toString()}>
-                      {list.name} ({list.contactCount || 0})
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: list.color || '#3B82F6' }} />
+                        {list.name} ({list.contactCount || 0})
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 px-2" data-testid="button-manage-lists">
+                    <Settings className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuItem onClick={() => { resetListForm(); setShowCreateListDialog(true); }}>
+                    <FolderPlus className="w-4 h-4 mr-2" />
+                    Create New List
+                  </DropdownMenuItem>
+                  {contactLists.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">Your Lists</div>
+                      {contactLists.map((list: ContactList) => (
+                        <DropdownMenuItem key={list.id} className="flex items-center justify-between group">
+                          <div className="flex items-center gap-2 flex-1" onClick={() => setSelectedListId(list.id.toString())}>
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: list.color || '#3B82F6' }} />
+                            <span className="truncate">{list.name}</span>
+                            <span className="text-xs text-gray-400">({list.contactCount || 0})</span>
+                          </div>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0"
+                              onClick={(e) => { e.stopPropagation(); handleEditList(list); }}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteList(list); }}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="flex items-center justify-between lg:justify-end space-x-2">
               <div className="flex items-center space-x-1">
@@ -673,6 +862,124 @@ export default function ContactsPage() {
         onClose={() => setShowImportModal(false)}
         onImportComplete={handleImportComplete}
       />
+
+      {/* Create List Dialog */}
+      <Dialog open={showCreateListDialog} onOpenChange={setShowCreateListDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Create New List</DialogTitle>
+            <DialogDescription>
+              Create a new contact list to organize your contacts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="list-name">List Name</Label>
+              <Input
+                id="list-name"
+                value={listFormData.name ?? ""}
+                onChange={(e) => setListFormData({ ...listFormData, name: e.target.value })}
+                placeholder="Enter list name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="list-description">Description (Optional)</Label>
+              <Textarea
+                id="list-description"
+                value={listFormData.description ?? ""}
+                onChange={(e) => setListFormData({ ...listFormData, description: e.target.value })}
+                placeholder="Describe what this list is for"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex gap-2">
+                {colorOptions.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => setListFormData({ ...listFormData, color: color.value })}
+                    className={cn(
+                      "w-7 h-7 rounded-full border-2 transition-all",
+                      listFormData.color === color.value ? "border-gray-900 dark:border-white scale-110" : "border-transparent"
+                    )}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateListDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateList} disabled={createListMutation.isPending || !listFormData.name}>
+              {createListMutation.isPending ? "Creating..." : "Create List"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit List Dialog */}
+      <Dialog open={showEditListDialog} onOpenChange={setShowEditListDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Edit List</DialogTitle>
+            <DialogDescription>
+              Update the details of your contact list.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-list-name">List Name</Label>
+              <Input
+                id="edit-list-name"
+                value={listFormData.name ?? ""}
+                onChange={(e) => setListFormData({ ...listFormData, name: e.target.value })}
+                placeholder="Enter list name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-list-description">Description (Optional)</Label>
+              <Textarea
+                id="edit-list-description"
+                value={listFormData.description ?? ""}
+                onChange={(e) => setListFormData({ ...listFormData, description: e.target.value })}
+                placeholder="Describe what this list is for"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex gap-2">
+                {colorOptions.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => setListFormData({ ...listFormData, color: color.value })}
+                    className={cn(
+                      "w-7 h-7 rounded-full border-2 transition-all",
+                      listFormData.color === color.value ? "border-gray-900 dark:border-white scale-110" : "border-transparent"
+                    )}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditListDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateList} disabled={editListMutation.isPending || !listFormData.name}>
+              {editListMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
