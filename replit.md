@@ -4,6 +4,12 @@
 DialPax is a cloud-based dialer and CRM Single Page Application (SPA) designed to provide a comprehensive platform for managing communication and customer relationships. It integrates features for calls, SMS, contacts, recordings, and system settings, aiming to be a scalable, full-stack solution for businesses. The platform focuses on enhancing business communication, streamlining CRM processes, and offering a robust, secure, and user-friendly experience.
 
 ## Recent Changes
+- **November 30, 2025**:
+  - Added Chrome Extension API endpoints (`/api/ext/*`) for external extension integration
+  - Implemented CORS support for `chrome-extension://` origins
+  - Added extension-specific rate limiting (100 req/min for general, 30 req/min for calls)
+  - Environment variable `CHROME_EXTENSION_IDS` for production extension whitelisting
+
 - **October 26, 2025**: 
   - Fixed production deployment issues for AWS environments
   - Added comprehensive environment variable validation at startup
@@ -62,6 +68,36 @@ Preferred communication style: Simple, everyday language.
 -   **Implementation**: Database schema tracks migration status. `bunnycdnService` handles uploads (with retries and exponential backoff) and deletions.
 -   **Security**: Uses environment variables for credentials and supports token-based authentication with MD5 hashing for secure CDN access via signed URLs (requires `BUNNYCDN_TOKEN_AUTH_KEY`).
 -   **Playback Architecture**: Server-proxied playback/download (`/api/recordings/:id/play` and `/api/recordings/:id/download`) ensures secure access without exposing CDN URLs directly to the frontend.
+
+### Chrome Extension API
+
+The platform provides a dedicated API for Chrome extension integration at `/api/ext/*`.
+
+**Authentication**: All endpoints (except `/api/ext/health`) require Auth0 JWT Bearer token.
+
+**CORS**: Chrome extensions are automatically allowed. In production, set `CHROME_EXTENSION_IDS` environment variable with comma-separated extension IDs to whitelist specific extensions.
+
+**Endpoints**:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/ext/health` | GET | Health check (no auth) |
+| `/api/ext/contacts` | GET | List contacts (paginated) |
+| `/api/ext/contacts/search` | GET | Search contacts by query |
+| `/api/ext/contacts/:id` | GET | Get single contact |
+| `/api/ext/contacts` | POST | Create new contact |
+| `/api/ext/contacts/:id` | PUT | Update contact |
+| `/api/ext/contacts/:id` | DELETE | Delete contact |
+| `/api/ext/twilio/token` | GET | Get Twilio access token for WebRTC |
+| `/api/ext/twilio/status` | GET | Get Twilio configuration status |
+| `/api/ext/calls/initiate` | POST | Initiate outbound call |
+| `/api/ext/calls/:id/hangup` | POST | End active call |
+| `/api/ext/calls/:id/mute` | POST | Toggle mute status |
+| `/api/ext/calls/:id/hold` | POST | Toggle hold status |
+| `/api/ext/calls/active` | GET | Get current active calls |
+| `/api/ext/calls/history` | GET | Get call history |
+| `/api/ext/user/profile` | GET | Get authenticated user profile |
+
+**Rate Limits**: 100 requests/minute for general endpoints, 30 requests/minute for call operations.
 
 ## External Dependencies
 

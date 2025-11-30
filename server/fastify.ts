@@ -223,7 +223,8 @@ function getAllowedOrigins(): string[] {
   const originSources = [
     process.env.CLIENT_ORIGIN,
     process.env.REPLIT_DOMAINS,
-    process.env.REPLIT_DEV_DOMAIN
+    process.env.REPLIT_DEV_DOMAIN,
+    process.env.CHROME_EXTENSION_IDS // Comma-separated Chrome extension IDs
   ].filter((origin): origin is string => Boolean(origin));
   
   // Split comma-separated origins and trim whitespace
@@ -239,6 +240,11 @@ function getAllowedOrigins(): string[] {
   }
   
   return allowedOrigins;
+}
+
+// Check if origin is a Chrome extension
+function isChromeExtension(origin: string): boolean {
+  return origin.startsWith('chrome-extension://');
 }
 
 export async function createFastifyServer(): Promise<FastifyInstance> {
@@ -269,9 +275,29 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
         return callback(null, true);
       }
       
-      // In development, allow all origins
+      // In development, allow all origins including Chrome extensions
       if (process.env.NODE_ENV !== 'production') {
         return callback(null, true);
+      }
+      
+      // Always allow Chrome extensions (they use their own authentication)
+      if (isChromeExtension(origin)) {
+        // Optionally validate against specific extension IDs
+        const extensionIds = process.env.CHROME_EXTENSION_IDS?.split(',').map(id => id.trim()).filter(id => id.length > 0) || [];
+        if (extensionIds.length === 0) {
+          // If no extension IDs configured, allow all Chrome extensions in production
+          return callback(null, true);
+        }
+        // Check if the origin matches any configured extension ID
+        // Support both formats: "abc123" or "chrome-extension://abc123"
+        const isAllowed = extensionIds.some(id => {
+          const normalizedId = id.startsWith('chrome-extension://') ? id : `chrome-extension://${id}`;
+          return origin === normalizedId;
+        });
+        if (isAllowed) {
+          return callback(null, true);
+        }
+        console.warn(`⚠️ Chrome extension ${origin} not in allowed list`);
       }
       
       // In production, check against allowed origins
@@ -289,7 +315,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
     },
     credentials: true, // Allow cookies and authorization headers
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Extension-Version'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
   });
 
@@ -528,6 +554,9 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   await fastify.register(import('./plugins/twilioRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/usersRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/voicemailsRoutes'), { prefix: '/api' });
+  
+  await fastify.register(import('./plugins/extensionRoutes'), { prefix: '/api' });
+  log('✅ Chrome Extension API routes registered');
   
   log('✅ All Fastify route plugins registered');
 

@@ -57,6 +57,20 @@ export const rateLimitConfigs = {
     timeWindow: '1 minute',
     skipOnError: true,
   } as Partial<RateLimitPluginOptions>,
+
+  // Rate limiter for Chrome extension API endpoints
+  extension: {
+    max: 100,
+    timeWindow: '1 minute',
+    skipOnError: true,
+  } as Partial<RateLimitPluginOptions>,
+
+  // Rate limiter for extension call operations
+  extensionCall: {
+    max: 30,
+    timeWindow: '1 minute',
+    skipOnError: true,
+  } as Partial<RateLimitPluginOptions>,
 };
 
 // Helper to create rate limit hook
