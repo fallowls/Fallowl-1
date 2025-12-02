@@ -14,7 +14,6 @@ import {
   CreditCard, 
   Cloud, 
   Settings, 
-  Sliders,
   LayoutDashboard,
   HelpCircle,
   LogOut,
@@ -22,9 +21,7 @@ import {
   Target,
   Calendar,
   Zap,
-  Activity,
-  Briefcase,
-  ChevronRight
+  Briefcase
 } from "lucide-react";
 
 import FallOwlLogo from "@assets/FallOwl_logo_1759278988195.png";
@@ -46,7 +43,6 @@ const menuItems = [
   { id: 'payments', label: 'Payments', icon: CreditCard },
   { id: 'cdn', label: 'CDN', icon: Cloud },
   { id: 'call-settings', label: 'Call Settings', icon: Settings },
-  { id: 'settings', label: 'Settings', icon: Sliders },
   { id: 'support', label: 'Support', icon: HelpCircle },
 ];
 

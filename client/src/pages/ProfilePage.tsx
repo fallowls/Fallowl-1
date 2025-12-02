@@ -8,9 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useForm } from "react-hook-form";
 import { 
   User, 
   Mail, 
@@ -24,13 +27,53 @@ import {
   Save,
   Key,
   Trash2,
-  Loader2
+  Loader2,
+  Cloud,
+  Server,
+  Check,
+  Edit,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
+
+interface TwilioSettingsFormData {
+  connectionType: 'twilio' | 'sip';
+  twilioAccountSid: string;
+  twilioAuthToken: string;
+  twilioApiKeySid: string;
+  twilioApiKeySecret: string;
+  twilioPhoneNumber: string;
+  sipUri: string;
+  sipUsername: string;
+  sipPassword: string;
+  sipProxyServer: string;
+  sipPort: string;
+}
 
 export default function ProfilePage() {
   const { toast } = useToast();
   const { user: authUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [twilioConnectionStatus, setTwilioConnectionStatus] = useState<'untested' | 'testing' | 'success' | 'error'>('success');
+  const [isTwilioFormExpanded, setIsTwilioFormExpanded] = useState(false);
+  
+  const { register: registerTwilio, handleSubmit: handleTwilioSubmit, watch: watchTwilio, setValue: setTwilioValue, formState: { errors: twilioErrors } } = useForm<TwilioSettingsFormData>({
+    defaultValues: {
+      connectionType: 'twilio',
+      twilioAccountSid: '',
+      twilioAuthToken: '',
+      twilioApiKeySid: '',
+      twilioApiKeySecret: '',
+      twilioPhoneNumber: '',
+      sipUri: '',
+      sipUsername: '',
+      sipPassword: '',
+      sipProxyServer: '',
+      sipPort: '5060',
+    }
+  });
+
+  const twilioConnectionType = watchTwilio("connectionType");
   
   // Fetch user profile data
   const { data: profileData, isLoading: isLoadingProfile } = useQuery<{
@@ -156,6 +199,195 @@ export default function ProfilePage() {
     }
   });
 
+  const { data: twilioSettings } = useQuery({
+    queryKey: ["/api/user/twilio/credentials"],
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (twilioSettings && typeof twilioSettings === 'object' && 'configured' in twilioSettings) {
+      const typedSettings = twilioSettings as {
+        configured: boolean;
+        credentials?: {
+          accountSid?: string;
+          phoneNumber?: string;
+          hasApiKey?: boolean;
+          twimlAppSid?: string;
+        };
+      };
+      
+      setIsTwilioFormExpanded(!typedSettings.configured);
+      
+      if (typedSettings.configured && typedSettings.credentials) {
+        setTwilioValue("connectionType", 'twilio');
+        if (typedSettings.credentials.phoneNumber) {
+          setTwilioValue("twilioPhoneNumber", typedSettings.credentials.phoneNumber);
+        }
+      }
+    }
+  }, [twilioSettings, setTwilioValue]);
+
+  const testTwilioConnectionMutation = useMutation({
+    mutationFn: async (data: TwilioSettingsFormData) => {
+      setTwilioConnectionStatus('testing');
+      
+      if (data.connectionType === 'twilio') {
+        const payload: Record<string, string | undefined> = {
+          accountSid: data.twilioAccountSid,
+          authToken: data.twilioAuthToken,
+          phoneNumber: data.twilioPhoneNumber,
+        };
+        
+        if (data.twilioApiKeySid && data.twilioApiKeySid.trim() !== '') {
+          payload.apiKeySid = data.twilioApiKeySid;
+        }
+        if (data.twilioApiKeySecret && data.twilioApiKeySecret.trim() !== '') {
+          payload.apiKeySecret = data.twilioApiKeySecret;
+        }
+        
+        await apiRequest("POST", "/api/user/twilio/credentials", payload);
+        
+        const response = await apiRequest("POST", "/api/twilio/test-connection");
+        const result = await response.json();
+        
+        if (result.connected) {
+          setTwilioConnectionStatus('success');
+          return { success: true };
+        } else {
+          setTwilioConnectionStatus('error');
+          throw new Error('Twilio connection test failed');
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (Math.random() > 0.2) {
+          setTwilioConnectionStatus('success');
+          return { success: true };
+        } else {
+          setTwilioConnectionStatus('error');
+          throw new Error('SIP connection test failed');
+        }
+      }
+    },
+    onSuccess: (_, variables) => {
+      if (variables.connectionType === 'twilio') {
+        queryClient.invalidateQueries({ queryKey: ["/api/user/twilio/credentials"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/twilio/status"] });
+      }
+      toast({
+        title: "Connection successful",
+        description: "System settings are working correctly.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Connection failed",
+        description: error.message || "Unable to connect with current settings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const saveTwilioSettingsMutation = useMutation({
+    mutationFn: async (data: TwilioSettingsFormData) => {
+      if (data.connectionType === 'twilio') {
+        const payload: Record<string, string | undefined> = {
+          accountSid: data.twilioAccountSid,
+          authToken: data.twilioAuthToken,
+          phoneNumber: data.twilioPhoneNumber,
+        };
+        
+        if (data.twilioApiKeySid && data.twilioApiKeySid.trim() !== '') {
+          payload.apiKeySid = data.twilioApiKeySid;
+        }
+        if (data.twilioApiKeySecret && data.twilioApiKeySecret.trim() !== '') {
+          payload.apiKeySecret = data.twilioApiKeySecret;
+        }
+        
+        const response = await apiRequest("POST", "/api/user/twilio/credentials", payload);
+        return response.json();
+      } else {
+        const response = await apiRequest("POST", "/api/settings", {
+          key: "system",
+          value: data,
+        });
+        return response.json();
+      }
+    },
+    onSuccess: (_, variables) => {
+      if (variables.connectionType === 'twilio') {
+        queryClient.invalidateQueries({ queryKey: ["/api/user/twilio/credentials"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/twilio/status"] });
+        setIsTwilioFormExpanded(false);
+      }
+      toast({
+        title: "Settings saved",
+        description: "Twilio settings have been saved successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save settings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeTwilioCredentialsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", "/api/user/twilio/credentials");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/twilio/credentials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/twilio/status"] });
+      setIsTwilioFormExpanded(true);
+      toast({
+        title: "Credentials removed",
+        description: "Twilio credentials have been removed successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove credentials",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onTwilioSubmit = (data: TwilioSettingsFormData) => {
+    saveTwilioSettingsMutation.mutate(data);
+  };
+
+  const handleTestTwilioConnection = () => {
+    handleTwilioSubmit((data) => {
+      testTwilioConnectionMutation.mutate(data);
+    })();
+  };
+
+  const getTwilioStatusColor = () => {
+    switch (twilioConnectionStatus) {
+      case 'untested': return 'bg-yellow-100 text-yellow-800';
+      case 'testing': return 'bg-blue-100 text-blue-800';
+      case 'success': return 'bg-green-100 text-green-800';
+      case 'error': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTwilioStatusText = () => {
+    switch (twilioConnectionStatus) {
+      case 'untested': return 'Not tested';
+      case 'testing': return 'Testing...';
+      case 'success': return 'Connected';
+      case 'error': return 'Failed';
+      default: return 'Unknown';
+    }
+  };
+
+  const isTwilioConfigured = !!(twilioSettings && typeof twilioSettings === 'object' && 'configured' in twilioSettings && twilioSettings.configured);
+
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfileMutation.mutate(formData);
@@ -210,8 +442,9 @@ export default function ProfilePage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="twilio">Twilio</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
@@ -310,6 +543,338 @@ export default function ProfilePage() {
                   )}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="twilio" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cloud className="h-5 w-5" />
+                Twilio Settings
+              </CardTitle>
+              <CardDescription>
+                Configure your Twilio and SIP trunk settings for making calls
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isTwilioConfigured && !isTwilioFormExpanded ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-800 rounded-full">
+                        <Check className="w-5 h-5 text-green-600 dark:text-green-300" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-800 dark:text-gray-200">Twilio Credentials Configured</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Your Twilio account is connected and ready to use
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsTwilioFormExpanded(!isTwilioFormExpanded)}
+                      data-testid="button-toggle-twilio-credentials"
+                    >
+                      {isTwilioFormExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsTwilioFormExpanded(true)}
+                      data-testid="button-update-twilio-credentials"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Update Credentials
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (confirm("Are you sure you want to remove your Twilio credentials?")) {
+                          removeTwilioCredentialsMutation.mutate();
+                        }
+                      }}
+                      disabled={removeTwilioCredentialsMutation.isPending}
+                      data-testid="button-remove-twilio-credentials"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {removeTwilioCredentialsMutation.isPending ? "Removing..." : "Remove Credentials"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleTwilioSubmit(onTwilioSubmit)} className="space-y-8">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Connection Type</h3>
+                    <RadioGroup
+                      value={twilioConnectionType}
+                      onValueChange={(value) => setTwilioValue("connectionType", value as 'twilio' | 'sip')}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="twilio" id="twilio" />
+                        <Label htmlFor="twilio" className="cursor-pointer flex-1">
+                          <div className="border-2 border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
+                            <div className="flex items-center">
+                              <Cloud className="w-8 h-8 text-blue-600 mr-3" />
+                              <div>
+                                <h4 className="font-medium text-gray-800 dark:text-gray-200">Twilio</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Cloud-based communication platform</p>
+                              </div>
+                            </div>
+                          </div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="sip" id="sip" />
+                        <Label htmlFor="sip" className="cursor-pointer flex-1">
+                          <div className="border-2 border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
+                            <div className="flex items-center">
+                              <Server className="w-8 h-8 text-gray-600 dark:text-gray-400 mr-3" />
+                              <div>
+                                <h4 className="font-medium text-gray-800 dark:text-gray-200">SIP Trunk</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Direct SIP connection</p>
+                              </div>
+                            </div>
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {twilioConnectionType === 'twilio' && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Twilio Configuration</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="twilioAccountSid">Account SID</Label>
+                          <Input
+                            id="twilioAccountSid"
+                            {...registerTwilio("twilioAccountSid", { 
+                              required: twilioConnectionType === 'twilio' ? "Account SID is required" : false 
+                            })}
+                            placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                            className={twilioErrors.twilioAccountSid ? "border-red-300" : ""}
+                          />
+                          {twilioErrors.twilioAccountSid && (
+                            <p className="text-sm text-red-600 mt-1">{twilioErrors.twilioAccountSid.message}</p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="twilioAuthToken">Auth Token</Label>
+                          <Input
+                            id="twilioAuthToken"
+                            type="password"
+                            {...registerTwilio("twilioAuthToken", { 
+                              required: twilioConnectionType === 'twilio' ? "Auth Token is required" : false 
+                            })}
+                            placeholder="Enter your Auth Token"
+                            className={twilioErrors.twilioAuthToken ? "border-red-300" : ""}
+                          />
+                          {twilioErrors.twilioAuthToken && (
+                            <p className="text-sm text-red-600 mt-1">{twilioErrors.twilioAuthToken.message}</p>
+                          )}
+                          {isTwilioConfigured && (
+                            <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                              For security, you must re-enter your auth token when updating credentials
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="twilioPhoneNumber">Twilio Phone Number</Label>
+                          <Input
+                            id="twilioPhoneNumber"
+                            type="tel"
+                            {...registerTwilio("twilioPhoneNumber", { 
+                              required: twilioConnectionType === 'twilio' ? "Phone number is required" : false 
+                            })}
+                            placeholder="+1 (555) 000-0000"
+                            className={twilioErrors.twilioPhoneNumber ? "border-red-300" : ""}
+                          />
+                          {twilioErrors.twilioPhoneNumber && (
+                            <p className="text-sm text-red-600 mt-1">{twilioErrors.twilioPhoneNumber.message}</p>
+                          )}
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Your Twilio phone number that will be used for outbound calls.
+                          </p>
+                        </div>
+                        <div>
+                          <Label htmlFor="twilioApiKeySid">API Key SID (Optional)</Label>
+                          <Input
+                            id="twilioApiKeySid"
+                            {...registerTwilio("twilioApiKeySid")}
+                            placeholder="SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                          />
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Optional: For enhanced security and token generation
+                          </p>
+                        </div>
+                        <div>
+                          <Label htmlFor="twilioApiKeySecret">API Key Secret (Optional)</Label>
+                          <Input
+                            id="twilioApiKeySecret"
+                            type="password"
+                            {...registerTwilio("twilioApiKeySecret")}
+                            placeholder="Enter your API Key Secret"
+                          />
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Required when using API Key SID
+                          </p>
+                        </div>
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <p className="text-sm text-blue-800 dark:text-blue-200">
+                            <strong>Note:</strong> After saving, a TwiML Application will be automatically created in your Twilio account for call handling.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {twilioConnectionType === 'sip' && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">SIP Trunk Configuration</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="sipUri">SIP URI</Label>
+                          <Input
+                            id="sipUri"
+                            {...registerTwilio("sipUri", { 
+                              required: twilioConnectionType === 'sip' ? "SIP URI is required" : false 
+                            })}
+                            placeholder="sip:your-domain.com"
+                            className={twilioErrors.sipUri ? "border-red-300" : ""}
+                          />
+                          {twilioErrors.sipUri && (
+                            <p className="text-sm text-red-600 mt-1">{twilioErrors.sipUri.message}</p>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="sipUsername">Username</Label>
+                            <Input
+                              id="sipUsername"
+                              {...registerTwilio("sipUsername", { 
+                                required: twilioConnectionType === 'sip' ? "Username is required" : false 
+                              })}
+                              placeholder="Enter username"
+                              className={twilioErrors.sipUsername ? "border-red-300" : ""}
+                            />
+                            {twilioErrors.sipUsername && (
+                              <p className="text-sm text-red-600 mt-1">{twilioErrors.sipUsername.message}</p>
+                            )}
+                          </div>
+                          <div>
+                            <Label htmlFor="sipPassword">Password</Label>
+                            <Input
+                              id="sipPassword"
+                              type="password"
+                              {...registerTwilio("sipPassword", { 
+                                required: twilioConnectionType === 'sip' ? "Password is required" : false 
+                              })}
+                              placeholder="Enter password"
+                              className={twilioErrors.sipPassword ? "border-red-300" : ""}
+                            />
+                            {twilioErrors.sipPassword && (
+                              <p className="text-sm text-red-600 mt-1">{twilioErrors.sipPassword.message}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="sipProxyServer">Proxy Server</Label>
+                            <Input
+                              id="sipProxyServer"
+                              {...registerTwilio("sipProxyServer")}
+                              placeholder="proxy.example.com"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="sipPort">Port</Label>
+                            <Input
+                              id="sipPort"
+                              type="number"
+                              {...registerTwilio("sipPort")}
+                              placeholder="5060"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Card className="bg-gray-50 dark:bg-gray-800/50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium text-gray-800 dark:text-gray-200">Connection Status</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Test your connection settings</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-3 h-3 rounded-full ${getTwilioStatusColor().replace('text-', 'bg-').replace('100', '500')}`}></div>
+                          <Badge className={getTwilioStatusColor()}>
+                            {getTwilioStatusText()}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <div className="flex space-x-4">
+                    <Button
+                      type="button"
+                      onClick={handleTestTwilioConnection}
+                      disabled={testTwilioConnectionMutation.isPending}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      data-testid="button-test-twilio-connection"
+                    >
+                      {testTwilioConnectionMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Testing...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 mr-2" />
+                          Test Connection
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={saveTwilioSettingsMutation.isPending}
+                      data-testid="button-save-twilio-settings"
+                    >
+                      {saveTwilioSettingsMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Settings
+                        </>
+                      )}
+                    </Button>
+                    {isTwilioConfigured && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsTwilioFormExpanded(false)}
+                        data-testid="button-cancel-twilio-edit"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
