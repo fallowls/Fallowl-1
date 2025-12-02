@@ -310,14 +310,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clearTwilioCacheOnLogout(userId);
       }
       
-      (req as any).session.destroy((err: any) => {
-        if (err) {
-          return res.status(500).json({ message: "Could not log out" });
-        }
-        res.json({ message: "Logged out successfully" });
+      await new Promise<void>((resolve, reject) => {
+        (req as any).session.destroy((err: any) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       });
+      
+      return res.json({ message: "Logged out successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   });
 
