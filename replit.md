@@ -4,6 +4,13 @@
 DialPax is a cloud-based dialer and CRM Single Page Application (SPA) designed to provide a comprehensive platform for managing communication and customer relationships. It integrates features for calls, SMS, contacts, recordings, and system settings, aiming to be a scalable, full-stack solution for businesses. The platform focuses on enhancing business communication, streamlining CRM processes, and offering a robust, secure, and user-friendly experience.
 
 ## Recent Changes
+- **December 3, 2025**:
+  - Enhanced CSV import with NLP-powered smart field mapping that learns and improves with each upload
+  - Added grouped field dropdowns (Contact Information, Company Information, Location Information)
+  - Removed lead management fields from import options (Lead Source, Lead Status, Priority, Disposition, etc.)
+  - Created `field_mapping_patterns` table to store learned CSV header mappings
+  - Auto-detection accuracy improves over time as users confirm mappings
+
 - **November 30, 2025**:
   - Added Chrome Extension API endpoints (`/api/ext/*`) for external extension integration
   - Implemented CORS support for `chrome-extension://` origins
