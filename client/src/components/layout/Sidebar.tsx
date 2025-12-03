@@ -16,7 +16,6 @@ import {
   Settings, 
   LayoutDashboard,
   HelpCircle,
-  LogOut,
   History,
   Target,
   Calendar,
@@ -54,7 +53,7 @@ export default function Sidebar() {
     setMobileMenuOpen,
     darkMode
   } = useStore();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
 
   const handleItemClick = (itemId: string) => {
@@ -158,48 +157,29 @@ export default function Sidebar() {
         </div>
 
         <div className="border-t border-gray-200/60 dark:border-gray-800/60 px-2.5 py-2.5 bg-white dark:bg-gray-950">
-          <div className={cn(
-            "flex items-center gap-2.5",
-            (sidebarExpanded || isMobile) ? "justify-between" : "justify-center"
-          )}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-gray-900 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-semibold text-xs">
-                  {user?.username?.substring(0, 2).toUpperCase() || 'U'}
-                </span>
-              </div>
-              <div className={cn(
-                "transition-all duration-200 ease-out min-w-0",
-                (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-              )}>
-                <p className="text-xs font-semibold text-gray-900 dark:text-white whitespace-nowrap truncate">
-                  {user?.username || 'User'}
-                </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap truncate">
-                  {user?.role === 'super_admin' ? 'Super Admin' : user?.role || 'User'}
-                </p>
-              </div>
-            </div>
-            <div className={cn(
-              "flex items-center gap-0.5 transition-all duration-200 ease-out",
-              (sidebarExpanded || isMobile) ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          <button
+            onClick={() => handleItemClick('settings')}
+            className={cn(
+              "group flex items-center rounded-lg transition-all duration-200 ease-out w-full",
+              currentView === 'settings'
+                ? "bg-gray-900 dark:bg-gray-800 text-white" 
+                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-800/50",
+              (sidebarExpanded || isMobile) ? "gap-2.5 px-2.5 py-2 justify-start" : "py-2 justify-center"
+            )}
+            data-testid="sidebar-settings-bottom"
+          >
+            <Settings className={cn(
+              "w-[17px] h-[17px] transition-colors duration-150",
+              currentView === 'settings' ? "text-white" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200"
+            )} />
+            <span className={cn(
+              "font-medium transition-all duration-200 ease-out whitespace-nowrap text-[13px]",
+              (sidebarExpanded || isMobile) ? "opacity-100 translate-x-0" : "opacity-0 w-0 absolute pointer-events-none",
+              currentView === 'settings' ? "text-white" : "text-gray-700 dark:text-gray-300"
             )}>
-              <button
-                onClick={() => handleItemClick('profile')}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-150 hover:scale-110"
-                title="Profile Settings"
-              >
-                <Settings className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-              </button>
-              <button
-                onClick={() => logout.mutate()}
-                className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-150 hover:scale-110"
-                title="Logout"
-              >
-                <LogOut className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-              </button>
-            </div>
-          </div>
+              Settings
+            </span>
+          </button>
         </div>
       </div>
     </>
