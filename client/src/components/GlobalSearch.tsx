@@ -25,7 +25,9 @@ import {
   HelpCircle,
   User,
   PhoneCall,
-  Calendar
+  Calendar,
+  Mic,
+  FileAudio
 } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -56,6 +58,21 @@ interface SearchResult {
     lastName: string;
     email?: string;
     company?: string;
+  }>;
+  voicemails: Array<{
+    id: number;
+    phone: string;
+    duration: number;
+    createdAt: string;
+  }>;
+  recordings: Array<{
+    id: number;
+    phone: string;
+    transcript?: string;
+    summary?: string;
+    callerName?: string;
+    duration: number;
+    createdAt: string;
   }>;
 }
 
@@ -107,6 +124,10 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       setCurrentView('sms');
     } else if (type === 'lead') {
       setCurrentView('leads');
+    } else if (type === 'voicemail') {
+      setCurrentView('voicemail');
+    } else if (type === 'recording') {
+      setCurrentView('call-log');
     }
   }, [onOpenChange, setCurrentView]);
 
@@ -135,7 +156,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     searchResults.contacts?.length > 0 ||
     searchResults.calls?.length > 0 ||
     searchResults.messages?.length > 0 ||
-    searchResults.leads?.length > 0
+    searchResults.leads?.length > 0 ||
+    searchResults.voicemails?.length > 0 ||
+    searchResults.recordings?.length > 0
   );
 
   return (
@@ -250,6 +273,58 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {lead.email} {lead.company && `• ${lead.company}`}
+                      </p>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {searchResults?.voicemails && searchResults.voicemails.length > 0 && (
+              <CommandGroup heading="Voicemails">
+                {searchResults.voicemails.slice(0, 5).map((vm) => (
+                  <CommandItem
+                    key={`voicemail-${vm.id}`}
+                    value={`voicemail-${vm.phone}-${vm.id}`}
+                    onSelect={() => handleSelect('voicemail', vm.id)}
+                    className="flex items-center gap-3 py-2.5"
+                    data-testid={`search-result-voicemail-${vm.id}`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+                      <Voicemail className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {vm.phone}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {Math.floor(vm.duration / 60)}:{String(vm.duration % 60).padStart(2, '0')} duration
+                      </p>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {searchResults?.recordings && searchResults.recordings.length > 0 && (
+              <CommandGroup heading="Recordings">
+                {searchResults.recordings.slice(0, 5).map((rec) => (
+                  <CommandItem
+                    key={`recording-${rec.id}`}
+                    value={`recording-${rec.phone}-${rec.id}`}
+                    onSelect={() => handleSelect('recording', rec.id)}
+                    className="flex items-center gap-3 py-2.5"
+                    data-testid={`search-result-recording-${rec.id}`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center flex-shrink-0">
+                      <Mic className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {rec.callerName || rec.phone}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {rec.transcript ? rec.transcript.substring(0, 50) + '...' : (rec.summary || `${Math.floor(rec.duration / 60)}:${String(rec.duration % 60).padStart(2, '0')} duration`)}
                       </p>
                     </div>
                   </CommandItem>

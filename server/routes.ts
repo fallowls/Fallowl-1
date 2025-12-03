@@ -901,36 +901,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const query = (req.query.q as string || '').trim();
       
       if (!query || query.length < 2) {
-        return res.json({ contacts: [], calls: [], messages: [], leads: [] });
+        return res.json({ contacts: [], calls: [], messages: [], leads: [], voicemails: [], recordings: [] });
       }
 
-      const [contacts, calls, messages, leads] = await Promise.all([
+      const queryLower = query.toLowerCase();
+
+      const [contacts, calls, messages, leads, voicemails, recordings] = await Promise.all([
         storage.searchContacts(userId, query).then(results => results.slice(0, 5)),
         storage.getAllCalls(userId).then(results => 
           results.filter(call => 
-            call.phone?.toLowerCase().includes(query.toLowerCase()) ||
-            call.status?.toLowerCase().includes(query.toLowerCase()) ||
-            call.type?.toLowerCase().includes(query.toLowerCase())
+            call.phone?.toLowerCase().includes(queryLower) ||
+            call.status?.toLowerCase().includes(queryLower) ||
+            call.type?.toLowerCase().includes(queryLower)
           ).slice(0, 5)
         ),
         storage.getAllMessages(userId).then(results =>
           results.filter(msg =>
-            msg.phone?.toLowerCase().includes(query.toLowerCase()) ||
-            msg.content?.toLowerCase().includes(query.toLowerCase())
+            msg.phone?.toLowerCase().includes(queryLower) ||
+            msg.content?.toLowerCase().includes(queryLower)
           ).slice(0, 5)
         ),
         storage.getAllLeads(userId).then(results =>
           results.filter(lead =>
-            lead.firstName?.toLowerCase().includes(query.toLowerCase()) ||
-            lead.lastName?.toLowerCase().includes(query.toLowerCase()) ||
-            lead.email?.toLowerCase().includes(query.toLowerCase()) ||
-            lead.company?.toLowerCase().includes(query.toLowerCase()) ||
-            lead.phone?.toLowerCase().includes(query.toLowerCase())
+            lead.firstName?.toLowerCase().includes(queryLower) ||
+            lead.lastName?.toLowerCase().includes(queryLower) ||
+            lead.email?.toLowerCase().includes(queryLower) ||
+            lead.company?.toLowerCase().includes(queryLower) ||
+            lead.phone?.toLowerCase().includes(queryLower)
+          ).slice(0, 5)
+        ),
+        storage.getAllVoicemails(userId).then(results =>
+          results.filter(vm =>
+            vm.phone?.toLowerCase().includes(queryLower)
+          ).slice(0, 5)
+        ),
+        storage.getAllRecordings(userId).then(results =>
+          results.filter(rec =>
+            rec.phone?.toLowerCase().includes(queryLower) ||
+            rec.transcript?.toLowerCase().includes(queryLower) ||
+            rec.summary?.toLowerCase().includes(queryLower) ||
+            rec.callerName?.toLowerCase().includes(queryLower)
           ).slice(0, 5)
         )
       ]);
 
-      res.json({ contacts, calls, messages, leads });
+      res.json({ contacts, calls, messages, leads, voicemails, recordings });
     } catch (error: any) {
       console.error('Global search error:', error);
       res.status(500).json({ message: error.message });

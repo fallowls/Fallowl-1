@@ -46,74 +46,74 @@ export default function Header() {
 
   return (
     <>
-      <header className="h-14 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-900 px-4 flex items-center sticky top-0 z-40">
-        <div className="flex items-center justify-between w-full">
+      <header className="h-11 sm:h-12 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-900 px-2 sm:px-4 flex items-center sticky top-0 z-40">
+        <div className="flex items-center justify-between w-full gap-2">
           {isMobile && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg mr-2"
+              className="h-8 w-8 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg flex-shrink-0"
               onClick={() => setMobileMenuOpen(true)}
               data-testid="button-menu"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4 h-4" />
             </Button>
           )}
           
-          <div className="flex-1 flex justify-center px-4">
+          <div className="flex-1 flex justify-center min-w-0">
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-3 w-full max-w-md h-10 px-4 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-800 transition-colors"
+              className="flex items-center gap-2 w-full max-w-xs sm:max-w-sm md:max-w-md h-8 px-3 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-800 transition-colors"
               data-testid="button-search"
             >
-              <Search className="w-4 h-4" />
-              <span className="text-sm">Search...</span>
-              <kbd className="hidden sm:inline-flex ml-auto items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-gray-400 dark:text-gray-600 bg-white dark:bg-gray-950 rounded border border-gray-200 dark:border-gray-800">
+              <Search className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="text-xs sm:text-sm truncate">Search everything...</span>
+              <kbd className="hidden md:inline-flex ml-auto items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-gray-400 dark:text-gray-600 bg-white dark:bg-gray-950 rounded border border-gray-200 dark:border-gray-800 flex-shrink-0">
                 ⌘K
               </kbd>
             </button>
           </div>
           
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
             <WebSocketStatusIndicator />
             
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg"
+              className="h-8 w-8 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-md"
               onClick={() => setDarkMode(!darkMode)}
               data-testid="button-theme-toggle"
             >
               {darkMode ? (
-                <Sun className="w-[18px] h-[18px]" />
+                <Sun className="w-4 h-4" />
               ) : (
-                <Moon className="w-[18px] h-[18px]" />
+                <Moon className="w-4 h-4" />
               )}
             </Button>
             
             <Button
               variant="ghost"
               size="icon"
-              className="relative h-9 w-9 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg"
+              className="relative h-8 w-8 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-md"
               data-testid="button-notifications"
             >
-              <Bell className="w-[18px] h-[18px]" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
             </Button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button 
-                  className="h-9 w-9 rounded-lg bg-gray-900 dark:bg-gray-100 flex items-center justify-center hover:opacity-90 transition-opacity ml-1"
+                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-md bg-gray-900 dark:bg-gray-100 flex items-center justify-center hover:opacity-90 transition-opacity ml-0.5"
                   data-testid="button-user-menu"
                 >
-                  <span className="text-white dark:text-gray-900 text-xs font-semibold">
+                  <span className="text-white dark:text-gray-900 text-[10px] sm:text-xs font-semibold">
                     {getInitials(user?.username, user?.email)}
                   </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52 p-1.5 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800">
-                <div className="px-3 py-2 mb-1">
+              <DropdownMenuContent align="end" className="w-48 sm:w-52 p-1 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800">
+                <div className="px-2.5 py-1.5 mb-0.5">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                     {user?.username || 'User'}
                   </p>
@@ -123,36 +123,36 @@ export default function Header() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-md cursor-pointer text-gray-700 dark:text-gray-300"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md cursor-pointer text-gray-700 dark:text-gray-300 text-sm"
                   onClick={() => setCurrentView('profile')}
                   data-testid="menu-item-profile"
                 >
-                  <User className="w-4 h-4" />
+                  <User className="w-3.5 h-3.5" />
                   <span>Profile</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-md cursor-pointer text-gray-700 dark:text-gray-300"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md cursor-pointer text-gray-700 dark:text-gray-300 text-sm"
                   onClick={() => setCurrentView('settings')}
                   data-testid="menu-item-settings"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className="w-3.5 h-3.5" />
                   <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-md cursor-pointer text-gray-700 dark:text-gray-300"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md cursor-pointer text-gray-700 dark:text-gray-300 text-sm"
                   onClick={() => setCurrentView('support')}
                   data-testid="menu-item-support"
                 >
-                  <HelpCircle className="w-4 h-4" />
+                  <HelpCircle className="w-3.5 h-3.5" />
                   <span>Help & Support</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-md cursor-pointer text-red-600 dark:text-red-400"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md cursor-pointer text-red-600 dark:text-red-400 text-sm"
                   onClick={() => logout.mutate()}
                   data-testid="menu-item-logout"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
