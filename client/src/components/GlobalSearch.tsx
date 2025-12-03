@@ -24,7 +24,8 @@ import {
   Settings,
   HelpCircle,
   User,
-  PhoneCall
+  PhoneCall,
+  Calendar
 } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 
