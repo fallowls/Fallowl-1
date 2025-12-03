@@ -1666,6 +1666,44 @@ export type InsertCallIntelligence = z.infer<typeof insertCallIntelligenceSchema
 export type AiInsight = typeof aiInsights.$inferSelect;
 export type InsertAiInsight = z.infer<typeof insertAiInsightSchema>;
 
+// CSV Field Mapping Learning - stores patterns learned from user CSV imports
+export const fieldMappingPatterns = pgTable("field_mapping_patterns", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
+  
+  // The CSV header that was mapped
+  csvHeader: text("csv_header").notNull(),
+  csvHeaderNormalized: text("csv_header_normalized").notNull(),
+  
+  // The contact field it was mapped to
+  mappedField: text("mapped_field").notNull(),
+  
+  // How many times this mapping was used
+  usageCount: integer("usage_count").default(1),
+  
+  // Confidence boost from learning (0.0 - 1.0)
+  learnedConfidence: decimal("learned_confidence", { precision: 3, scale: 2 }).default("0.0"),
+  
+  // Last time this mapping was used
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  csvHeaderIdx: index("field_mapping_patterns_csv_header_idx").on(table.csvHeaderNormalized),
+  mappedFieldIdx: index("field_mapping_patterns_mapped_field_idx").on(table.mappedField),
+  tenantCsvIdx: index("field_mapping_patterns_tenant_csv_idx").on(table.tenantId, table.csvHeaderNormalized),
+}));
+
+export const insertFieldMappingPatternSchema = createInsertSchema(fieldMappingPatterns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type FieldMappingPattern = typeof fieldMappingPatterns.$inferSelect;
+export type InsertFieldMappingPattern = z.infer<typeof insertFieldMappingPatternSchema>;
+
 // WebSocket Event Types for Parallel Dialer
 export interface ParallelDialerContact {
   id: number;

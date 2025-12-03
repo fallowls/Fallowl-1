@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,12 @@ interface FieldMapping {
   mappedField: string | null;
   confidence: number;
   suggestions: Array<{ field: string; confidence: number }>;
+}
+
+interface FieldGroup {
+  group: string;
+  label: string;
+  fields: Array<{ field: string; label: string; description: string }>;
 }
 
 interface ImportOptions {
@@ -405,12 +411,31 @@ export default function ContactImportModal({ open, onClose, onImportComplete }: 
                               value={fieldMappings[mapping.csvField] || ''}
                               onValueChange={(value) => updateFieldMapping(mapping.csvField, value === 'none' ? null : value)}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger data-testid={`select-mapping-${mapping.csvField}`}>
                                 <SelectValue placeholder="Select mapping..." />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">Don't import</SelectItem>
-                                {parseResult.availableFields.map((field: any) => (
+                                <SelectSeparator />
+                                {parseResult.groupedFields?.map((group: FieldGroup, groupIndex: number) => (
+                                  <SelectGroup key={group.group}>
+                                    <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                      {group.label}
+                                    </SelectLabel>
+                                    {group.fields.map((field: { field: string; label: string }) => (
+                                      <SelectItem 
+                                        key={field.field} 
+                                        value={field.field}
+                                        data-testid={`option-${field.field}`}
+                                      >
+                                        {field.label}
+                                      </SelectItem>
+                                    ))}
+                                    {groupIndex < (parseResult.groupedFields?.length || 0) - 1 && (
+                                      <SelectSeparator />
+                                    )}
+                                  </SelectGroup>
+                                )) || parseResult.availableFields?.map((field: any) => (
                                   <SelectItem key={field.field} value={field.field}>
                                     {field.label}
                                   </SelectItem>

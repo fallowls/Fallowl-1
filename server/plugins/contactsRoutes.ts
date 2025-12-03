@@ -494,7 +494,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // POST /contacts/import/parse - Parse CSV for import
+  // POST /contacts/import/parse - Parse CSV for import with NLP-powered field mapping
   fastify.post('/contacts/import/parse', {
     config: {
       rateLimit: rateLimitConfigs.api
@@ -514,18 +514,22 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
       // Parse CSV
       const { headers, data } = csvImportService.parseCsvContent(csvContent);
       
-      // Get smart field mappings
-      const fieldMappings = fieldMappingService.mapFields(headers);
+      // Get smart field mappings using NLP with learning (async)
+      const fieldMappings = await fieldMappingService.mapFields(headers);
       
-      // Get available fields for manual mapping
+      // Get available fields for manual mapping (flat list for fallback)
       const availableFields = fieldMappingService.getAvailableFields();
+      
+      // Get grouped fields for better UI (Contact Info, Company Info, Location)
+      const groupedFields = fieldMappingService.getGroupedFields();
       
       return reply.send({
         headers,
         data: data.slice(0, 5), // Return first 5 rows for preview
         totalRows: data.length,
         fieldMappings,
-        availableFields
+        availableFields,
+        groupedFields
       });
     } catch (error: any) {
       return reply.code(400).send({ message: error.message });
@@ -560,7 +564,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // POST /contacts/import/execute - Execute CSV import
+  // POST /contacts/import/execute - Execute CSV import with NLP learning
   fastify.post('/contacts/import/execute', {
     config: {
       rateLimit: rateLimitConfigs.api
@@ -580,6 +584,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
       }
 
       const { csvImportService } = await import('../services/csvImportService');
+      const { fieldMappingService } = await import('../services/fieldMappingService');
       
       // Parse CSV
       const { data } = csvImportService.parseCsvContent(csvContent);
@@ -590,6 +595,17 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
         updateDuplicates: false,
         createList: false
       });
+      
+      // Learn from successful import - store mapping patterns for future auto-detection
+      if (result.success && result.importedCount > 0) {
+        try {
+          await fieldMappingService.learnFromImport(fieldMappings);
+          console.log(`[CSV Import] Learned from ${Object.keys(fieldMappings).length} field mappings`);
+        } catch (learnError) {
+          console.error('[CSV Import] Learning error:', learnError);
+          // Don't fail the import if learning fails
+        }
+      }
       
       return reply.send(result);
     } catch (error: any) {

@@ -1,7 +1,15 @@
 /**
- * Custom NLP-based Field Mapping Service
- * Smart field mapping for CSV import using pattern matching and semantic analysis
+ * Smart NLP-based Field Mapping Service with Learning Capabilities
+ * Features:
+ * - Grouped field categories (Contact Info, Company Info, Location)
+ * - Pattern matching and semantic analysis
+ * - Self-learning from user imports
+ * - Only essential contact fields (no lead management fields)
  */
+
+import { db } from '../db';
+import { fieldMappingPatterns } from '@shared/schema';
+import { eq, and, sql } from 'drizzle-orm';
 
 export interface ContactFieldMapping {
   csvField: string;
@@ -18,9 +26,23 @@ export interface FieldPattern {
   weight: number;
 }
 
+export interface FieldGroup {
+  group: string;
+  label: string;
+  fields: Array<{ field: string; label: string; description: string }>;
+}
+
+export interface LearnedMapping {
+  csvHeader: string;
+  mappedField: string;
+  confidence: number;
+  usageCount: number;
+}
+
 export class FieldMappingService {
+  // Only essential contact fields - removed lead management fields (after country)
   private fieldPatterns: FieldPattern[] = [
-    // Basic Contact Information
+    // Contact Information
     {
       field: 'name',
       patterns: ['^(full_?)?name$', '^contact_?name$', '^customer_?name$', '^person$', '^individual$'],
@@ -44,153 +66,105 @@ export class FieldMappingService {
     },
     {
       field: 'phone',
-      patterns: ['^phone(_?number)?$', '^mobile$', '^cell$', '^telephone$', '^tel$', '^contact_?number$'],
+      patterns: ['^phone(_?number)?$', '^mobile$', '^cell$', '^telephone$', '^tel$', '^contact_?number$', '^primary_?phone$'],
       keywords: ['phone', 'mobile', 'cell', 'telephone', 'tel', 'number', 'contact'],
-      aliases: ['phone_number', 'mobile_number', 'cell_phone', 'telephone_number', 'contact_number'],
+      aliases: ['phone_number', 'mobile_number', 'cell_phone', 'telephone_number', 'contact_number', 'primary_phone'],
       weight: 1.0
     },
     {
       field: 'alternatePhone',
-      patterns: ['^(alt|alternate|alternative|secondary|other)_?phone$', '^phone_?2$', '^backup_?phone$'],
-      keywords: ['alternate', 'alternative', 'secondary', 'other', 'backup', 'second'],
-      aliases: ['alt_phone', 'phone2', 'secondary_phone', 'backup_phone', 'other_phone'],
+      patterns: ['^(alt|alternate|alternative|secondary|other)_?phone$', '^phone_?2$', '^backup_?phone$', '^work_?phone$', '^office_?phone$'],
+      keywords: ['alternate', 'alternative', 'secondary', 'other', 'backup', 'second', 'work', 'office'],
+      aliases: ['alt_phone', 'phone2', 'secondary_phone', 'backup_phone', 'other_phone', 'work_phone', 'office_phone'],
       weight: 0.9
     },
     {
       field: 'email',
-      patterns: ['^e?mail(_?address)?$', '^contact_?email$', '^email_?addr$'],
+      patterns: ['^e?mail(_?address)?$', '^contact_?email$', '^email_?addr$', '^primary_?email$'],
       keywords: ['email', 'mail', 'address', 'contact'],
-      aliases: ['email_address', 'mail_address', 'contact_email', 'e_mail'],
+      aliases: ['email_address', 'mail_address', 'contact_email', 'e_mail', 'primary_email'],
       weight: 1.0
     },
 
     // Company Information
     {
       field: 'company',
-      patterns: ['^company(_?name)?$', '^organization$', '^org$', '^business$', '^employer$', '^firm$'],
-      keywords: ['company', 'organization', 'business', 'employer', 'firm', 'corp'],
-      aliases: ['company_name', 'organization_name', 'business_name', 'employer_name'],
+      patterns: ['^company(_?name)?$', '^organization$', '^org$', '^business$', '^employer$', '^firm$', '^corporation$', '^enterprise$'],
+      keywords: ['company', 'organization', 'business', 'employer', 'firm', 'corp', 'enterprise'],
+      aliases: ['company_name', 'organization_name', 'business_name', 'employer_name', 'corporation_name'],
       weight: 0.9
     },
     {
       field: 'industry',
-      patterns: ['^industry$', '^business_?type$', '^sector$', '^vertical$', '^market$'],
-      keywords: ['industry', 'business', 'sector', 'vertical', 'market', 'type'],
-      aliases: ['business_type', 'industry_type', 'market_sector'],
+      patterns: ['^industry$', '^business_?type$', '^sector$', '^vertical$', '^market$', '^field$'],
+      keywords: ['industry', 'business', 'sector', 'vertical', 'market', 'type', 'field'],
+      aliases: ['business_type', 'industry_type', 'market_sector', 'industry_sector'],
       weight: 0.8
     },
     {
       field: 'jobTitle',
-      patterns: ['^(job_?)?title$', '^position$', '^role$', '^designation$', '^job_?position$'],
-      keywords: ['title', 'position', 'role', 'designation', 'job'],
-      aliases: ['job_title', 'job_position', 'work_title', 'position_title'],
+      patterns: ['^(job_?)?title$', '^position$', '^role$', '^designation$', '^job_?position$', '^occupation$'],
+      keywords: ['title', 'position', 'role', 'designation', 'job', 'occupation'],
+      aliases: ['job_title', 'job_position', 'work_title', 'position_title', 'role_title'],
       weight: 0.9
     },
     {
       field: 'revenue',
-      patterns: ['^(annual_?)?revenue$', '^income$', '^turnover$', '^sales$'],
-      keywords: ['revenue', 'income', 'turnover', 'sales', 'annual'],
-      aliases: ['annual_revenue', 'company_revenue', 'yearly_revenue'],
+      patterns: ['^(annual_?)?revenue$', '^income$', '^turnover$', '^sales$', '^arr$'],
+      keywords: ['revenue', 'income', 'turnover', 'sales', 'annual', 'arr'],
+      aliases: ['annual_revenue', 'company_revenue', 'yearly_revenue', 'total_revenue'],
       weight: 0.7
     },
     {
       field: 'employeeSize',
-      patterns: ['^employee(_?size|_?count)?$', '^staff_?size$', '^team_?size$', '^headcount$'],
+      patterns: ['^employee(_?size|_?count)?$', '^staff_?size$', '^team_?size$', '^headcount$', '^company_?size$', '^num_?employees$'],
       keywords: ['employee', 'staff', 'team', 'headcount', 'size', 'count'],
-      aliases: ['employee_count', 'staff_count', 'team_count', 'company_size'],
+      aliases: ['employee_count', 'staff_count', 'team_count', 'company_size', 'num_employees', 'number_of_employees'],
       weight: 0.7
     },
 
-    // Address Information
+    // Location Information
     {
       field: 'address',
-      patterns: ['^(street_?)?address$', '^addr$', '^location$', '^street$'],
-      keywords: ['address', 'street', 'location', 'addr'],
-      aliases: ['street_address', 'mailing_address', 'physical_address'],
+      patterns: ['^(street_?)?address$', '^addr$', '^location$', '^street$', '^address_?line'],
+      keywords: ['address', 'street', 'location', 'addr', 'line'],
+      aliases: ['street_address', 'mailing_address', 'physical_address', 'address_line_1'],
       weight: 0.8
     },
     {
       field: 'city',
-      patterns: ['^city$', '^town$', '^locality$'],
-      keywords: ['city', 'town', 'locality'],
-      aliases: ['city_name', 'town_name'],
+      patterns: ['^city$', '^town$', '^locality$', '^municipality$'],
+      keywords: ['city', 'town', 'locality', 'municipality'],
+      aliases: ['city_name', 'town_name', 'locality_name'],
       weight: 0.9
     },
     {
       field: 'state',
-      patterns: ['^state$', '^province$', '^region$'],
-      keywords: ['state', 'province', 'region'],
-      aliases: ['state_name', 'province_name'],
+      patterns: ['^state$', '^province$', '^region$', '^territory$'],
+      keywords: ['state', 'province', 'region', 'territory'],
+      aliases: ['state_name', 'province_name', 'region_name', 'state_province'],
       weight: 0.9
     },
     {
       field: 'zipCode',
-      patterns: ['^(zip|postal)_?code$', '^zip$', '^postcode$'],
-      keywords: ['zip', 'postal', 'code', 'postcode'],
-      aliases: ['zip_code', 'postal_code', 'post_code'],
+      patterns: ['^(zip|postal)_?code$', '^zip$', '^postcode$', '^pin_?code$'],
+      keywords: ['zip', 'postal', 'code', 'postcode', 'pin'],
+      aliases: ['zip_code', 'postal_code', 'post_code', 'pincode'],
       weight: 0.8
     },
     {
       field: 'country',
-      patterns: ['^country$', '^nation$'],
+      patterns: ['^country$', '^nation$', '^country_?code$'],
       keywords: ['country', 'nation'],
-      aliases: ['country_name', 'country_code'],
+      aliases: ['country_name', 'country_code', 'nation_name'],
       weight: 0.8
-    },
-
-    // Lead Information
-    {
-      field: 'leadSource',
-      patterns: ['^(lead_?)?source$', '^origin$', '^referral$', '^channel$'],
-      keywords: ['source', 'origin', 'referral', 'channel', 'lead'],
-      aliases: ['lead_source', 'traffic_source', 'referral_source'],
-      weight: 0.7
-    },
-    {
-      field: 'leadStatus',
-      patterns: ['^(lead_?)?status$', '^stage$', '^phase$'],
-      keywords: ['status', 'stage', 'phase', 'lead'],
-      aliases: ['lead_status', 'contact_status', 'stage_status'],
-      weight: 0.7
-    },
-    {
-      field: 'priority',
-      patterns: ['^priority$', '^importance$', '^urgency$'],
-      keywords: ['priority', 'importance', 'urgency'],
-      aliases: ['contact_priority', 'lead_priority'],
-      weight: 0.6
-    },
-    {
-      field: 'disposition',
-      patterns: ['^disposition$', '^outcome$', '^result$'],
-      keywords: ['disposition', 'outcome', 'result'],
-      aliases: ['call_disposition', 'contact_disposition'],
-      weight: 0.6
-    },
-
-    // Additional Fields
-    {
-      field: 'tags',
-      patterns: ['^tags?$', '^labels?$', '^categories?$'],
-      keywords: ['tag', 'label', 'category'],
-      aliases: ['contact_tags', 'labels', 'categories'],
-      weight: 0.5
-    },
-    {
-      field: 'notes',
-      patterns: ['^notes?$', '^comments?$', '^description$', '^remarks?$'],
-      keywords: ['note', 'comment', 'description', 'remark'],
-      aliases: ['contact_notes', 'additional_notes', 'comments'],
-      weight: 0.5
-    },
-    {
-      field: 'assignedTo',
-      patterns: ['^assigned(_?to)?$', '^owner$', '^agent$', '^rep$', '^representative$'],
-      keywords: ['assigned', 'owner', 'agent', 'rep', 'representative'],
-      aliases: ['assigned_to', 'contact_owner', 'sales_rep'],
-      weight: 0.6
     }
   ];
+
+  // Learned patterns from database - cached in memory
+  private learnedPatterns: Map<string, LearnedMapping[]> = new Map();
+  private lastLearnedFetch: number = 0;
+  private readonly CACHE_TTL = 60000; // 1 minute cache
 
   /**
    * Normalize field names for comparison
@@ -220,9 +194,9 @@ export class FieldMappingService {
           matrix[j][i] = matrix[j - 1][i - 1];
         } else {
           matrix[j][i] = Math.min(
-            matrix[j - 1][i - 1] + 1, // substitution
-            matrix[j][i - 1] + 1,     // insertion
-            matrix[j - 1][i] + 1      // deletion
+            matrix[j - 1][i - 1] + 1,
+            matrix[j][i - 1] + 1,
+            matrix[j - 1][i] + 1
           );
         }
       }
@@ -233,11 +207,69 @@ export class FieldMappingService {
   }
 
   /**
-   * Score a field match using multiple criteria
+   * Fetch learned patterns from database
+   */
+  private async fetchLearnedPatterns(tenantId?: number): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastLearnedFetch < this.CACHE_TTL) {
+      return; // Use cached data
+    }
+
+    try {
+      const patterns = await db
+        .select()
+        .from(fieldMappingPatterns)
+        .where(tenantId ? eq(fieldMappingPatterns.tenantId, tenantId) : sql`TRUE`)
+        .orderBy(sql`${fieldMappingPatterns.usageCount} DESC`);
+
+      this.learnedPatterns.clear();
+      for (const pattern of patterns) {
+        const key = pattern.csvHeaderNormalized;
+        if (!this.learnedPatterns.has(key)) {
+          this.learnedPatterns.set(key, []);
+        }
+        this.learnedPatterns.get(key)!.push({
+          csvHeader: pattern.csvHeader,
+          mappedField: pattern.mappedField,
+          confidence: parseFloat(pattern.learnedConfidence || '0'),
+          usageCount: pattern.usageCount || 1
+        });
+      }
+      this.lastLearnedFetch = now;
+    } catch (error) {
+      console.error('Error fetching learned patterns:', error);
+    }
+  }
+
+  /**
+   * Get learned confidence boost for a CSV field -> contact field mapping
+   */
+  private getLearnedConfidence(csvField: string, contactField: string): number {
+    const normalized = this.normalizeField(csvField);
+    const learned = this.learnedPatterns.get(normalized);
+    
+    if (!learned) return 0;
+    
+    const match = learned.find(l => l.mappedField === contactField);
+    if (!match) return 0;
+    
+    // Boost based on usage count (logarithmic scaling)
+    const usageBoost = Math.min(0.3, Math.log10(match.usageCount + 1) * 0.15);
+    return Math.min(0.5, match.confidence + usageBoost);
+  }
+
+  /**
+   * Score a field match using multiple criteria including learned patterns
    */
   private scoreFieldMatch(csvField: string, pattern: FieldPattern): number {
     const normalizedCsvField = this.normalizeField(csvField);
     let score = 0;
+
+    // Check learned patterns first (highest priority)
+    const learnedBoost = this.getLearnedConfidence(csvField, pattern.field);
+    if (learnedBoost > 0) {
+      score += learnedBoost;
+    }
 
     // Check regex patterns
     for (const regexPattern of pattern.patterns) {
@@ -251,7 +283,7 @@ export class FieldMappingService {
     // Check exact keyword matches
     for (const keyword of pattern.keywords) {
       if (normalizedCsvField.includes(keyword)) {
-        score += 0.6 * pattern.weight;
+        score += 0.5 * pattern.weight;
         break;
       }
     }
@@ -259,25 +291,28 @@ export class FieldMappingService {
     // Check aliases using similarity
     for (const alias of pattern.aliases) {
       const similarity = this.calculateSimilarity(normalizedCsvField, this.normalizeField(alias));
-      if (similarity > 0.8) {
+      if (similarity > 0.85) {
         score += similarity * 0.7 * pattern.weight;
         break;
       }
     }
 
     // Check direct similarity with field name
-    const fieldSimilarity = this.calculateSimilarity(normalizedCsvField, pattern.field);
-    if (fieldSimilarity > 0.7) {
-      score += fieldSimilarity * 0.9 * pattern.weight;
+    const fieldSimilarity = this.calculateSimilarity(normalizedCsvField, pattern.field.toLowerCase());
+    if (fieldSimilarity > 0.75) {
+      score += fieldSimilarity * 0.8 * pattern.weight;
     }
 
-    return Math.min(score, 1.0); // Cap at 1.0
+    return Math.min(score, 1.0);
   }
 
   /**
-   * Map CSV fields to contact schema fields
+   * Map CSV fields to contact schema fields with NLP and learning
    */
-  public mapFields(csvHeaders: string[]): ContactFieldMapping[] {
+  public async mapFields(csvHeaders: string[], tenantId?: number): Promise<ContactFieldMapping[]> {
+    // Fetch learned patterns
+    await this.fetchLearnedPatterns(tenantId);
+
     const mappings: ContactFieldMapping[] = [];
 
     for (const csvField of csvHeaders) {
@@ -286,7 +321,7 @@ export class FieldMappingService {
       // Score against all field patterns
       for (const pattern of this.fieldPatterns) {
         const confidence = this.scoreFieldMatch(csvField, pattern);
-        if (confidence > 0.1) { // Only include meaningful matches
+        if (confidence > 0.1) {
           scores.push({ field: pattern.field, confidence });
         }
       }
@@ -302,7 +337,7 @@ export class FieldMappingService {
         csvField,
         mappedField,
         confidence: bestMatch ? bestMatch.confidence : 0,
-        suggestions: scores.slice(0, 5) // Top 5 suggestions
+        suggestions: scores.slice(0, 5)
       });
     }
 
@@ -311,20 +346,13 @@ export class FieldMappingService {
     const usedFields = new Set<string>();
     const finalMappings = mappings.map(mapping => {
       if (mapping.mappedField && usedFields.has(mapping.mappedField)) {
-        // Find existing mapping with this field
         const existingMapping = mappings.find(m => 
           m.mappedField === mapping.mappedField && m !== mapping
         );
         
         if (existingMapping && existingMapping.confidence > mapping.confidence) {
-          // Current mapping loses, set to null
-          return {
-            ...mapping,
-            mappedField: null,
-            confidence: 0
-          };
+          return { ...mapping, mappedField: null, confidence: 0 };
         } else {
-          // Current mapping wins, mark existing as null
           if (existingMapping) {
             existingMapping.mappedField = null;
             existingMapping.confidence = 0;
@@ -344,33 +372,137 @@ export class FieldMappingService {
   }
 
   /**
-   * Get available contact fields for manual mapping
+   * Learn from a successful import - save mapping patterns
+   */
+  public async learnFromImport(
+    fieldMappings: { [csvField: string]: string },
+    tenantId?: number
+  ): Promise<void> {
+    try {
+      for (const [csvField, contactField] of Object.entries(fieldMappings)) {
+        if (!contactField || contactField === 'none' || contactField === '') continue;
+
+        const normalized = this.normalizeField(csvField);
+        
+        // Check if this pattern already exists
+        const existing = await db
+          .select()
+          .from(fieldMappingPatterns)
+          .where(
+            and(
+              eq(fieldMappingPatterns.csvHeaderNormalized, normalized),
+              eq(fieldMappingPatterns.mappedField, contactField),
+              tenantId 
+                ? eq(fieldMappingPatterns.tenantId, tenantId)
+                : sql`${fieldMappingPatterns.tenantId} IS NULL`
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          // Update existing pattern - increment usage count and boost confidence
+          const newCount = (existing[0].usageCount || 1) + 1;
+          const newConfidence = Math.min(0.5, parseFloat(existing[0].learnedConfidence || '0') + 0.05);
+          
+          await db
+            .update(fieldMappingPatterns)
+            .set({
+              usageCount: newCount,
+              learnedConfidence: String(newConfidence),
+              lastUsedAt: new Date(),
+              updatedAt: new Date()
+            })
+            .where(eq(fieldMappingPatterns.id, existing[0].id));
+        } else {
+          // Insert new learned pattern
+          await db
+            .insert(fieldMappingPatterns)
+            .values({
+              tenantId: tenantId || null,
+              csvHeader: csvField,
+              csvHeaderNormalized: normalized,
+              mappedField: contactField,
+              usageCount: 1,
+              learnedConfidence: '0.1',
+              lastUsedAt: new Date()
+            });
+        }
+      }
+
+      // Invalidate cache to pick up new patterns
+      this.lastLearnedFetch = 0;
+    } catch (error) {
+      console.error('Error learning from import:', error);
+    }
+  }
+
+  /**
+   * Get available contact fields grouped by category
+   * Only essential fields - no lead management options
    */
   public getAvailableFields(): Array<{ field: string; label: string; description: string }> {
     return [
-      { field: 'name', label: 'Full Name', description: 'Contact\'s full name (required)' },
+      // Contact Information
+      { field: 'name', label: 'Full Name', description: 'Contact\'s full name' },
       { field: 'firstName', label: 'First Name', description: 'Contact\'s first name' },
       { field: 'lastName', label: 'Last Name', description: 'Contact\'s last name' },
-      { field: 'phone', label: 'Phone Number', description: 'Primary phone number (required)' },
+      { field: 'phone', label: 'Phone Number', description: 'Primary phone number' },
       { field: 'email', label: 'Email Address', description: 'Primary email address' },
       { field: 'alternatePhone', label: 'Alternate Phone', description: 'Secondary phone number' },
+      // Company Information
       { field: 'company', label: 'Company', description: 'Company or organization name' },
       { field: 'industry', label: 'Industry', description: 'Business industry or sector' },
       { field: 'jobTitle', label: 'Job Title', description: 'Position or role title' },
-      { field: 'revenue', label: 'Revenue', description: 'Annual revenue or income' },
+      { field: 'revenue', label: 'Revenue', description: 'Annual revenue' },
       { field: 'employeeSize', label: 'Employee Size', description: 'Number of employees' },
+      // Location Information
       { field: 'address', label: 'Address', description: 'Street address' },
       { field: 'city', label: 'City', description: 'City name' },
       { field: 'state', label: 'State/Province', description: 'State or province' },
       { field: 'zipCode', label: 'ZIP/Postal Code', description: 'ZIP or postal code' },
-      { field: 'country', label: 'Country', description: 'Country name or code' },
-      { field: 'leadSource', label: 'Lead Source', description: 'How the lead was acquired' },
-      { field: 'leadStatus', label: 'Lead Status', description: 'Current lead status' },
-      { field: 'priority', label: 'Priority', description: 'Contact priority (high, medium, low)' },
-      { field: 'disposition', label: 'Disposition', description: 'Contact disposition or outcome' },
-      { field: 'assignedTo', label: 'Assigned To', description: 'Assigned agent or representative' },
-      { field: 'tags', label: 'Tags', description: 'Comma-separated tags' },
-      { field: 'notes', label: 'Notes', description: 'Additional notes or comments' }
+      { field: 'country', label: 'Country', description: 'Country name or code' }
+    ];
+  }
+
+  /**
+   * Get available contact fields grouped by category for UI
+   */
+  public getGroupedFields(): FieldGroup[] {
+    return [
+      {
+        group: 'contact',
+        label: 'Contact Information',
+        fields: [
+          { field: 'name', label: 'Full Name', description: 'Contact\'s full name' },
+          { field: 'firstName', label: 'First Name', description: 'Contact\'s first name' },
+          { field: 'lastName', label: 'Last Name', description: 'Contact\'s last name' },
+          { field: 'phone', label: 'Phone Number', description: 'Primary phone number' },
+          { field: 'email', label: 'Email Address', description: 'Primary email address' },
+          { field: 'alternatePhone', label: 'Alternate Phone', description: 'Secondary phone number' }
+        ]
+      },
+      {
+        group: 'company',
+        label: 'Company Information',
+        fields: [
+          { field: 'company', label: 'Company', description: 'Company or organization name' },
+          { field: 'industry', label: 'Industry', description: 'Business industry or sector' },
+          { field: 'jobTitle', label: 'Job Title', description: 'Position or role title' },
+          { field: 'revenue', label: 'Revenue', description: 'Annual revenue' },
+          { field: 'employeeSize', label: 'Employee Size', description: 'Number of employees' }
+        ]
+      },
+      {
+        group: 'location',
+        label: 'Location Information',
+        fields: [
+          { field: 'address', label: 'Address', description: 'Street address' },
+          { field: 'city', label: 'City', description: 'City name' },
+          { field: 'state', label: 'State/Province', description: 'State or province' },
+          { field: 'zipCode', label: 'ZIP/Postal Code', description: 'ZIP or postal code' },
+          { field: 'country', label: 'Country', description: 'Country name or code' }
+        ]
+      }
     ];
   }
 
@@ -390,7 +522,7 @@ export class FieldMappingService {
 
       // Transform fields according to mapping
       for (const [csvField, contactField] of Object.entries(fieldMappings)) {
-        if (contactField && row[csvField] !== undefined && row[csvField] !== '') {
+        if (contactField && contactField !== 'none' && row[csvField] !== undefined && row[csvField] !== '') {
           const value = this.transformFieldValue(contactField, row[csvField]);
           transformedRow[contactField] = value;
         }
@@ -446,35 +578,8 @@ export class FieldMappingService {
     const stringValue = String(value).trim();
 
     switch (field) {
-      case 'tags':
-        // Split comma-separated tags
-        return stringValue.split(',').map(tag => tag.trim()).filter(tag => tag);
-      
-      case 'doNotCall':
-      case 'doNotEmail':
-      case 'doNotSms':
-        // Convert to boolean
-        return ['true', 'yes', '1', 'on'].includes(stringValue.toLowerCase());
-      
-      case 'priority':
-        // Normalize priority values
-        const priority = stringValue.toLowerCase();
-        if (['high', 'urgent', '3'].includes(priority)) return 'high';
-        if (['low', '1'].includes(priority)) return 'low';
-        return 'medium';
-      
-      case 'leadStatus':
-        // Normalize lead status
-        const status = stringValue.toLowerCase();
-        if (['contacted', 'reached', 'spoke'].includes(status)) return 'contacted';
-        if (['qualified', 'interested', 'hot'].includes(status)) return 'qualified';
-        if (['converted', 'closed', 'won', 'customer'].includes(status)) return 'converted';
-        if (['lost', 'closed-lost', 'unqualified'].includes(status)) return 'lost';
-        return 'new';
-      
       case 'phone':
       case 'alternatePhone':
-        // Clean phone number
         return this.cleanPhoneNumber(stringValue);
       
       default:
