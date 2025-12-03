@@ -894,6 +894,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global Search across all entities
+  app.get("/api/search", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const query = (req.query.q as string || '').trim();
+      
+      if (!query || query.length < 2) {
+        return res.json({ contacts: [], calls: [], messages: [], leads: [] });
+      }
+
+      const [contacts, calls, messages, leads] = await Promise.all([
+        storage.searchContacts(userId, query).then(results => results.slice(0, 5)),
+        storage.getAllCalls(userId).then(results => 
+          results.filter(call => 
+            call.phone?.toLowerCase().includes(query.toLowerCase()) ||
+            call.status?.toLowerCase().includes(query.toLowerCase()) ||
+            call.type?.toLowerCase().includes(query.toLowerCase())
+          ).slice(0, 5)
+        ),
+        storage.getAllMessages(userId).then(results =>
+          results.filter(msg =>
+            msg.phone?.toLowerCase().includes(query.toLowerCase()) ||
+            msg.content?.toLowerCase().includes(query.toLowerCase())
+          ).slice(0, 5)
+        ),
+        storage.getAllLeads(userId).then(results =>
+          results.filter(lead =>
+            lead.firstName?.toLowerCase().includes(query.toLowerCase()) ||
+            lead.lastName?.toLowerCase().includes(query.toLowerCase()) ||
+            lead.email?.toLowerCase().includes(query.toLowerCase()) ||
+            lead.company?.toLowerCase().includes(query.toLowerCase()) ||
+            lead.phone?.toLowerCase().includes(query.toLowerCase())
+          ).slice(0, 5)
+        )
+      ]);
+
+      res.json({ contacts, calls, messages, leads });
+    } catch (error: any) {
+      console.error('Global search error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Contacts
   app.get("/api/contacts", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
