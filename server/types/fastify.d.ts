@@ -10,6 +10,8 @@ declare module 'fastify' {
   interface FastifyRequest {
     userId?: number;
     auth0UserId?: string;
+    tenantId?: number;
+    tenantRole?: string;
   }
   
   interface Session {

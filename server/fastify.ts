@@ -488,6 +488,11 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
       // Set userId on request (now properly typed via module augmentation)
       request.userId = user.id;
       request.auth0UserId = auth0UserId;
+      
+      // Resolve tenant for the user
+      const membership = await storage.ensureDefaultTenant(user.id);
+      request.tenantId = membership.tenantId;
+      request.tenantRole = membership.role;
     } catch (error: any) {
       console.error('Auth helper error:', error);
       return reply.code(500).send({ message: "Authentication error" });

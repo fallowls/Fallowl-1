@@ -3,7 +3,7 @@ import {
   roles, loginHistory, userActivity, subscriptionPlans, invoices, callNotes,
   smsTemplates, smsCampaigns, conversationThreads, contactLists, contactListMemberships,
   leadSources, leadStatuses, leadCampaigns, leads, leadActivities, leadTasks, leadScoring, leadNurturing,
-  aiLeadScores, callIntelligence, aiInsights,
+  aiLeadScores, callIntelligence, aiInsights, tenants, tenantMemberships,
   type User, type InsertUser, type Contact, type InsertContact,
   type Call, type InsertCall, type Message, type InsertMessage,
   type Recording, type InsertRecording, type Voicemail, type InsertVoicemail,
@@ -18,7 +18,8 @@ import {
   type LeadActivity, type InsertLeadActivity, type LeadTask, type InsertLeadTask,
   type LeadScoring, type InsertLeadScoring, type LeadNurturing, type InsertLeadNurturing,
   type AiLeadScore, type InsertAiLeadScore, type CallIntelligence, type InsertCallIntelligence,
-  type AiInsight, type InsertAiInsight
+  type AiInsight, type InsertAiInsight,
+  type Tenant, type InsertTenant, type TenantMembership, type InsertTenantMembership
 } from "@shared/schema";
 import { normalizePhoneNumber, arePhoneNumbersEqual } from "@shared/phoneUtils";
 import { eq, and, or, desc, asc, count, sum, gte, lte, lt, gt, ilike, isNotNull, sql, inArray } from "drizzle-orm";
@@ -372,6 +373,24 @@ export interface IStorage {
   createAiInsight(userId: number, insight: Omit<InsertAiInsight, 'userId'>): Promise<AiInsight>;
   updateAiInsight(userId: number, id: number, insight: Partial<InsertAiInsight>): Promise<AiInsight>;
   deleteAiInsight(userId: number, id: number): Promise<void>;
+
+  // Tenants
+  getTenant(id: number): Promise<Tenant | undefined>;
+  getTenantBySlug(slug: string): Promise<Tenant | undefined>;
+  createTenant(tenant: InsertTenant): Promise<Tenant>;
+  updateTenant(id: number, tenant: Partial<InsertTenant>): Promise<Tenant>;
+  deleteTenant(id: number): Promise<void>;
+  getAllTenants(): Promise<Tenant[]>;
+  
+  // Tenant Memberships
+  getTenantMembership(tenantId: number, userId: number): Promise<TenantMembership | undefined>;
+  getUserTenantMemberships(userId: number): Promise<TenantMembership[]>;
+  getTenantMembers(tenantId: number): Promise<TenantMembership[]>;
+  createTenantMembership(membership: InsertTenantMembership): Promise<TenantMembership>;
+  updateTenantMembership(id: number, membership: Partial<InsertTenantMembership>): Promise<TenantMembership>;
+  deleteTenantMembership(id: number): Promise<void>;
+  getDefaultTenantForUser(userId: number): Promise<TenantMembership | undefined>;
+  ensureDefaultTenant(userId: number): Promise<TenantMembership>;
 }
 
 
@@ -2588,6 +2607,135 @@ export class DatabaseStorage implements IStorage {
         eq(aiInsights.id, id),
         eq(aiInsights.userId, userId)
       ));
+  }
+
+  // Tenants
+  async getTenant(id: number): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
+    return tenant || undefined;
+  }
+
+  async getTenantBySlug(slug: string): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug));
+    return tenant || undefined;
+  }
+
+  async createTenant(tenant: InsertTenant): Promise<Tenant> {
+    const [newTenant] = await db.insert(tenants).values(tenant).returning();
+    return newTenant;
+  }
+
+  async updateTenant(id: number, tenant: Partial<InsertTenant>): Promise<Tenant> {
+    const [updated] = await db.update(tenants)
+      .set({
+        ...tenant,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenants.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTenant(id: number): Promise<void> {
+    await db.delete(tenants).where(eq(tenants.id, id));
+  }
+
+  async getAllTenants(): Promise<Tenant[]> {
+    return await db.select().from(tenants).orderBy(asc(tenants.name));
+  }
+
+  // Tenant Memberships
+  async getTenantMembership(tenantId: number, userId: number): Promise<TenantMembership | undefined> {
+    const [membership] = await db.select()
+      .from(tenantMemberships)
+      .where(and(
+        eq(tenantMemberships.tenantId, tenantId),
+        eq(tenantMemberships.userId, userId)
+      ));
+    return membership || undefined;
+  }
+
+  async getUserTenantMemberships(userId: number): Promise<TenantMembership[]> {
+    return await db.select()
+      .from(tenantMemberships)
+      .where(eq(tenantMemberships.userId, userId));
+  }
+
+  async getTenantMembers(tenantId: number): Promise<TenantMembership[]> {
+    return await db.select()
+      .from(tenantMemberships)
+      .where(eq(tenantMemberships.tenantId, tenantId));
+  }
+
+  async createTenantMembership(membership: InsertTenantMembership): Promise<TenantMembership> {
+    const [newMembership] = await db.insert(tenantMemberships).values(membership).returning();
+    return newMembership;
+  }
+
+  async updateTenantMembership(id: number, membership: Partial<InsertTenantMembership>): Promise<TenantMembership> {
+    const [updated] = await db.update(tenantMemberships)
+      .set({
+        ...membership,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenantMemberships.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTenantMembership(id: number): Promise<void> {
+    await db.delete(tenantMemberships).where(eq(tenantMemberships.id, id));
+  }
+
+  async getDefaultTenantForUser(userId: number): Promise<TenantMembership | undefined> {
+    const [membership] = await db.select()
+      .from(tenantMemberships)
+      .where(and(
+        eq(tenantMemberships.userId, userId),
+        eq(tenantMemberships.isDefault, true),
+        eq(tenantMemberships.status, 'active')
+      ));
+    
+    if (membership) return membership;
+    
+    // If no default, return the first active membership
+    const [firstMembership] = await db.select()
+      .from(tenantMemberships)
+      .where(and(
+        eq(tenantMemberships.userId, userId),
+        eq(tenantMemberships.status, 'active')
+      ))
+      .limit(1);
+    
+    return firstMembership || undefined;
+  }
+
+  async ensureDefaultTenant(userId: number): Promise<TenantMembership> {
+    // Check if user already has a default tenant
+    const existing = await this.getDefaultTenantForUser(userId);
+    if (existing) return existing;
+    
+    // Get or create the default organization tenant
+    let defaultTenant = await this.getTenantBySlug('default');
+    if (!defaultTenant) {
+      defaultTenant = await this.createTenant({
+        name: 'Default Organization',
+        slug: 'default',
+        status: 'active',
+        plan: 'free',
+      });
+    }
+    
+    // Create membership for the user
+    const membership = await this.createTenantMembership({
+      tenantId: defaultTenant.id,
+      userId,
+      role: 'member',
+      status: 'active',
+      isDefault: true,
+    });
+    
+    return membership;
   }
 }
 
