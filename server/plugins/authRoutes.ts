@@ -55,14 +55,25 @@ export default async function authRoutes(fastify: FastifyInstance) {
         clearTwilioCacheOnLogout(userId);
       }
       
-      (request as any).session.destroy((err: any) => {
-        if (err) {
-          return reply.code(500).send({ message: "Could not log out" });
+      // Wrap session.destroy in a Promise to properly await it
+      await new Promise<void>((resolve, reject) => {
+        if (!(request as any).session?.destroy) {
+          // No session to destroy
+          resolve();
+          return;
         }
-        return reply.send({ message: "Logged out successfully" });
+        (request as any).session.destroy((err: any) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       });
+      
+      return reply.send({ message: "Logged out successfully" });
     } catch (error: any) {
-      return reply.code(500).send({ message: error.message });
+      return reply.code(500).send({ message: "Could not log out" });
     }
   });
 
