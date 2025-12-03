@@ -6,7 +6,6 @@ import { WebSocketStatusIndicator } from "./WebSocketStatusIndicator";
 
 const viewTitles = {
   dashboard: 'Dashboard',
-  'my-work': 'My Work',
   dialer: 'Dialer',
   'parallel-dialer': 'Parallel Dialer',
   'call-status-overview': 'Call Status Overview',

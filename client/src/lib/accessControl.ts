@@ -3,7 +3,7 @@ export function hasAdminAccess(userEmail: string | undefined | null): boolean {
   return userEmail.toLowerCase().endsWith('@demonflare.com');
 }
 
-export const RESTRICTED_VIEWS = ['smtp', 'payments', 'cdn'] as const;
+export const RESTRICTED_VIEWS = ['smtp', 'payments', 'cdn', 'users'] as const;
 
 export function canAccessView(userEmail: string | undefined | null, viewId: string): boolean {
   if (!RESTRICTED_VIEWS.includes(viewId as any)) {

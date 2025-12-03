@@ -20,8 +20,7 @@ import {
   History,
   Target,
   Calendar,
-  Zap,
-  Briefcase
+  Zap
 } from "lucide-react";
 
 import FallOwlLogo from "@assets/FallOwl_logo_1759278988195.png";
@@ -29,7 +28,6 @@ import FallOwlLogoDark from "@assets/FallOwl_logo_1759339763714.png";
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'my-work', label: 'My Work', icon: Briefcase },
   { id: 'dialer', label: 'Dialer', icon: Phone },
   { id: 'parallel-dialer', label: 'Parallel Dialer', icon: Zap },
   { id: 'call-log', label: 'Call Logs', icon: History },
