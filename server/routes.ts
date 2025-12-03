@@ -898,6 +898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/search", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const query = (req.query.q as string || '').trim();
       
       if (!query || query.length < 2) {
@@ -907,21 +908,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const queryLower = query.toLowerCase();
 
       const [contacts, calls, messages, leads, voicemails, recordings] = await Promise.all([
-        storage.searchContacts(userId, query).then(results => results.slice(0, 5)),
-        storage.getAllCalls(userId).then(results => 
+        storage.searchContacts(tenantId, userId, query).then(results => results.slice(0, 5)),
+        storage.getAllCalls(tenantId, userId).then(results => 
           results.filter(call => 
             call.phone?.toLowerCase().includes(queryLower) ||
             call.status?.toLowerCase().includes(queryLower) ||
             call.type?.toLowerCase().includes(queryLower)
           ).slice(0, 5)
         ),
-        storage.getAllMessages(userId).then(results =>
+        storage.getAllMessages(tenantId, userId).then(results =>
           results.filter(msg =>
             msg.phone?.toLowerCase().includes(queryLower) ||
             msg.content?.toLowerCase().includes(queryLower)
           ).slice(0, 5)
         ),
-        storage.getAllLeads(userId).then(results =>
+        storage.getAllLeads(tenantId, userId).then(results =>
           results.filter(lead =>
             lead.firstName?.toLowerCase().includes(queryLower) ||
             lead.lastName?.toLowerCase().includes(queryLower) ||
@@ -930,12 +931,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lead.phone?.toLowerCase().includes(queryLower)
           ).slice(0, 5)
         ),
-        storage.getAllVoicemails(userId).then(results =>
+        storage.getAllVoicemails(tenantId, userId).then(results =>
           results.filter(vm =>
             vm.phone?.toLowerCase().includes(queryLower)
           ).slice(0, 5)
         ),
-        storage.getAllRecordings(userId).then(results =>
+        storage.getAllRecordings(tenantId, userId).then(results =>
           results.filter(rec =>
             rec.phone?.toLowerCase().includes(queryLower) ||
             rec.transcript?.toLowerCase().includes(queryLower) ||
@@ -956,7 +957,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/contacts", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const contacts = await storage.getAllContacts(userId);
+      const tenantId = req.tenantId!;
+      const contacts = await storage.getAllContacts(tenantId, userId);
       res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -966,11 +968,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/contacts/search", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const query = req.query.q as string;
       if (!query) {
         return res.status(400).json({ message: "Query parameter 'q' is required" });
       }
-      const contacts = await storage.searchContacts(userId, query);
+      const contacts = await storage.searchContacts(tenantId, userId, query);
       res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -980,17 +983,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contacts", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const contactData = insertContactSchema.parse(req.body);
       
       // Check if contact with this phone number already exists
-      const existingContact = await storage.findContactByAnyPhoneFormat(userId, contactData.phone);
+      const existingContact = await storage.findContactByAnyPhoneFormat(tenantId, userId, contactData.phone);
       if (existingContact) {
         return res.status(409).json({ 
           message: `A contact with phone number ${contactData.phone} already exists. Contact name: ${existingContact.name}` 
         });
       }
       
-      const contact = await storage.createContact(userId, contactData);
+      const contact = await storage.createContact(tenantId, userId, contactData);
       res.status(201).json(contact);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -1005,8 +1009,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contacts/upsert", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const contactData = insertContactSchema.parse(req.body);
-      const contact = await storage.upsertContact(userId, contactData);
+      const contact = await storage.upsertContact(tenantId, userId, contactData);
       res.json(contact);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1016,13 +1021,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/contacts/:id", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid contact ID" });
       }
       
-      const existingContact = await storage.getContact(userId, id);
+      const existingContact = await storage.getContact(tenantId, userId, id);
       if (!existingContact) {
         return res.status(404).json({ message: "Contact not found" });
       }
@@ -1031,7 +1037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If phone is being updated, check for duplicates
       if (contactData.phone && contactData.phone !== existingContact.phone) {
-        const duplicateContact = await storage.findContactByAnyPhoneFormat(userId, contactData.phone);
+        const duplicateContact = await storage.findContactByAnyPhoneFormat(tenantId, userId, contactData.phone);
         if (duplicateContact && duplicateContact.id !== id) {
           return res.status(409).json({ 
             message: `Phone number ${contactData.phone} is already used by contact: ${duplicateContact.name}` 
@@ -1039,7 +1045,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const contact = await storage.updateContact(userId, id, contactData);
+      const contact = await storage.updateContact(tenantId, userId, id, contactData);
       res.json(contact);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -1057,13 +1063,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/contacts/:id", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid contact ID" });
       }
       
-      const existingContact = await storage.getContact(userId, id);
+      const existingContact = await storage.getContact(tenantId, userId, id);
       if (!existingContact) {
         return res.status(404).json({ message: "Contact not found" });
       }
@@ -1072,7 +1079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If phone is being updated, check for duplicates
       if (contactData.phone && contactData.phone !== existingContact.phone) {
-        const duplicateContact = await storage.findContactByAnyPhoneFormat(userId, contactData.phone);
+        const duplicateContact = await storage.findContactByAnyPhoneFormat(tenantId, userId, contactData.phone);
         if (duplicateContact && duplicateContact.id !== id) {
           return res.status(409).json({ 
             message: `Phone number ${contactData.phone} is already used by contact: ${duplicateContact.name}` 
@@ -1080,7 +1087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const contact = await storage.updateContact(userId, id, contactData);
+      const contact = await storage.updateContact(tenantId, userId, id, contactData);
       res.json(contact);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -1098,18 +1105,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/contacts/:id", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid contact ID" });
       }
       
-      const contact = await storage.getContact(userId, id);
+      const contact = await storage.getContact(tenantId, userId, id);
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
       
-      await storage.deleteContact(userId, id);
+      await storage.deleteContact(tenantId, userId, id);
       res.json({ message: "Contact deleted successfully", deletedContact: contact });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to delete contact" });
@@ -1120,11 +1128,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contacts/:id/favorite", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const id = parseInt(req.params.id);
       const { isFavorite } = req.body;
       
       // Add favorite to tags array
-      const contact = await storage.getContact(userId, id);
+      const contact = await storage.getContact(tenantId, userId, id);
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
@@ -1138,7 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedTags = currentTags.filter(tag => tag !== 'favorite');
       }
 
-      const updatedContact = await storage.updateContact(userId, id, { tags: updatedTags });
+      const updatedContact = await storage.updateContact(tenantId, userId, id, { tags: updatedTags });
       res.json(updatedContact);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1148,6 +1157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contacts/:id/disposition", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const id = parseInt(req.params.id);
       const { disposition } = req.body;
       
@@ -1172,12 +1182,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const contact = await storage.getContact(userId, id);
+      const contact = await storage.getContact(tenantId, userId, id);
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      const updatedContact = await storage.updateContact(userId, id, { 
+      const updatedContact = await storage.updateContact(tenantId, userId, id, { 
         disposition,
         lastContactedAt: new Date()
       });
@@ -1190,8 +1200,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contacts/:id/call", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const tenantId = req.tenantId!;
       const id = parseInt(req.params.id);
-      const contact = await storage.getContact(userId, id);
+      const contact = await storage.getContact(tenantId, userId, id);
       
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
@@ -1202,7 +1213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update last contacted timestamp
-      await storage.updateContact(userId, id, {
+      await storage.updateContact(tenantId, userId, id, {
         lastContactedAt: new Date()
       });
 
