@@ -61,6 +61,72 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Tenants table for multi-tenant organization
+export const tenants = pgTable("tenants", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  ownerId: integer("owner_id").references(() => users.id),
+  
+  // Organization Details
+  description: text("description"),
+  logo: text("logo"),
+  website: text("website"),
+  industry: text("industry"),
+  size: text("size"), // 1-10, 11-50, 51-200, 201-1000, 1000+
+  
+  // Status and Type
+  status: text("status").notNull().default("active"), // active, suspended, trial, cancelled
+  plan: text("plan").default("free"), // free, starter, pro, enterprise
+  
+  // Settings
+  settings: jsonb("settings").default({}),
+  features: jsonb("features").default({}), // Enabled features for this tenant
+  
+  // Billing
+  billingEmail: text("billing_email"),
+  stripeCustomerId: text("stripe_customer_id"),
+  subscriptionId: text("subscription_id"),
+  
+  // Metadata
+  metadata: jsonb("metadata").default({}),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  slugIdx: uniqueIndex("tenants_slug_idx").on(table.slug),
+  ownerIdx: index("tenants_owner_id_idx").on(table.ownerId),
+  statusIdx: index("tenants_status_idx").on(table.status),
+}));
+
+// Tenant Memberships - Links users to tenants with roles
+export const tenantMemberships = pgTable("tenant_memberships", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  
+  // Role within the tenant
+  role: text("role").notNull().default("member"), // owner, admin, member, viewer
+  permissions: jsonb("permissions").default({}), // Custom permission overrides
+  
+  // Status
+  status: text("status").notNull().default("active"), // active, pending, suspended
+  invitedBy: integer("invited_by").references(() => users.id),
+  invitedAt: timestamp("invited_at"),
+  acceptedAt: timestamp("accepted_at"),
+  
+  // Settings
+  isDefault: boolean("is_default").default(false), // Is this the user's default tenant
+  notifications: jsonb("notifications").default({}), // Notification preferences
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  tenantUserIdx: uniqueIndex("tenant_memberships_tenant_user_idx").on(table.tenantId, table.userId),
+  tenantIdx: index("tenant_memberships_tenant_id_idx").on(table.tenantId),
+  userIdx: index("tenant_memberships_user_id_idx").on(table.userId),
+}));
+
 // Contact Lists for smart organization
 export const contactLists = pgTable("contact_lists", {
   id: serial("id").primaryKey(),
@@ -143,6 +209,7 @@ export const contactListMemberships = pgTable("contact_list_memberships", {
 
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
@@ -202,6 +269,7 @@ export const contacts = pgTable("contacts", {
 
 export const calls = pgTable("calls", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   contactId: integer("contact_id").references(() => contacts.id),
   phone: text("phone").notNull(),
@@ -340,6 +408,7 @@ export const calendarEvents = pgTable("calendar_events", {
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   contactId: integer("contact_id").references(() => contacts.id),
   phone: text("phone").notNull(),
@@ -469,6 +538,7 @@ export const conversationThreads = pgTable("conversation_threads", {
 
 export const recordings = pgTable("recordings", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   
   // Twilio Integration - Unique identifiers to prevent duplicates
   twilioRecordingSid: text("twilio_recording_sid").unique().notNull(), // Twilio's unique recording identifier
@@ -579,6 +649,7 @@ export const recordings = pgTable("recordings", {
 
 export const voicemails = pgTable("voicemails", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   contactId: integer("contact_id").references(() => contacts.id),
   phone: text("phone").notNull(),
@@ -723,6 +794,7 @@ export const leadCampaigns = pgTable("lead_campaigns", {
 
 export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   contactId: integer("contact_id").references(() => contacts.id),
   
@@ -1270,6 +1342,18 @@ export const insertUserSchema = createInsertSchema(users).omit({
   passwordResetExpires: true,
 });
 
+export const insertTenantSchema = createInsertSchema(tenants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTenantMembershipSchema = createInsertSchema(tenantMemberships).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertContactSchema = createInsertSchema(contacts).omit({
   id: true,
   userId: true,
@@ -1503,6 +1587,10 @@ export const insertAiInsightSchema = createInsertSchema(aiInsights).omit({
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Tenant = typeof tenants.$inferSelect;
+export type InsertTenant = z.infer<typeof insertTenantSchema>;
+export type TenantMembership = typeof tenantMemberships.$inferSelect;
+export type InsertTenantMembership = z.infer<typeof insertTenantMembershipSchema>;
 export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Call = typeof calls.$inferSelect;
