@@ -158,6 +158,29 @@ export class FieldMappingService {
       keywords: ['country', 'nation'],
       aliases: ['country_name', 'country_code', 'nation_name'],
       weight: 0.8
+    },
+
+    // Social & Web Profiles
+    {
+      field: 'linkedinProfile',
+      patterns: ['^linkedin(_?profile|_?url)?$', '^li_?profile$', '^personal_?linkedin$', '^profile_?linkedin$'],
+      keywords: ['linkedin', 'li', 'profile'],
+      aliases: ['linkedin_profile', 'linkedin_url', 'personal_linkedin', 'linkedin_link', 'linkedin_page'],
+      weight: 0.9
+    },
+    {
+      field: 'companyLinkedinProfile',
+      patterns: ['^company_?linkedin(_?profile|_?url)?$', '^org_?linkedin$', '^business_?linkedin$', '^corporate_?linkedin$'],
+      keywords: ['company', 'linkedin', 'corporate', 'business', 'organization'],
+      aliases: ['company_linkedin', 'company_linkedin_profile', 'company_linkedin_url', 'org_linkedin', 'business_linkedin'],
+      weight: 0.85
+    },
+    {
+      field: 'website',
+      patterns: ['^website(_?url)?$', '^web$', '^url$', '^site$', '^homepage$', '^company_?website$', '^personal_?website$'],
+      keywords: ['website', 'web', 'url', 'site', 'homepage'],
+      aliases: ['website_url', 'web_url', 'company_website', 'personal_website', 'home_page', 'site_url'],
+      weight: 0.9
     }
   ];
 
@@ -460,7 +483,11 @@ export class FieldMappingService {
       { field: 'city', label: 'City', description: 'City name' },
       { field: 'state', label: 'State/Province', description: 'State or province' },
       { field: 'zipCode', label: 'ZIP/Postal Code', description: 'ZIP or postal code' },
-      { field: 'country', label: 'Country', description: 'Country name or code' }
+      { field: 'country', label: 'Country', description: 'Country name or code' },
+      // Social & Web Profiles
+      { field: 'linkedinProfile', label: 'LinkedIn Profile', description: 'Personal LinkedIn profile URL' },
+      { field: 'companyLinkedinProfile', label: 'Company LinkedIn', description: 'Company LinkedIn page URL' },
+      { field: 'website', label: 'Website', description: 'Personal or company website URL' }
     ];
   }
 
@@ -501,6 +528,15 @@ export class FieldMappingService {
           { field: 'state', label: 'State/Province', description: 'State or province' },
           { field: 'zipCode', label: 'ZIP/Postal Code', description: 'ZIP or postal code' },
           { field: 'country', label: 'Country', description: 'Country name or code' }
+        ]
+      },
+      {
+        group: 'social',
+        label: 'Social & Web Profiles',
+        fields: [
+          { field: 'linkedinProfile', label: 'LinkedIn Profile', description: 'Personal LinkedIn profile URL' },
+          { field: 'companyLinkedinProfile', label: 'Company LinkedIn', description: 'Company LinkedIn page URL' },
+          { field: 'website', label: 'Website', description: 'Personal or company website URL' }
         ]
       }
     ];
@@ -555,6 +591,26 @@ export class FieldMappingService {
       // Validate email format if provided
       if (transformedRow.email && !this.isValidEmail(transformedRow.email)) {
         errors.push('Invalid email format');
+      }
+
+      // Consolidate social profile fields into socialProfiles object
+      const socialProfiles: any = {};
+      if (transformedRow.linkedinProfile) {
+        socialProfiles.linkedin = transformedRow.linkedinProfile;
+        delete transformedRow.linkedinProfile;
+      }
+      if (transformedRow.companyLinkedinProfile) {
+        socialProfiles.companyLinkedin = transformedRow.companyLinkedinProfile;
+        delete transformedRow.companyLinkedinProfile;
+      }
+      if (transformedRow.website) {
+        socialProfiles.website = transformedRow.website;
+        delete transformedRow.website;
+      }
+      
+      // Only add socialProfiles if there's at least one value
+      if (Object.keys(socialProfiles).length > 0) {
+        transformedRow.socialProfiles = socialProfiles;
       }
 
       if (errors.length === 0) {

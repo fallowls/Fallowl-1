@@ -229,7 +229,8 @@ export class CsvImportService {
                 leadSource: contactData.leadSource || 'import',
                 disposition: contactData.disposition || null,
                 assignedTo: contactData.assignedTo || null,
-                primaryListId: listId || null
+                primaryListId: listId || null,
+                socialProfiles: contactData.socialProfiles || {}
               };
               newContacts.push(insertData);
             }
