@@ -1663,7 +1663,8 @@ export class DatabaseStorage implements IStorage {
     // Smart contact linking - try to find the contact using smart phone matching
     let contactIdToUse = insertNote.contactId;
     if (!contactIdToUse) {
-      const existingContact = await this.findContactByAnyPhoneFormat(userId, insertNote.phone);
+      const defaultTenant = await this.ensureDefaultTenant(userId);
+      const existingContact = await this.findContactByAnyPhoneFormat(defaultTenant.tenantId, userId, insertNote.phone);
       if (existingContact) {
         contactIdToUse = existingContact.id;
       }
