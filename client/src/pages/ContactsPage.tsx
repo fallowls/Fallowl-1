@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ContactList, InsertContactList } from "@shared/schema";
 import SmartContactCard from "@/components/contacts/SmartContactCard";
+import ContactListRow from "@/components/contacts/ContactListRow";
 import SmartContactModal from "@/components/contacts/SmartContactModal";
 import ContactFilters from "@/components/contacts/ContactFilters";
 import ContactImportModal from "@/components/contacts/ContactImportModal";
@@ -44,7 +45,7 @@ export default function ContactsPage() {
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | undefined>();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filters, setFilters] = useState<any>({});
@@ -826,13 +827,8 @@ export default function ContactsPage() {
                 Add Contact
               </Button>
             </div>
-          ) : (
-            <div className={cn(
-              "mt-4",
-              viewMode === 'grid' 
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
-                : "space-y-3"
-            )}>
+          ) : viewMode === 'grid' ? (
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredAndSortedContacts.map((contact) => (
                 <SmartContactCard
                   key={contact.id}
@@ -846,6 +842,34 @@ export default function ContactsPage() {
                   onUpdateDisposition={handleUpdateDisposition}
                 />
               ))}
+            </div>
+          ) : (
+            <div className="mt-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              {/* List Header */}
+              <div className="flex items-center px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <div className="w-10 flex-shrink-0"></div>
+                <div className="w-10 flex-shrink-0 mr-4"></div>
+                <div className="flex-1 min-w-0 pr-4">Name</div>
+                <div className="w-40 flex-shrink-0 hidden md:block pr-4">Job Title</div>
+                <div className="w-44 flex-shrink-0 hidden lg:block pr-4">Company</div>
+                <div className="w-56 flex-shrink-0 hidden xl:block pr-4">Email</div>
+                <div className="w-36 flex-shrink-0 hidden sm:block">Phone</div>
+                <div className="w-32 flex-shrink-0"></div>
+              </div>
+              {/* Contact Rows */}
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {filteredAndSortedContacts.map((contact) => (
+                  <ContactListRow
+                    key={contact.id}
+                    contact={contact}
+                    onCall={handleCall}
+                    onSms={handleSms}
+                    onEmail={handleEmail}
+                    onEdit={handleEditContact}
+                    onMarkFavorite={handleMarkFavorite}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
