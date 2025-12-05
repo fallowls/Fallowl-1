@@ -97,6 +97,7 @@ export class CsvImportService {
    * Import contacts from parsed CSV data with optimized batch processing
    */
   public async importContacts(
+    tenantId: number,
     userId: number,
     csvData: any[],
     fieldMappings: { [csvField: string]: string },
@@ -155,7 +156,7 @@ export class CsvImportService {
       }
 
       console.log('🔍 Fetching existing contacts for duplicate detection...');
-      const allContacts = await storage.getAllContacts(userId);
+      const allContacts = await storage.getAllContacts(tenantId, userId);
       const contactsByPhone = new Map(allContacts.map((c: any) => [c.phone, c]));
       console.log(`📊 Found ${allContacts.length} existing contacts`);
 
@@ -247,7 +248,7 @@ export class CsvImportService {
         // Batch create new contacts
         if (newContacts.length > 0) {
           console.log(`  ✨ Creating ${newContacts.length} new contacts...`);
-          const batchResult = await this.batchCreateContacts(userId, newContacts);
+          const batchResult = await this.batchCreateContacts(tenantId, userId, newContacts);
           result.importedCount += batchResult.successCount;
           result.errorCount += batchResult.failedCount;
           
@@ -267,7 +268,7 @@ export class CsvImportService {
         // Batch update contacts
         if (updateOps.length > 0) {
           console.log(`  🔄 Updating ${updateOps.length} contacts...`);
-          const updateResult = await this.batchUpdateContacts(userId, updateOps);
+          const updateResult = await this.batchUpdateContacts(tenantId, userId, updateOps);
           result.errorCount += updateResult.failedCount;
         }
 
@@ -334,7 +335,7 @@ export class CsvImportService {
   /**
    * Batch create contacts - much faster than one-by-one
    */
-  private async batchCreateContacts(userId: number, contacts: InsertContact[]): Promise<BatchOperationResult> {
+  private async batchCreateContacts(tenantId: number, userId: number, contacts: InsertContact[]): Promise<BatchOperationResult> {
     const createdContacts: any[] = [];
     let successCount = 0;
     let failedCount = 0;
@@ -343,7 +344,7 @@ export class CsvImportService {
     for (let i = 0; i < contacts.length; i += subBatchSize) {
       const subBatch = contacts.slice(i, i + subBatchSize);
       
-      const promises = subBatch.map(contact => storage.createContact(userId, contact));
+      const promises = subBatch.map(contact => storage.createContact(tenantId, userId, contact));
       const results = await Promise.allSettled(promises);
       
       results.forEach((result) => {
@@ -362,8 +363,8 @@ export class CsvImportService {
   /**
    * Batch update contacts
    */
-  private async batchUpdateContacts(userId: number, updates: Array<{ id: number; data: any }>): Promise<BatchOperationResult> {
-    const promises = updates.map(({ id, data }) => storage.updateContact(userId, id, data));
+  private async batchUpdateContacts(tenantId: number, userId: number, updates: Array<{ id: number; data: any }>): Promise<BatchOperationResult> {
+    const promises = updates.map(({ id, data }) => storage.updateContact(tenantId, userId, id, data));
     const results = await Promise.allSettled(promises);
     
     const successCount = results.filter(r => r.status === 'fulfilled').length;

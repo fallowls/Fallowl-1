@@ -18,7 +18,8 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const contacts = await storage.getAllContacts(userId);
+      const tenantId = (request as any).tenantId || userId;
+      const contacts = await storage.getAllContacts(tenantId, userId);
       return reply.send(contacts);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -34,11 +35,12 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { q } = request.query as { q?: string };
       if (!q) {
         return reply.code(400).send({ message: "Query parameter 'q' is required" });
       }
-      const contacts = await storage.searchContacts(userId, q);
+      const contacts = await storage.searchContacts(tenantId, userId, q);
       return reply.send(contacts);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -54,17 +56,18 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const contactData = insertContactSchema.parse(request.body);
       
       // Check if contact with this phone number already exists
-      const existingContact = await storage.findContactByAnyPhoneFormat(userId, contactData.phone);
+      const existingContact = await storage.findContactByAnyPhoneFormat(tenantId, userId, contactData.phone);
       if (existingContact) {
         return reply.code(409).send({ 
           message: `A contact with phone number ${contactData.phone} already exists. Contact name: ${existingContact.name}` 
         });
       }
       
-      const contact = await storage.createContact(userId, contactData);
+      const contact = await storage.createContact(tenantId, userId, contactData);
       return reply.code(201).send(contact);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -85,8 +88,9 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const contactData = insertContactSchema.parse(request.body);
-      const contact = await storage.upsertContact(userId, contactData);
+      const contact = await storage.upsertContact(tenantId, userId, contactData);
       return reply.send(contact);
     } catch (error: any) {
       return reply.code(400).send({ message: error.message });
@@ -102,6 +106,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       
@@ -109,7 +114,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ message: "Invalid contact ID" });
       }
       
-      const existingContact = await storage.getContact(userId, contactId);
+      const existingContact = await storage.getContact(tenantId, userId, contactId);
       if (!existingContact) {
         return reply.code(404).send({ message: "Contact not found" });
       }
@@ -118,7 +123,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
       
       // If phone is being updated, check for duplicates
       if (contactData.phone && contactData.phone !== existingContact.phone) {
-        const duplicateContact = await storage.findContactByAnyPhoneFormat(userId, contactData.phone);
+        const duplicateContact = await storage.findContactByAnyPhoneFormat(tenantId, userId, contactData.phone);
         if (duplicateContact && duplicateContact.id !== contactId) {
           return reply.code(409).send({ 
             message: `Phone number ${contactData.phone} is already used by contact: ${duplicateContact.name}` 
@@ -126,7 +131,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
         }
       }
       
-      const contact = await storage.updateContact(userId, contactId, contactData);
+      const contact = await storage.updateContact(tenantId, userId, contactId, contactData);
       return reply.send(contact);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -150,6 +155,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       
@@ -157,7 +163,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ message: "Invalid contact ID" });
       }
       
-      const existingContact = await storage.getContact(userId, contactId);
+      const existingContact = await storage.getContact(tenantId, userId, contactId);
       if (!existingContact) {
         return reply.code(404).send({ message: "Contact not found" });
       }
@@ -166,7 +172,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
       
       // If phone is being updated, check for duplicates
       if (contactData.phone && contactData.phone !== existingContact.phone) {
-        const duplicateContact = await storage.findContactByAnyPhoneFormat(userId, contactData.phone);
+        const duplicateContact = await storage.findContactByAnyPhoneFormat(tenantId, userId, contactData.phone);
         if (duplicateContact && duplicateContact.id !== contactId) {
           return reply.code(409).send({ 
             message: `Phone number ${contactData.phone} is already used by contact: ${duplicateContact.name}` 
@@ -174,7 +180,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
         }
       }
       
-      const contact = await storage.updateContact(userId, contactId, contactData);
+      const contact = await storage.updateContact(tenantId, userId, contactId, contactData);
       return reply.send(contact);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -198,6 +204,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       
@@ -205,12 +212,12 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ message: "Invalid contact ID" });
       }
       
-      const contact = await storage.getContact(userId, contactId);
+      const contact = await storage.getContact(tenantId, userId, contactId);
       if (!contact) {
         return reply.code(404).send({ message: "Contact not found" });
       }
       
-      await storage.deleteContact(userId, contactId);
+      await storage.deleteContact(tenantId, userId, contactId);
       return reply.send({ message: "Contact deleted successfully", deletedContact: contact });
     } catch (error: any) {
       return reply.code(500).send({ message: error.message || "Failed to delete contact" });
@@ -226,12 +233,13 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       const { isFavorite } = request.body as { isFavorite?: boolean };
       
       // Add favorite to tags array
-      const contact = await storage.getContact(userId, contactId);
+      const contact = await storage.getContact(tenantId, userId, contactId);
       if (!contact) {
         return reply.code(404).send({ message: "Contact not found" });
       }
@@ -245,7 +253,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
         updatedTags = currentTags.filter(tag => tag !== 'favorite');
       }
 
-      const updatedContact = await storage.updateContact(userId, contactId, { tags: updatedTags });
+      const updatedContact = await storage.updateContact(tenantId, userId, contactId, { tags: updatedTags });
       return reply.send(updatedContact);
     } catch (error: any) {
       return reply.code(400).send({ message: error.message });
@@ -261,6 +269,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       const { disposition } = request.body as { disposition?: string };
@@ -286,12 +295,12 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
         });
       }
       
-      const contact = await storage.getContact(userId, contactId);
+      const contact = await storage.getContact(tenantId, userId, contactId);
       if (!contact) {
         return reply.code(404).send({ message: "Contact not found" });
       }
 
-      const updatedContact = await storage.updateContact(userId, contactId, { 
+      const updatedContact = await storage.updateContact(tenantId, userId, contactId, { 
         disposition,
         lastContactedAt: new Date()
       });
@@ -310,9 +319,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
-      const contact = await storage.getContact(userId, contactId);
+      const contact = await storage.getContact(tenantId, userId, contactId);
       
       if (!contact) {
         return reply.code(404).send({ message: "Contact not found" });
@@ -323,7 +333,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
       }
 
       // Update last contacted timestamp
-      await storage.updateContact(userId, contactId, {
+      await storage.updateContact(tenantId, userId, contactId, {
         lastContactedAt: new Date()
       });
 
@@ -346,19 +356,20 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { contactIds } = request.body as { contactIds?: number[] };
       let contacts;
       
       if (contactIds && contactIds.length > 0) {
-        contacts = await Promise.all(contactIds.map((id: number) => storage.getContact(userId, id)));
-        contacts = contacts.filter(Boolean); // Remove null results
+        const rawContacts = await Promise.all(contactIds.map((id: number) => storage.getContact(tenantId, userId, id)));
+        contacts = rawContacts.filter((c): c is NonNullable<typeof c> => c !== null && c !== undefined);
       } else {
-        contacts = await storage.getAllContacts(userId);
+        contacts = await storage.getAllContacts(tenantId, userId);
       }
 
       // Convert to CSV format
       const csvHeaders = ['Name', 'Phone', 'Email', 'Company', 'Job Title', 'Lead Status', 'Priority', 'Tags'];
-      const csvRows = contacts.map(contact => [
+      const csvRows = contacts.map((contact) => [
         contact.name,
         contact.phone,
         contact.email || '',
@@ -390,6 +401,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { contactIds } = request.body as { contactIds?: number[] };
       
       if (!contactIds || contactIds.length === 0) {
@@ -398,9 +410,9 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
 
       const results = [];
       for (const id of contactIds) {
-        const contact = await storage.getContact(userId, id);
+        const contact = await storage.getContact(tenantId, userId, id);
         if (contact && !contact.doNotCall) {
-          await storage.updateContact(userId, id, {
+          await storage.updateContact(tenantId, userId, id, {
             lastContactedAt: new Date()
           });
           results.push({ id, phone: contact.phone, status: 'queued' });
@@ -427,6 +439,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { contactIds, message } = request.body as { contactIds?: number[]; message?: string };
       
       if (!contactIds || contactIds.length === 0) {
@@ -439,7 +452,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
 
       const results = [];
       for (const id of contactIds) {
-        const contact = await storage.getContact(userId, id);
+        const contact = await storage.getContact(tenantId, userId, id);
         if (contact && !contact.doNotSms) {
           results.push({ id, phone: contact.phone, status: 'queued' });
         } else {
@@ -465,6 +478,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       const { contactIds, subject, message } = request.body as { contactIds?: number[]; subject?: string; message?: string };
       
       if (!contactIds || contactIds.length === 0) {
@@ -477,7 +491,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
 
       const results = [];
       for (const id of contactIds) {
-        const contact = await storage.getContact(userId, id);
+        const contact = await storage.getContact(tenantId, userId, id);
         if (contact && contact.email && !contact.doNotEmail) {
           results.push({ id, email: contact.email, status: 'queued' });
         } else {
@@ -573,6 +587,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId || userId;
       if (!userId) {
         return reply.code(401).send({ message: "Not authenticated" });
       }
@@ -590,7 +605,7 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
       const { data } = csvImportService.parseCsvContent(csvContent);
       
       // Execute import
-      const result = await csvImportService.importContacts(userId, data, fieldMappings, options || {
+      const result = await csvImportService.importContacts(tenantId, userId, data, fieldMappings, options || {
         skipDuplicates: true,
         updateDuplicates: false,
         createList: false
@@ -671,8 +686,9 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
       const userId = getUserIdFromRequest(request);
       
       // Set userId in the data before validation
+      const bodyData = request.body as Record<string, unknown>;
       const listWithUserId = {
-        ...request.body,
+        ...bodyData,
         userId
       };
       
