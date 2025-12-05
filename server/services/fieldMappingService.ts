@@ -593,18 +593,27 @@ export class FieldMappingService {
         errors.push('Invalid email format');
       }
 
-      // Consolidate social profile fields into socialProfiles object
+      // Validate and consolidate social profile fields into socialProfiles object
       const socialProfiles: any = {};
       if (transformedRow.linkedinProfile) {
-        socialProfiles.linkedin = transformedRow.linkedinProfile;
+        const url = this.normalizeUrl(transformedRow.linkedinProfile);
+        if (url && this.isValidUrl(url)) {
+          socialProfiles.linkedin = url;
+        }
         delete transformedRow.linkedinProfile;
       }
       if (transformedRow.companyLinkedinProfile) {
-        socialProfiles.companyLinkedin = transformedRow.companyLinkedinProfile;
+        const url = this.normalizeUrl(transformedRow.companyLinkedinProfile);
+        if (url && this.isValidUrl(url)) {
+          socialProfiles.companyLinkedin = url;
+        }
         delete transformedRow.companyLinkedinProfile;
       }
       if (transformedRow.website) {
-        socialProfiles.website = transformedRow.website;
+        const url = this.normalizeUrl(transformedRow.website);
+        if (url && this.isValidUrl(url)) {
+          socialProfiles.website = url;
+        }
         delete transformedRow.website;
       }
       
@@ -676,6 +685,38 @@ export class FieldMappingService {
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  }
+
+  /**
+   * Normalize URL by adding https:// prefix if missing
+   */
+  private normalizeUrl(url: string): string {
+    if (!url || typeof url !== 'string') return '';
+    
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    
+    // If URL already has a protocol, return as-is
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    
+    // Add https:// prefix for URLs without protocol
+    return 'https://' + trimmed;
+  }
+
+  /**
+   * Validate URL format
+   */
+  private isValidUrl(url: string): boolean {
+    if (!url || typeof url !== 'string') return false;
+    
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
   }
 }
 
