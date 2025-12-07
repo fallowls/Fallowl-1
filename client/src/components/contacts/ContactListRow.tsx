@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
-  Phone, MessageSquare, Mail, Edit, Heart, StickyNote, MoreHorizontal, Building, Briefcase
+  Phone, MessageSquare, Mail, Edit, Heart, StickyNote, MoreHorizontal, Building, Briefcase, Eye, X, MapPin, Calendar, Tag
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Contact } from "@shared/schema";
 import NotesModal from "@/components/modals/NotesModal";
@@ -35,6 +36,7 @@ export default function ContactListRow({
 }: ContactListRowProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showQuickView, setShowQuickView] = useState(false);
   const { toast } = useToast();
   const saveNotesMutation = useSaveCallNotes();
   const { data: callNotes = [] } = useContactCallNotes(contact.id, showNotesModal);
@@ -86,19 +88,18 @@ export default function ContactListRow({
     <>
       <div 
         className={cn(
-          "flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 transition-all duration-150 cursor-pointer",
+          "grid grid-cols-[auto_auto_1fr_120px_160px_200px_140px_auto] items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 transition-all duration-150 cursor-pointer gap-x-3",
           "hover:bg-gray-50 dark:hover:bg-gray-800/50",
-          selected && "bg-blue-50 dark:bg-blue-900/20",
-          isHovered && "bg-gray-50 dark:bg-gray-800/50"
+          selected && "bg-blue-50 dark:bg-blue-900/20"
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={() => onEdit?.(contact)}
         data-testid={`row-contact-${contact.id}`}
       >
-        {/* Checkbox - visible on hover or when selected */}
+        {/* Checkbox */}
         <div className={cn(
-          "w-10 flex-shrink-0 transition-opacity duration-150",
+          "w-6 flex-shrink-0 transition-opacity duration-150",
           (isHovered || selected) ? "opacity-100" : "opacity-0"
         )}>
           <Checkbox 
@@ -113,7 +114,7 @@ export default function ContactListRow({
 
         {/* Avatar */}
         <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0 mr-4",
+          "w-9 h-9 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0",
           getAvatarColor(contact.id)
         )}>
           {contact.avatar ? (
@@ -123,42 +124,34 @@ export default function ContactListRow({
           )}
         </div>
 
-        {/* Name Column - Primary info */}
-        <div className="flex-1 min-w-0 pr-4">
+        {/* Name Column */}
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900 dark:text-white truncate" data-testid={`text-name-${contact.id}`}>
+            <span className="font-medium text-gray-900 dark:text-white truncate text-sm" data-testid={`text-name-${contact.id}`}>
               {contact.name}
             </span>
             {isFavorite && (
-              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 flex-shrink-0" />
+              <Heart className="w-3 h-3 text-red-500 fill-red-500 flex-shrink-0" />
             )}
           </div>
         </div>
 
         {/* Job Title Column */}
-        <div className="w-40 flex-shrink-0 hidden md:block pr-4">
-          {contact.jobTitle ? (
-            <span className="text-sm text-gray-600 dark:text-gray-400 truncate block" data-testid={`text-jobtitle-${contact.id}`}>
-              {contact.jobTitle}
-            </span>
-          ) : (
-            <span className="text-sm text-gray-400 dark:text-gray-600">—</span>
-          )}
+        <div className="hidden md:block min-w-0">
+          <span className="text-sm text-gray-500 dark:text-gray-400 truncate block" data-testid={`text-jobtitle-${contact.id}`}>
+            {contact.jobTitle || "—"}
+          </span>
         </div>
 
         {/* Company Column */}
-        <div className="w-44 flex-shrink-0 hidden lg:block pr-4">
-          {contact.company ? (
-            <span className="text-sm text-gray-600 dark:text-gray-400 truncate block" data-testid={`text-company-${contact.id}`}>
-              {contact.company}
-            </span>
-          ) : (
-            <span className="text-sm text-gray-400 dark:text-gray-600">—</span>
-          )}
+        <div className="hidden lg:block min-w-0">
+          <span className="text-sm text-gray-500 dark:text-gray-400 truncate block" data-testid={`text-company-${contact.id}`}>
+            {contact.company || "—"}
+          </span>
         </div>
 
         {/* Email Column */}
-        <div className="w-56 flex-shrink-0 hidden xl:block pr-4">
+        <div className="hidden xl:block min-w-0">
           {contact.email ? (
             <span 
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block cursor-pointer"
@@ -175,18 +168,33 @@ export default function ContactListRow({
           )}
         </div>
 
-        {/* Phone Column - Always visible with call action */}
-        <div className="w-36 flex-shrink-0 hidden sm:block">
-          <span className="text-sm font-mono text-gray-700 dark:text-gray-300" data-testid={`text-phone-${contact.id}`}>
+        {/* Phone Column */}
+        <div className="hidden sm:block">
+          <span className="text-sm font-mono text-gray-600 dark:text-gray-300 whitespace-nowrap" data-testid={`text-phone-${contact.id}`}>
             {contact.phone}
           </span>
         </div>
 
-        {/* Action Buttons - Visible on hover */}
+        {/* Action Buttons */}
         <div className={cn(
-          "flex items-center gap-1 ml-2 transition-opacity duration-150",
+          "flex items-center gap-1 transition-opacity duration-150 justify-end",
           isHovered ? "opacity-100" : "opacity-0"
         )}>
+          {/* Quick View Eye Icon */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowQuickView(true);
+            }}
+            className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            data-testid={`button-quickview-${contact.id}`}
+            title="Quick View"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+
           {/* Primary Phone Call */}
           {!contact.doNotCall && (
             <Button
@@ -198,25 +206,8 @@ export default function ContactListRow({
               className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium"
               data-testid={`button-call-${contact.id}`}
             >
-              <Phone className="w-3.5 h-3.5 mr-1.5" />
+              <Phone className="w-3.5 h-3.5 mr-1" />
               Call
-            </Button>
-          )}
-
-          {/* Alternate Phone - if exists */}
-          {contact.alternatePhone && !contact.doNotCall && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCall?.(contact.alternatePhone!);
-              }}
-              className="h-8 px-2 text-xs"
-              data-testid={`button-call-alt-${contact.id}`}
-              title={`Call ${contact.alternatePhone}`}
-            >
-              <Phone className="w-3.5 h-3.5" />
             </Button>
           )}
 
@@ -292,6 +283,155 @@ export default function ContactListRow({
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Quick View Dialog */}
+      <Dialog open={showQuickView} onOpenChange={setShowQuickView}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className={cn(
+                "w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg",
+                getAvatarColor(contact.id)
+              )}>
+                {contact.avatar ? (
+                  <img src={contact.avatar} alt={contact.name} className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <span>{getInitials(contact.name)}</span>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span>{contact.name}</span>
+                  {isFavorite && (
+                    <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                  )}
+                </div>
+                {contact.jobTitle && (
+                  <p className="text-sm font-normal text-gray-500 dark:text-gray-400">{contact.jobTitle}</p>
+                )}
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            {/* Contact Information */}
+            <div className="space-y-3">
+              {contact.company && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Building className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-gray-700 dark:text-gray-300">{contact.company}</span>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-3 text-sm">
+                <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300 font-mono">{contact.phone}</span>
+                {contact.doNotCall && (
+                  <Badge variant="destructive" className="text-xs">Do Not Call</Badge>
+                )}
+              </div>
+              
+              {contact.alternatePhone && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-gray-700 dark:text-gray-300 font-mono">{contact.alternatePhone}</span>
+                  <Badge variant="outline" className="text-xs">Alt</Badge>
+                </div>
+              )}
+              
+              {contact.email && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <a 
+                    href={`mailto:${contact.email}`} 
+                    className="text-blue-600 dark:text-blue-400 hover:underline truncate"
+                  >
+                    {contact.email}
+                  </a>
+                  {contact.doNotEmail && (
+                    <Badge variant="destructive" className="text-xs">Do Not Email</Badge>
+                  )}
+                </div>
+              )}
+              
+              {contact.address && (
+                <div className="flex items-start gap-3 text-sm">
+                  <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700 dark:text-gray-300">{contact.address}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Tags */}
+            {contact.tags && contact.tags.length > 0 && (
+              <div className="flex items-start gap-3 text-sm">
+                <Tag className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                <div className="flex flex-wrap gap-1.5">
+                  {contact.tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {contact.notes && (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Notes</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{contact.notes}</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+              {!contact.doNotCall && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setShowQuickView(false);
+                    onCall?.(contact.phone);
+                  }}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  data-testid={`quickview-call-${contact.id}`}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Call
+                </Button>
+              )}
+              
+              {!contact.doNotSms && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setShowQuickView(false);
+                    onSms?.(contact.id);
+                  }}
+                  className="flex-1"
+                  data-testid={`quickview-sms-${contact.id}`}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  SMS
+                </Button>
+              )}
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowQuickView(false);
+                  onEdit?.(contact);
+                }}
+                data-testid={`quickview-edit-${contact.id}`}
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <NotesModal
         isOpen={showNotesModal}
