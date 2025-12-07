@@ -27,6 +27,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
   }, async (request: AuthRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
+      const tenantId = (request as any).tenantId || userId;
       const { contactId, phone, name, lineId, amdEnabled, amdTimeout = 30, amdSensitivity = 'standard' } = request.body as any;
 
       if (!phone) {
@@ -40,7 +41,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
 
       let contact = null;
       if (contactId) {
-        contact = await storage.getContact(userId, contactId);
+        contact = await storage.getContact(tenantId, userId, contactId);
       }
 
       const { client, credentials } = await userTwilioCache.getTwilioClient(userId);
@@ -49,7 +50,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ message: "Twilio phone number not configured" });
       }
 
-      const callRecord = await storage.createCall(userId, {
+      const callRecord = await storage.createCall(tenantId, userId, {
         userId,
         contactId: contactId || undefined,
         phone,
@@ -99,7 +100,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
         ...amdConfig
       });
 
-      await storage.updateCall(userId, callRecord.id, {
+      await storage.updateCall(tenantId, userId, callRecord.id, {
         sipCallId: call.sid,
         metadata: {
           ...(callRecord.metadata && typeof callRecord.metadata === 'object' ? callRecord.metadata : {}),
@@ -114,7 +115,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
 
       if (contact) {
         const currentAttempts = contact.callAttempts || 0;
-        await storage.updateContact(userId, contact.id, {
+        await storage.updateContact(tenantId, userId, contact.id, {
           callAttempts: currentAttempts + 1,
           lastCallAttempt: new Date()
         });
@@ -187,6 +188,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
   }, async (request: AuthRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
+      const tenantId = (request as any).tenantId || userId;
       const { callSid, lineId, phone } = request.body as any;
 
       if (!callSid || !lineId) {
@@ -200,7 +202,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
       if (callRecord) {
         let contact = null;
         if (callRecord.contactId) {
-          contact = await storage.getContact(userId, callRecord.contactId);
+          contact = await storage.getContact(tenantId, userId, callRecord.contactId);
         }
 
         const contactData = {
@@ -308,6 +310,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
   }, async (request: AuthRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
+      const tenantId = (request as any).tenantId || userId;
       const { callSid } = request.body as any;
 
       if (!callSid) {
@@ -325,7 +328,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const allCalls = await storage.getAllCalls(userId);
+      const allCalls = await storage.getAllCalls(tenantId, userId);
       const call = allCalls.find(c => 
         c.metadata && 
         typeof c.metadata === 'object' && 

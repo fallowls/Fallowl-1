@@ -249,8 +249,9 @@ export class ParallelDialerVerificationService {
   /**
    * Check for resource leaks and ghost calls
    */
-  async checkResourceLeaks(userId: number): Promise<ResourceLeakCheck> {
-    const activeCalls = await storage.getActiveCalls(userId);
+  async checkResourceLeaks(userId: number, tenantId?: number): Promise<ResourceLeakCheck> {
+    const effectiveTenantId = tenantId || userId;
+    const activeCalls = await storage.getActiveCalls(effectiveTenantId, userId);
     const stuckCalls: Call[] = [];
     const ghostCalls: Call[] = [];
 
@@ -411,8 +412,9 @@ export class ParallelDialerVerificationService {
   /**
    * Helper: Get parallel dialer calls
    */
-  private async getParallelDialerCalls(userId: number, startDate?: Date, endDate?: Date): Promise<Call[]> {
-    const allCalls = await storage.getAllCalls(userId);
+  private async getParallelDialerCalls(userId: number, startDate?: Date, endDate?: Date, tenantId?: number): Promise<Call[]> {
+    const effectiveTenantId = tenantId || userId;
+    const allCalls = await storage.getAllCalls(effectiveTenantId, userId);
     
     return allCalls.filter((call: Call) => {
       const metadata = call.metadata as any;
@@ -546,14 +548,15 @@ export class ParallelDialerVerificationService {
   /**
    * Cleanup stuck or ghost calls
    */
-  async cleanupStaleCalls(userId: number): Promise<{ cleaned: number; errors: string[] }> {
-    const leakCheck = await this.checkResourceLeaks(userId);
+  async cleanupStaleCalls(userId: number, tenantId?: number): Promise<{ cleaned: number; errors: string[] }> {
+    const effectiveTenantId = tenantId || userId;
+    const leakCheck = await this.checkResourceLeaks(userId, effectiveTenantId);
     const errors: string[] = [];
     let cleaned = 0;
 
     for (const call of [...leakCheck.stuckCalls, ...leakCheck.ghostCalls]) {
       try {
-        await storage.updateCall(userId, call.id, {
+        await storage.updateCall(effectiveTenantId, userId, call.id, {
           status: 'failed',
           hangupReason: 'cleanup_stale_call',
           metadata: {
