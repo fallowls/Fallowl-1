@@ -1486,6 +1486,150 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // SMS webhook - Handle incoming SMS messages
+  fastify.post('/twilio/sms', {
+    config: {
+      rateLimit: rateLimitConfigs.webhook
+    },
+    preHandler: validateTwilioWebhook
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { From, To, Body, MessageSid, SmsStatus, AccountSid } = request.body as any;
+      const userId = (request as any).userId as number;
+      
+      console.log('📨 Incoming SMS webhook:', { From, To, MessageSid, SmsStatus, userId });
+      
+      if (!userId) {
+        console.warn('⚠️ No userId found in webhook request');
+        return reply
+          .header('Content-Type', 'text/xml')
+          .code(200)
+          .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+      }
+      
+      // Find contact for the sender
+      const contact = await storage.getContactByPhone(userId, From);
+      
+      // Create the incoming message record using proper schema fields
+      const messageData = {
+        userId,
+        contactId: contact?.id || null,
+        phone: From,
+        content: Body || '',
+        type: 'received',
+        status: 'delivered',
+        twilioMessageSid: MessageSid,
+        twilioAccountSid: AccountSid,
+        twilioFromNumber: From,
+        twilioToNumber: To,
+        twilioStatus: SmsStatus || 'received',
+        messageSource: 'twilio_webhook' as const,
+        messageDirection: 'inbound' as const
+      };
+      
+      const message = await storage.createMessage(userId, messageData);
+      
+      console.log(`✅ Incoming SMS saved for user ${userId} from ${From}`);
+      
+      // Broadcast to connected WebSocket clients
+      wsService.broadcastIncomingSms(userId, {
+        ...message,
+        contactName: contact?.name || From
+      });
+      
+      // Return empty TwiML response
+      return reply
+        .header('Content-Type', 'text/xml')
+        .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+    } catch (error: any) {
+      console.error('SMS webhook error:', error);
+      return reply
+        .header('Content-Type', 'text/xml')
+        .code(200)
+        .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+    }
+  });
+
+  // SMS Status callback - Handle delivery status updates
+  fastify.post('/twilio/sms-status', {
+    config: {
+      rateLimit: rateLimitConfigs.webhook
+    },
+    preHandler: validateTwilioWebhook
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { MessageSid, MessageStatus, ErrorCode, ErrorMessage } = request.body as any;
+      const userId = (request as any).userId as number;
+      
+      console.log('📊 SMS status callback:', { MessageSid, MessageStatus, ErrorCode, userId });
+      
+      // Map Twilio status to app status (valid: delivered, pending, failed, read)
+      const mapTwilioStatusToAppStatus = (twilioStatus: string): string => {
+        switch (twilioStatus) {
+          case 'queued':
+          case 'accepted':
+          case 'sending':
+          case 'sent': // Sent but not yet confirmed delivered
+            return 'pending';
+          case 'delivered':
+            return 'delivered';
+          case 'read':
+            return 'read';
+          case 'failed':
+          case 'undelivered':
+            return 'failed';
+          default:
+            return 'pending'; // Default to pending for unknown statuses
+        }
+      };
+      
+      // Find the message by Twilio SID (using userId from webhook validator if available)
+      const message = await storage.getMessageByTwilioSid(MessageSid);
+      
+      if (message) {
+        const targetUserId = userId || message.userId;
+        const appStatus = mapTwilioStatusToAppStatus(MessageStatus);
+        
+        const updates: any = { 
+          status: appStatus,
+          twilioStatus: MessageStatus
+        };
+        
+        if (ErrorCode) {
+          updates.twilioErrorCode = ErrorCode;
+          updates.twilioErrorMessage = ErrorMessage;
+        }
+        
+        await storage.updateMessage(targetUserId, message.id, updates);
+        
+        const updatedMessage = { ...message, ...updates };
+        
+        // Always broadcast generic status update for UI synchronization
+        wsService.broadcastSmsStatusUpdate(targetUserId, updatedMessage);
+        
+        // Also broadcast specific events for delivered/failed
+        if (appStatus === 'delivered') {
+          wsService.broadcastSmsDelivered(targetUserId, updatedMessage);
+        } else if (appStatus === 'failed') {
+          wsService.broadcastSmsFailed(targetUserId, {
+            ...updatedMessage,
+            errorCode: ErrorCode,
+            errorMessage: ErrorMessage
+          });
+        }
+        
+        console.log(`✅ SMS status updated for message ${message.id}: ${MessageStatus} -> ${appStatus}`);
+      } else {
+        console.warn(`⚠️ Message not found for SID: ${MessageSid}`);
+      }
+      
+      return reply.code(200).send();
+    } catch (error: any) {
+      console.error('SMS status webhook error:', error);
+      return reply.code(200).send();
+    }
+  });
+
   // Conference status webhook
   fastify.post('/twilio/conference-status', {
     config: {
