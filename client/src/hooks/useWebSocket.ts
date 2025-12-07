@@ -170,6 +170,78 @@ export function useWebSocket() {
             window.dispatchEvent(new CustomEvent("import_error", { detail: message.data }));
             break;
 
+          case "new_sms":
+            console.log("📱 New SMS sent:", message.data);
+            queryClient.invalidateQueries({ 
+              predicate: (query) => {
+                return query.queryKey.some(key => 
+                  typeof key === 'string' && (
+                    key === "/api/messages" || 
+                    key.startsWith("/api/messages/") ||
+                    key === "/api/sms/analytics"
+                  )
+                );
+              }
+            });
+            window.dispatchEvent(new CustomEvent("new_sms", { detail: message.data }));
+            break;
+
+          case "incoming_sms":
+            console.log("📱 Incoming SMS received:", message.data);
+            queryClient.invalidateQueries({ 
+              predicate: (query) => {
+                return query.queryKey.some(key => 
+                  typeof key === 'string' && (
+                    key === "/api/messages" || 
+                    key.startsWith("/api/messages/") ||
+                    key === "/api/sms/analytics" ||
+                    key === "/api/messages/unread/count"
+                  )
+                );
+              }
+            });
+            window.dispatchEvent(new CustomEvent("incoming_sms", { detail: message.data }));
+            break;
+
+          case "sms_status_update":
+            console.log("📱 SMS status updated:", message.data);
+            queryClient.invalidateQueries({ 
+              predicate: (query) => {
+                return query.queryKey.some(key => 
+                  typeof key === 'string' && (
+                    key === "/api/messages" || 
+                    key.startsWith("/api/messages/")
+                  )
+                );
+              }
+            });
+            window.dispatchEvent(new CustomEvent("sms_status_update", { detail: message.data }));
+            break;
+
+          case "sms_delivered":
+            console.log("✅ SMS delivered:", message.data);
+            queryClient.invalidateQueries({ 
+              predicate: (query) => {
+                return query.queryKey.some(key => 
+                  typeof key === 'string' && key.startsWith("/api/messages")
+                );
+              }
+            });
+            window.dispatchEvent(new CustomEvent("sms_delivered", { detail: message.data }));
+            break;
+
+          case "sms_failed":
+            console.log("❌ SMS failed:", message.data);
+            queryClient.invalidateQueries({ 
+              predicate: (query) => {
+                return query.queryKey.some(key => 
+                  typeof key === 'string' && key.startsWith("/api/messages")
+                );
+              }
+            });
+            window.dispatchEvent(new CustomEvent("sms_failed", { detail: message.data }));
+            break;
+
           default:
             console.log("📨 Unknown message type:", message.type);
         }

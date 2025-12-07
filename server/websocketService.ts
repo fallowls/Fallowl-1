@@ -251,6 +251,26 @@ class WebSocketService {
   broadcastImportError(userId: number, errorData: any) {
     this.broadcastToUser(userId, "import_error", errorData);
   }
+
+  broadcastNewSms(userId: number, smsData: any) {
+    this.broadcastToUser(userId, "new_sms", smsData);
+  }
+
+  broadcastSmsStatusUpdate(userId: number, smsData: any) {
+    this.broadcastToUser(userId, "sms_status_update", smsData);
+  }
+
+  broadcastIncomingSms(userId: number, smsData: any) {
+    this.broadcastToUser(userId, "incoming_sms", smsData);
+  }
+
+  broadcastSmsDelivered(userId: number, smsData: any) {
+    this.broadcastToUser(userId, "sms_delivered", smsData);
+  }
+
+  broadcastSmsFailed(userId: number, smsData: any) {
+    this.broadcastToUser(userId, "sms_failed", smsData);
+  }
 }
 
 export const wsService = new WebSocketService();

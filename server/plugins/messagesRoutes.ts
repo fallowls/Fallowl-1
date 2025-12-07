@@ -7,6 +7,7 @@ import {
 } from '@shared/schema';
 import { rateLimitConfigs } from './rateLimiters';
 import { userTwilioCache } from '../userTwilioService';
+import { wsService } from '../websocketService';
 
 /**
  * Helper function to extract userId from JWT token (similar to requireAuth middleware)
@@ -227,6 +228,8 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
       };
       
       const message = await storage.createMessage(user.id, messageData);
+      
+      wsService.broadcastNewSms(user.id, message);
       
       return reply.send({
         ...message,
