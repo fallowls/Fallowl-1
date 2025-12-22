@@ -441,4 +441,33 @@ export default async function callsRoutes(fastify: FastifyInstance) {
       return reply.code(400).send({ message: error.message });
     }
   });
+
+  // GET /dialer/metrics - Get dialer dashboard metrics
+  fastify.get('/dialer/metrics', {
+    config: {
+      rateLimit: rateLimitConfigs.api
+    },
+    preHandler: (fastify as any).requireAuth
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const userId = getUserIdFromRequest(request);
+      const stats = await storage.getCallStats(userId);
+      
+      return reply.send({
+        totalCalls: stats?.totalCalls || 0,
+        answeredCalls: stats?.answeredCalls || 0,
+        missedCalls: stats?.missedCalls || 0,
+        totalDuration: stats?.totalDuration || 0,
+        averageDuration: stats?.averageDuration || 0,
+        callsToday: 0,
+        activeAgents: 0,
+        dialsInProgress: 0,
+        successRate: 0,
+        conversionRate: 0,
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error: any) {
+      return reply.code(500).send({ message: error.message });
+    }
+  });
 }

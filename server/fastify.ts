@@ -559,6 +559,8 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   await fastify.register(import('./plugins/twilioRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/usersRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/voicemailsRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/leadsRoutes'), { prefix: '/api' });
+  await fastify.register(import('./plugins/supportRoutes'), { prefix: '/api' });
   
   await fastify.register(import('./plugins/extensionRoutes'), { prefix: '/api' });
   log('✅ Chrome Extension API routes registered');
