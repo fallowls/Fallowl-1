@@ -145,14 +145,14 @@ export const TwilioDeviceStatus = ({
 
   if (variant === 'inline') {
     return (
-      <div className={cn("flex items-center gap-2 text-sm", className)}>
-        <div className="flex items-center gap-1">
-          <div className={cn("w-2 h-2 rounded-full", statusInfo.color)} />
+      <div className={cn("flex items-center gap-1 text-xs font-medium", className)}>
+        <div className="flex items-center gap-0.5">
+          <div className={cn("w-1.5 h-1.5 rounded-full", statusInfo.color)} />
           <span>{statusInfo.label}</span>
         </div>
         
         {deviceStatus === 'registered' && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <span className="text-muted-foreground">•</span>
             <span className={qualityInfo.color}>{qualityInfo.label}</span>
           </div>
