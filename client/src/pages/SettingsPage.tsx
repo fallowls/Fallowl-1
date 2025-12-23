@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Cloud, Server, Check, Save, Edit, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Cloud, Server, Check, Save, Edit, Trash2, ChevronDown, ChevronUp, Users, Settings2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface SystemSettingsFormData {
   connectionType: 'twilio' | 'sip';
@@ -25,9 +27,27 @@ interface SystemSettingsFormData {
   sipPort: string;
 }
 
+interface AdminUser {
+  id: number;
+  email: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
+  twilioConfigured: boolean;
+  twilioPhoneNumber?: string;
+}
+
 export default function SettingsPage() {
   const [connectionStatus, setConnectionStatus] = useState<'untested' | 'testing' | 'success' | 'error'>('success');
   const [isFormExpanded, setIsFormExpanded] = useState(false);
+  const [showAdminDialog, setShowAdminDialog] = useState(false);
+  const [selectedAdminUser, setSelectedAdminUser] = useState<AdminUser | null>(null);
+  const [adminTwilioSid, setAdminTwilioSid] = useState('');
+  const [adminTwilioToken, setAdminTwilioToken] = useState('');
+  const [adminTwilioKeyId, setAdminTwilioKeyId] = useState('');
+  const [adminTwilioKeySecret, setAdminTwilioKeySecret] = useState('');
+  const [adminTwilioPhone, setAdminTwilioPhone] = useState('');
   const { toast } = useToast();
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SystemSettingsFormData>({
     defaultValues: {
@@ -56,6 +76,49 @@ export default function SettingsPage() {
   const { data: twilioSettings } = useQuery({
     queryKey: ["/api/user/twilio/credentials"],
     retry: false,
+  });
+
+  // Load all users for admin panel
+  const { data: adminUsers, refetch: refetchAdminUsers } = useQuery({
+    queryKey: ["/api/admin/users"],
+    retry: false,
+    enabled: false, // Don't fetch automatically, will check role first
+  });
+
+  // Mutation to update user's Twilio credentials from admin panel
+  const adminUpdateCredentialsMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedAdminUser) throw new Error("No user selected");
+      const response = await apiRequest("POST", `/api/admin/users/${selectedAdminUser.id}/twilio-credentials`, {
+        accountSid: adminTwilioSid,
+        authToken: adminTwilioToken,
+        apiKeySid: adminTwilioKeyId,
+        apiKeySecret: adminTwilioKeySecret,
+        phoneNumber: adminTwilioPhone,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Twilio credentials updated for user",
+      });
+      refetchAdminUsers();
+      setShowAdminDialog(false);
+      setSelectedAdminUser(null);
+      setAdminTwilioSid('');
+      setAdminTwilioToken('');
+      setAdminTwilioKeyId('');
+      setAdminTwilioKeySecret('');
+      setAdminTwilioPhone('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update credentials",
+        variant: "destructive",
+      });
+    },
   });
 
   // Pre-populate form with existing system settings
@@ -569,6 +632,145 @@ export default function SettingsPage() {
               </Button>
             </div>
           </form>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SUPER ADMIN PANEL */}
+      <Card className="mt-6 border-purple-500/30">
+        <CardHeader className="bg-purple-500/10">
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-purple-600" />
+            Super Admin - Manage User Credentials
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <Button
+            onClick={() => refetchAdminUsers()}
+            className="mb-4 bg-purple-600 hover:bg-purple-700"
+            data-testid="button-load-users"
+          >
+            Load All Users
+          </Button>
+
+          {adminUsers && Array.isArray(adminUsers) && (
+            <div className="space-y-3">
+              {adminUsers.map((user: AdminUser) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900"
+                  data-testid={`user-row-${user.id}`}
+                >
+                  <div className="flex-1">
+                    <p className="font-medium" data-testid={`text-username-${user.id}`}>
+                      {user.firstName || user.username} ({user.email})
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {user.twilioConfigured ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                          ✓ Configured ({user.twilioPhoneNumber})
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                          ⚠ Not Configured
+                        </Badge>
+                      )}
+                    </p>
+                  </div>
+                  <Dialog open={showAdminDialog && selectedAdminUser?.id === user.id} onOpenChange={(open) => {
+                    if (!open) {
+                      setShowAdminDialog(false);
+                      setSelectedAdminUser(null);
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedAdminUser(user);
+                          setShowAdminDialog(true);
+                        }}
+                        data-testid={`button-edit-user-${user.id}`}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Update
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Update Twilio Credentials</DialogTitle>
+                        <DialogDescription>
+                          Update Twilio credentials for {selectedAdminUser?.firstName || selectedAdminUser?.username}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="admin-sid">Account SID</Label>
+                          <Input
+                            id="admin-sid"
+                            value={adminTwilioSid}
+                            onChange={(e) => setAdminTwilioSid(e.target.value)}
+                            placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                            data-testid="input-twilio-sid"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="admin-token">Auth Token</Label>
+                          <Input
+                            id="admin-token"
+                            type="password"
+                            value={adminTwilioToken}
+                            onChange={(e) => setAdminTwilioToken(e.target.value)}
+                            placeholder="••••••••••••••••••••••••••••••••"
+                            data-testid="input-twilio-token"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="admin-key-id">API Key SID (optional)</Label>
+                          <Input
+                            id="admin-key-id"
+                            value={adminTwilioKeyId}
+                            onChange={(e) => setAdminTwilioKeyId(e.target.value)}
+                            placeholder="SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                            data-testid="input-twilio-key-id"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="admin-key-secret">API Key Secret (optional)</Label>
+                          <Input
+                            id="admin-key-secret"
+                            type="password"
+                            value={adminTwilioKeySecret}
+                            onChange={(e) => setAdminTwilioKeySecret(e.target.value)}
+                            placeholder="••••••••••••••••••••••••••••••••"
+                            data-testid="input-twilio-key-secret"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="admin-phone">Phone Number</Label>
+                          <Input
+                            id="admin-phone"
+                            value={adminTwilioPhone}
+                            onChange={(e) => setAdminTwilioPhone(e.target.value)}
+                            placeholder="+1234567890"
+                            data-testid="input-twilio-phone"
+                          />
+                        </div>
+                        <Button
+                          onClick={() => adminUpdateCredentialsMutation.mutate()}
+                          disabled={adminUpdateCredentialsMutation.isPending || !adminTwilioSid || !adminTwilioToken || !adminTwilioPhone}
+                          className="w-full bg-purple-600 hover:bg-purple-700"
+                          data-testid="button-save-admin-credentials"
+                        >
+                          {adminUpdateCredentialsMutation.isPending ? "Updating..." : "Update Credentials"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
