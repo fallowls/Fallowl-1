@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Cloud, Server, Check, Save, Edit, Trash2, ChevronDown, ChevronUp, Users, Settings2 } from "lucide-react";
+import { Cloud, Server, Check, Save, Edit, Trash2, ChevronDown, ChevronUp, Users, Settings2, Shield, Activity, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,10 @@ interface AdminUser {
   firstName?: string;
   lastName?: string;
   role: string;
+  status?: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  accountType?: string;
   twilioConfigured: boolean;
   twilioPhoneNumber?: string;
 }
@@ -43,11 +47,15 @@ export default function SettingsPage() {
   const [isFormExpanded, setIsFormExpanded] = useState(false);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [selectedAdminUser, setSelectedAdminUser] = useState<AdminUser | null>(null);
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
   const [adminTwilioSid, setAdminTwilioSid] = useState('');
   const [adminTwilioToken, setAdminTwilioToken] = useState('');
   const [adminTwilioKeyId, setAdminTwilioKeyId] = useState('');
   const [adminTwilioKeySecret, setAdminTwilioKeySecret] = useState('');
   const [adminTwilioPhone, setAdminTwilioPhone] = useState('');
+  const [newRole, setNewRole] = useState('');
+  const [newStatus, setNewStatus] = useState('');
+  const [userActivity, setUserActivity] = useState<any>(null);
   const { toast } = useToast();
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SystemSettingsFormData>({
     defaultValues: {
@@ -118,6 +126,67 @@ export default function SettingsPage() {
         description: error.message || "Failed to update credentials",
         variant: "destructive",
       });
+    },
+  });
+
+  // Mutation to update user status
+  const adminUpdateStatusMutation = useMutation({
+    mutationFn: async (userId: number, status: string) => {
+      const response = await apiRequest("PUT", `/api/admin/users/${userId}/status`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "User status updated" });
+      refetchAdminUsers();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  // Mutation to update user role
+  const adminUpdateRoleMutation = useMutation({
+    mutationFn: async (userId: number, role: string) => {
+      const response = await apiRequest("PUT", `/api/admin/users/${userId}/role`, { role });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "User role updated" });
+      refetchAdminUsers();
+      setNewRole('');
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update role", variant: "destructive" });
+    },
+  });
+
+  // Mutation to fetch user activity
+  const fetchUserActivityMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await apiRequest("GET", `/api/admin/users/${userId}/activity`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setUserActivity(data);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: "Failed to load user activity", variant: "destructive" });
+    },
+  });
+
+  // Mutation to delete user
+  const adminDeleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "User deleted successfully" });
+      refetchAdminUsers();
+      setExpandedUserId(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete user", variant: "destructive" });
     },
   });
 

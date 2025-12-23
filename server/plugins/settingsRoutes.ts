@@ -173,4 +173,141 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
       return reply.code(400).send({ message: error.message });
     }
   });
+
+  // SUPER ADMIN: PUT /admin/users/:userId/status - Update user status
+  fastify.put('/admin/users/:userId/status', {
+    config: {
+      rateLimit: rateLimitConfigs.api
+    },
+    preHandler: (fastify as any).requireAuth
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const isSuperAdmin = await checkSuperAdmin(request);
+      if (!isSuperAdmin) {
+        return reply.code(403).send({ message: "Super admin access required" });
+      }
+
+      const { userId } = request.params as { userId: string };
+      const targetUserId = parseInt(userId);
+      const { status } = request.body as { status: string };
+
+      if (isNaN(targetUserId) || !status) {
+        return reply.code(400).send({ message: "Invalid user ID or status" });
+      }
+
+      const user = await storage.updateUser(targetUserId, { status });
+      return reply.send({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        status: user.status,
+        message: `User status updated to ${status}`
+      });
+    } catch (error: any) {
+      return reply.code(400).send({ message: error.message });
+    }
+  });
+
+  // SUPER ADMIN: PUT /admin/users/:userId/role - Update user role
+  fastify.put('/admin/users/:userId/role', {
+    config: {
+      rateLimit: rateLimitConfigs.api
+    },
+    preHandler: (fastify as any).requireAuth
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const isSuperAdmin = await checkSuperAdmin(request);
+      if (!isSuperAdmin) {
+        return reply.code(403).send({ message: "Super admin access required" });
+      }
+
+      const { userId } = request.params as { userId: string };
+      const targetUserId = parseInt(userId);
+      const { role } = request.body as { role: string };
+
+      if (isNaN(targetUserId) || !role) {
+        return reply.code(400).send({ message: "Invalid user ID or role" });
+      }
+
+      const user = await storage.updateUser(targetUserId, { role });
+      return reply.send({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        message: `User role updated to ${role}`
+      });
+    } catch (error: any) {
+      return reply.code(400).send({ message: error.message });
+    }
+  });
+
+  // SUPER ADMIN: GET /admin/users/:userId/activity - Get user activity stats
+  fastify.get('/admin/users/:userId/activity', {
+    config: {
+      rateLimit: rateLimitConfigs.api
+    },
+    preHandler: (fastify as any).requireAuth
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const isSuperAdmin = await checkSuperAdmin(request);
+      if (!isSuperAdmin) {
+        return reply.code(403).send({ message: "Super admin access required" });
+      }
+
+      const { userId } = request.params as { userId: string };
+      const targetUserId = parseInt(userId);
+
+      if (isNaN(targetUserId)) {
+        return reply.code(400).send({ message: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(targetUserId);
+      if (!user) {
+        return reply.code(404).send({ message: "User not found" });
+      }
+
+      return reply.send({
+        userId: user.id,
+        lastLogin: user.lastLogin,
+        lastLoginIp: user.lastLoginIp,
+        lastLoginDevice: user.lastLoginDevice,
+        createdAt: user.createdAt,
+        accountType: user.accountType,
+        subscriptionPlan: user.subscriptionPlan,
+        subscriptionStatus: user.subscriptionStatus,
+        usageStats: user.usageStats,
+        twoFactorEnabled: user.twoFactorEnabled
+      });
+    } catch (error: any) {
+      return reply.code(500).send({ message: error.message });
+    }
+  });
+
+  // SUPER ADMIN: DELETE /admin/users/:userId - Delete a user
+  fastify.delete('/admin/users/:userId', {
+    config: {
+      rateLimit: rateLimitConfigs.api
+    },
+    preHandler: (fastify as any).requireAuth
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const isSuperAdmin = await checkSuperAdmin(request);
+      if (!isSuperAdmin) {
+        return reply.code(403).send({ message: "Super admin access required" });
+      }
+
+      const { userId } = request.params as { userId: string };
+      const targetUserId = parseInt(userId);
+
+      if (isNaN(targetUserId)) {
+        return reply.code(400).send({ message: "Invalid user ID" });
+      }
+
+      await storage.deleteUser(targetUserId);
+      return reply.send({ message: "User deleted successfully" });
+    } catch (error: any) {
+      return reply.code(400).send({ message: error.message });
+    }
+  });
 }
