@@ -31,12 +31,14 @@ export function getBaseUrl(): string {
   // Production: Use REPLIT_DOMAINS (comma-separated list, use first domain)
   if (process.env.REPLIT_DOMAINS) {
     const domains = process.env.REPLIT_DOMAINS.split(',');
-    return `https://${domains[0].trim()}`;
+    const domain = domains[0].trim();
+    return domain.startsWith('http') ? domain : `https://${domain}`;
   }
   
   // Development on Replit: Use REPLIT_DEV_DOMAIN
   if (process.env.REPLIT_DEV_DOMAIN) {
-    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    const domain = process.env.REPLIT_DEV_DOMAIN.trim();
+    return domain.startsWith('http') ? domain : `https://${domain}`;
   }
   
   // Local development fallback

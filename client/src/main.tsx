@@ -11,6 +11,10 @@ const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "placeholder";
 // You can manually override by setting VITE_AUTH0_REDIRECT_URI
 const redirectUri = import.meta.env.VITE_AUTH0_REDIRECT_URI || window.location.origin;
 
+if (redirectUri.includes("127.0.0.1") || redirectUri.includes("localhost")) {
+  console.warn("⚠️ Localhost redirect detected in main.tsx, but app is on Replit domain.");
+}
+
 // Don't use Management API audience for user authentication
 // If you have a custom API, set VITE_AUTH0_AUDIENCE in your environment
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
