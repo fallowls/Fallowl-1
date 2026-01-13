@@ -6,24 +6,17 @@ import "./index.css";
 const domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
 
-// Automatically use current domain - this ensures Auth0 redirect works
-// correctly even when Replit changes the domain
-// You can manually override by setting VITE_AUTH0_REDIRECT_URI
-const redirectUri = import.meta.env.VITE_AUTH0_REDIRECT_URI || window.location.origin;
-
-if (redirectUri.includes("127.0.0.1") || redirectUri.includes("localhost")) {
-  console.warn("⚠️ Localhost redirect detected in main.tsx, but app is on Replit domain.");
-}
-
-// Don't use Management API audience for user authentication
-// If you have a custom API, set VITE_AUTH0_AUDIENCE in your environment
+// Use current origin but log it for debugging
+const redirectUri = window.location.origin;
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
-console.log("Auth0 Config:", {
+console.log("Auth0 Config Details:", {
   domain,
-  clientId: clientId.substring(0, 8) + "...",
+  clientId,
   redirect_uri: redirectUri,
-  audience: audience || 'none (basic auth)'
+  audience: audience || 'none',
+  window_location: window.location.href,
+  origin: window.location.origin
 });
 
 const onRedirectCallback = (appState: any) => {

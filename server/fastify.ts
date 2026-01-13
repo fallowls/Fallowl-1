@@ -424,14 +424,14 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // ============================================================================
 
   // Register Auth0 JWT verification plugin
-  const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN;
-  if (!auth0Domain) {
-    log('⚠️ AUTH0_DOMAIN not set, authentication will fail');
-  }
+  const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN || 'dev-fallowl.us.auth0.com';
+  const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE;
+  
+  log(`🛡️ Configuring Auth0 with domain: ${auth0Domain}`);
 
   await fastify.register(import('fastify-auth0-verify'), {
-    domain: auth0Domain!,
-    audience: process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE,
+    domain: auth0Domain,
+    audience: auth0Audience,
     secret: undefined, // Use JWKS for verification
   });
 

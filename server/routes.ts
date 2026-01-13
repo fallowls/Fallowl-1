@@ -38,8 +38,10 @@ import {
 import { openaiService } from "./services/openaiService";
 
 // Auth0 JWT validation middleware
-const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN;
+const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN || 'dev-fallowl.us.auth0.com';
 const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE;
+
+console.log(`🛡️ Express Auth0 using domain: ${auth0Domain}`);
 
 const checkJwt = expressjwt({
   secret: expressJwtSecret({
@@ -324,6 +326,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       return res.status(500).json({ message: error.message });
     }
+  });
+
+  // Debug log for environment variables
+  console.log('Server Auth0 Configuration:', {
+    domain: auth0Domain,
+    audience: auth0Audience,
+    env: process.env.NODE_ENV
   });
 
   app.get("/api/auth/me", checkJwt, async (req, res) => {
