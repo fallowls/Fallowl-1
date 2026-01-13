@@ -50,7 +50,7 @@ createRoot(document.getElementById("root")!).render(
     domain={domain}
     clientId={clientId}
     authorizationParams={{
-      redirect_uri: redirectUri,
+      redirect_uri: window.location.origin,
       ...(audience ? { audience } : {}),
       scope: "openid profile email"
     }}
