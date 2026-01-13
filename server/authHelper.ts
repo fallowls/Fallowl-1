@@ -3,6 +3,7 @@ import { storage } from "./storage";
 
 export interface AuthenticatedRequest extends Request {
   userId?: number;
+  tenantId?: number;
   auth?: any;
 }
 
@@ -60,6 +61,14 @@ export async function requireAuth(
     }
 
     req.userId = user.id;
+    
+    // Get tenant ID for multi-tenancy
+    const memberships = await storage.getTenantMembershipsByUserId(user.id);
+    const defaultMembership = memberships.find(m => m.isDefault) || memberships[0];
+    if (defaultMembership) {
+      (req as any).tenantId = defaultMembership.tenantId;
+    }
+
     next();
   } catch (error: any) {
     console.error('Auth helper error:', error);

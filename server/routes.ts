@@ -38,8 +38,8 @@ import {
 import { openaiService } from "./services/openaiService";
 
 // Auth0 JWT validation middleware
-const auth0Domain = process.env.AUTH0_DOMAIN;
-const auth0Audience = process.env.AUTH0_AUDIENCE;
+const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN;
+const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE;
 
 const checkJwt = expressjwt({
   secret: expressJwtSecret({
@@ -334,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Extract user info from Auth0 token with better fallbacks
-      const userId = parseInt(auth.sub.split('|')[1] || '0');
+      const auth0UserId = auth.sub;
       const email = auth['https://app.com/email'] || auth.email || '';
       
       // Extract username with multiple fallbacks - ensure it's never empty
@@ -345,18 +345,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (email) {
           username = email.split('@')[0]; // Use email prefix
         } else {
-          username = `user_${auth.sub.split('|')[1] || auth.sub}`; // Use Auth0 ID
+          username = `user_${auth0UserId.split('|')[1] || auth0UserId}`; // Use Auth0 ID
         }
       }
       
       const role = auth['https://app.com/roles']?.[0] || 'user';
 
+      // Get user from database to include ID and tenant context
+      let user = await storage.getUserByAuth0Id(auth0UserId);
+      if (!user && email) {
+        user = await storage.getUserByEmail(email);
+      }
+
+      const memberships = user ? await storage.getTenantMembershipsByUserId(user.id) : [];
+      const tenantId = (memberships.find(m => m.isDefault) || memberships[0])?.tenantId;
+
       res.json({
-        id: userId,
+        id: user?.id || 0,
         username,
         email,
         role,
-        status: 'active'
+        status: 'active',
+        tenantId
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
