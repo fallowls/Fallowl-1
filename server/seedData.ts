@@ -506,8 +506,15 @@ export async function seedLeadData() {
       }
     ];
 
+    const membership = await storage.ensureDefaultTenant(adminUser.id);
+    const tenantId = membership.tenantId;
+
+    console.log(`🌱 Seeding ${leads.length} leads for user ${adminUser.id} in tenant ${tenantId}...`);
+
     for (const lead of leads) {
-      await storage.createLead(adminUser.id, lead);
+      if (lead) {
+        await storage.createLead(tenantId, adminUser.id, lead as any);
+      }
     }
 
     console.log("✅ Lead data seeded successfully");

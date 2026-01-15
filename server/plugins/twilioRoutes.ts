@@ -8,6 +8,21 @@ import { wsService } from '../websocketService';
 import { rateLimitConfigs } from './rateLimiters';
 import { validateTwilioWebhook, generateWebhookToken, verifyWebhookToken } from './twilioWebhookValidator';
 
+// Auth0 JWT validation middleware for Twilio routes
+const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN || 'dev-fallowl.us.auth0.com';
+const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE;
+
+// Use current origin but log it for debugging
+const getBaseUrl = (request: FastifyRequest) => {
+  if (process.env.REPLIT_DOMAINS) {
+    return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+  }
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return `${request.protocol}://${request.hostname}`;
+};
+
 /**
  * Twilio Integration Routes Plugin for Fastify
  * Handles all Twilio-related endpoints including webhooks, credentials management, and call handling
@@ -75,14 +90,16 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       clearTwilioCacheOnLogout(user.id);
       console.log(`✅ Twilio credentials saved for user ${user.id}`);
 
+      // Resolve tenant for the user
+      const membership = await storage.ensureDefaultTenant(user.id);
+      const tenantId = membership.tenantId;
+
       // Auto-create TwiML Application if not provided
       let finalTwimlAppSid = twimlAppSid;
       if (!twimlAppSid) {
         try {
           console.log(`📱 Auto-creating TwiML Application for user ${user.id}...`);
-          const baseUrl = process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-            : `${request.protocol}://${request.hostname}`;
+          const baseUrl = getBaseUrl(request);
           
           const application = await userTwilioCache.createTwiMLApplication(user.id, baseUrl);
           finalTwimlAppSid = application.sid;
@@ -95,9 +112,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       // Configure phone number's voiceUrl for incoming calls
       try {
         console.log(`📞 Configuring incoming call webhook for phone number ${phoneNumber}...`);
-        const baseUrl = process.env.REPLIT_DOMAINS 
-          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-          : `${request.protocol}://${request.hostname}`;
+        const baseUrl = getBaseUrl(request);
         
         const twilioClient = twilio(accountSid, authToken);
         const phoneNumbers = await twilioClient.incomingPhoneNumbers.list({
@@ -494,8 +509,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ message: "User not found" });
       }
 
-      const protocol = process.env.REPLIT_DOMAINS ? 'https' : request.protocol;
-      const baseUrl = `${protocol}://${request.hostname}`;
+      const baseUrl = getBaseUrl(request);
       console.log(`Creating TwiML Application for user ${user.id} with base URL:`, baseUrl);
       
       const application = await userTwilioCache.createTwiMLApplication(user.id, baseUrl);
@@ -540,9 +554,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ message: "User not found" });
       }
 
-      const baseUrl = process.env.REPLIT_DOMAINS 
-        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : `https://${request.hostname}`;
+      const baseUrl = getBaseUrl(request);
       
       console.log(`🔄 Updating TwiML App webhooks for user ${user.id} with base URL:`, baseUrl);
       
@@ -608,9 +620,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ message: "User not found" });
       }
 
-      const baseUrl = process.env.REPLIT_DOMAINS 
-        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : `https://${request.hostname}`;
+      const baseUrl = getBaseUrl(request);
       
       console.log(`📞 Configuring phone number webhook for user ${user.id}...`);
       

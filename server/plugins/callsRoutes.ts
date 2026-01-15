@@ -19,7 +19,11 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const calls = await storage.getAllCalls(userId);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
+      const calls = await storage.getAllCalls(tenantId, userId);
       return reply.send(calls);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -35,9 +39,13 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
       const { limit } = request.query as { limit?: string };
       const limitNum = limit ? parseInt(limit) : 10;
-      const calls = await storage.getRecentCalls(userId, limitNum);
+      const calls = await storage.getRecentCalls(tenantId, userId, limitNum);
       return reply.send(calls);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -53,7 +61,11 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const stats = await storage.getCallStats(userId);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
+      const stats = await storage.getCallStats(tenantId, userId);
       return reply.send(stats);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -69,7 +81,11 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const activeCalls = await storage.getActiveCalls(userId);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
+      const activeCalls = await storage.getActiveCalls(tenantId, userId);
       return reply.send(activeCalls);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });

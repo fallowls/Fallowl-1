@@ -48,6 +48,7 @@ createRoot(document.getElementById("root")!).render(
       scope: "openid profile email"
     }}
     onRedirectCallback={onRedirectCallback}
+    cacheLocation="localstorage"
   >
     <App />
   </Auth0Provider>

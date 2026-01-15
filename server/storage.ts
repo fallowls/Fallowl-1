@@ -1934,10 +1934,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLead(tenantId: number, userId: number, lead: InsertLead): Promise<Lead> {
+    if (!lead) {
+      throw new Error('Lead data is required');
+    }
     const leadData = {
       ...lead,
       userId: userId,
-      tenantId: tenantId
+      tenantId: tenantId,
+      // Ensure integer fields are properly cast if they come as strings
+      leadStatusId: typeof (lead as any).leadStatusId === 'string' ? parseInt((lead as any).leadStatusId) : (lead as any).leadStatusId,
+      leadSourceId: typeof (lead as any).leadSourceId === 'string' ? parseInt((lead as any).leadSourceId) : (lead as any).leadSourceId,
+      leadScore: typeof (lead as any).leadScore === 'string' ? parseInt((lead as any).leadScore) : (lead as any).leadScore,
     };
     const [created] = await db.insert(leads).values(leadData).returning();
     return created;

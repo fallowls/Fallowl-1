@@ -25,24 +25,12 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
         return reply.code(401).send({ message: "Not authenticated" });
       }
 
-      const {
-        page = 1,
-        limit = 50,
-        search,
-        status,
-        category,
-        direction,
-        startDate,
-        endDate,
-        hasTranscript,
-        sentiment,
-        starred,
-        archived,
-        sortBy = 'createdAt',
-        sortOrder = 'desc'
-      } = request.query as any;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Not authenticated" });
+      }
 
-      console.log(`📼 Fetching recordings for user ${userId}: page=${page}, limit=${limit}, filters=${JSON.stringify({ search, status, direction })}`);
+      console.log(`📼 Fetching recordings for user ${userId}, tenant ${tenantId}: page=${page}, limit=${limit}, filters=${JSON.stringify({ search, status, direction })}`);
 
       const filters = {
         search: search as string,
@@ -57,7 +45,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
         archived: archived === 'true'
       };
 
-      const recordings = await storage.getRecordings(userId, {
+      const recordings = await storage.getRecordings(tenantId, userId, {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         filters,
@@ -81,13 +69,14 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = (request as any as HasUserId).userId;
-      if (!userId) {
+      const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
         return reply.code(401).send({ message: "Not authenticated" });
       }
 
-      console.log(`📊 Fetching recording stats for user ${userId}`);
-      const stats = await recordingService.getRecordingStats(userId);
+      console.log(`📊 Fetching recording stats for user ${userId}, tenant ${tenantId}`);
+      const stats = await storage.getRecordingStats(tenantId, userId);
       return reply.send(stats);
     } catch (error: any) {
       console.error('❌ Failed to fetch recording stats:', error);
@@ -103,8 +92,9 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = (request as any as HasUserId).userId;
-      if (!userId) {
+      const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
         return reply.code(401).send({ message: "Not authenticated" });
       }
 
@@ -145,8 +135,9 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = (request as any as HasUserId).userId;
-      if (!userId) {
+      const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId || !userId) {
         return reply.code(401).send({ message: "Not authenticated" });
       }
 
