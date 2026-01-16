@@ -277,8 +277,8 @@ export const calls = pgTable("calls", {
   status: text("status").notNull(), // queued, initiated, ringing, in-progress, completed, busy, failed, no-answer, canceled, call-dropped
   duration: integer("duration").default(0), // in seconds
   recordingUrl: text("recording_url"),
-  
-  // Enhanced call details
+  ringDuration: integer("ring_duration"),
+  metadata: jsonb("metadata").default({}),
   callQuality: integer("call_quality"), // 1-5 rating
   cost: decimal("cost", { precision: 10, scale: 4 }), // Call cost
   carrier: text("carrier"), // Phone carrier information

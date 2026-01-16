@@ -20,15 +20,28 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
     preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = (request as any as HasUserId).userId;
-      if (!userId) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
+      const userId = getUserIdFromRequest(request);
       const tenantId = (request as any).tenantId;
       if (!tenantId) {
         return reply.code(401).send({ message: "Not authenticated" });
       }
+
+      const { 
+        page = 1,
+        limit = 50,
+        search,
+        status,
+        category,
+        direction,
+        startDate,
+        endDate,
+        hasTranscript,
+        sentiment,
+        starred,
+        archived,
+        sortBy,
+        sortOrder
+      } = (request.query || {}) as any;
 
       console.log(`📼 Fetching recordings for user ${userId}, tenant ${tenantId}: page=${page}, limit=${limit}, filters=${JSON.stringify({ search, status, direction })}`);
 
@@ -104,7 +117,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
         generateTranscription = false,
         syncAll = false,
         dateRange
-      } = request.body as any;
+      } = (request.body || {}) as any;
 
       const options = {
         forceRefresh,
@@ -183,7 +196,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ message: "User not found" });
       }
 
-      const { setting, value } = request.body as any;
+      const { setting, value } = (request.body || {}) as any;
       
       const validSettings = ['autoSync', 'downloadLocal', 'autoTranscript', 'sentimentAnalysis', 'retentionPeriod'];
       if (!validSettings.includes(setting)) {
@@ -345,7 +358,7 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
         return reply.code(401).send({ message: "Not authenticated" });
       }
 
-      const { limit = 100 } = request.body as any;
+      const { limit = 100 } = (request.body || {}) as any;
       
       console.log(`📤 Bulk BunnyCDN migration requested for user ${userId} (limit: ${limit})`);
       

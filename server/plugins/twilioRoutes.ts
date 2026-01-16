@@ -7,8 +7,12 @@ import { userTwilioCache, clearTwilioCacheOnLogout } from '../userTwilioService'
 import { wsService } from '../websocketService';
 import { rateLimitConfigs } from './rateLimiters';
 import { validateTwilioWebhook, generateWebhookToken, verifyWebhookToken } from './twilioWebhookValidator';
+import { getUserIdFromRequest } from '../authHelper';
+import type { Twilio } from 'twilio';
 
-// Auth0 JWT validation middleware for Twilio routes
+interface HasUserId {
+  userId?: number;
+}
 const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN || 'dev-fallowl.us.auth0.com';
 const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE;
 
