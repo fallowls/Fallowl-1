@@ -716,6 +716,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
         const formattedTo = To.startsWith('+') ? To : `+${To}`;
         
         // Create call record in database
+        const metadataObj = { twilioCallSid: CallSid };
         const callRecord = await storage.createCall(user.id, {
           userId: user.id,
           phone: formattedTo,
@@ -753,7 +754,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
           conferenceId: null,
           recordingUrl: null,
           customFields: {},
-          metadata: { twilioCallSid: CallSid }
+          metadata: metadataObj
         });
         
         wsService.broadcastNewCall(user.id, callRecord);
@@ -811,6 +812,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
         console.log(`📞 Incoming call to ${To} belongs to user ${incomingUser.id} (${incomingUser.username})`);
         
         // Create call record in database for this user
+        const metadataObj = { twilioCallSid: CallSid };
         const callRecord = await storage.createCall(incomingUser.id, {
           userId: incomingUser.id,
           phone: From,
@@ -848,7 +850,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
           conferenceId: null,
           recordingUrl: null,
           customFields: {},
-          metadata: { twilioCallSid: CallSid }
+          metadata: metadataObj
         });
         
         wsService.broadcastNewCall(incomingUser.id, callRecord);

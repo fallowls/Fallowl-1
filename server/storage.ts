@@ -918,7 +918,10 @@ export class DatabaseStorage implements IStorage {
     const callData = {
       ...insertCall,
       userId: userId,
-      tenantId: tenantId
+      tenantId: tenantId,
+      metadata: typeof insertCall.metadata === 'object' && insertCall.metadata !== null 
+        ? insertCall.metadata 
+        : {}
     };
     const [call] = await db
       .insert(calls)
