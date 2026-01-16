@@ -5,6 +5,7 @@ import { userTwilioCache } from '../userTwilioService';
 import { insertRecordingSchema } from '@shared/schema';
 import { rateLimitConfigs } from './rateLimiters';
 import fs from 'fs';
+import { getUserIdFromRequest } from '../authHelper';
 import type { HasUserId } from '../authHelper';
 
 /**

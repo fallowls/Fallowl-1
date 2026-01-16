@@ -277,9 +277,18 @@ export const calls = pgTable("calls", {
   status: text("status").notNull(), // queued, initiated, ringing, in-progress, completed, busy, failed, no-answer, canceled, call-dropped
   duration: integer("duration").default(0), // in seconds
   recordingUrl: text("recording_url"),
-  ringDuration: integer("ring_duration"),
-  metadata: jsonb("metadata").default({}),
-  callQuality: integer("call_quality"), // 1-5 rating
+  
+  // Parallel Dialer Enhanced Metrics
+  ringDuration: integer("ring_duration"), // Time from initiated to answered (seconds)
+  connectionTime: timestamp("connection_time"), // Exact timestamp when call connected
+  answeredBy: text("answered_by"), // human, machine, machine_start, machine_end_beep, machine_end_silence, machine_end_other, fax, unknown (AMD result)
+  amdComment: text("amd_comment"), // AMD detection details/confidence
+  disposition: text("disposition"), // Auto-assigned: answered, voicemail, machine_detected, busy, no_answer, failed, canceled, call_dropped, callback
+  isParallelDialer: boolean("is_parallel_dialer").default(false), // Track if from parallel dialer
+  lineId: text("line_id"), // Parallel dialer line identifier
+  droppedReason: text("dropped_reason"), // Why call was dropped (if secondary call)
+  
+  // Enhanced call details
   cost: decimal("cost", { precision: 10, scale: 4 }), // Call cost
   carrier: text("carrier"), // Phone carrier information
   location: text("location"), // Caller location (city, state)
