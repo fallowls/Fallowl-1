@@ -915,19 +915,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCall(tenantId: number, userId: number, insertCall: InsertCall): Promise<Call> {
-    const callData = {
-      ...insertCall,
-      userId: userId,
-      tenantId: tenantId,
-      metadata: typeof insertCall.metadata === 'object' && insertCall.metadata !== null 
-        ? insertCall.metadata 
-        : {}
-    };
-    const [call] = await db
-      .insert(calls)
-      .values(callData)
-      .returning();
-    return call;
+    try {
+      const [call] = await db
+        .insert(calls)
+        .values({
+          tenantId,
+          userId,
+          contactId: insertCall.contactId || null,
+          phone: insertCall.phone,
+          type: insertCall.type,
+          status: insertCall.status,
+          duration: insertCall.duration || 0,
+          recordingUrl: insertCall.recordingUrl || null,
+          metadata: insertCall.metadata || {},
+          callQuality: insertCall.callQuality || null,
+          cost: insertCall.cost || "0",
+          carrier: insertCall.carrier || null,
+          location: insertCall.location || null,
+          deviceType: insertCall.deviceType || null,
+          sipCallId: insertCall.sipCallId || null,
+          ringDuration: insertCall.ringDuration || null,
+          connectionTime: insertCall.connectionTime || null,
+          answeredBy: insertCall.answeredBy || null,
+          amdComment: insertCall.amdComment || null,
+          disposition: insertCall.disposition || null,
+          isParallelDialer: insertCall.isParallelDialer || false,
+          lineId: insertCall.lineId || null,
+          droppedReason: insertCall.droppedReason || null,
+        })
+        .returning();
+      return call;
+    } catch (error) {
+      console.error("CRITICAL: createCall database error:", error);
+      throw error;
+    }
   }
 
   async updateCall(tenantId: number, userId: number, id: number, updateData: Partial<InsertCall>): Promise<Call> {

@@ -717,7 +717,10 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
         
         // Create call record in database
         const metadataObj = { twilioCallSid: CallSid };
-        const callRecord = await storage.createCall(user.id, {
+        const membership = await storage.ensureDefaultTenant(user.id);
+        const tenantId = membership.tenantId;
+
+        const callRecord = await storage.createCall(tenantId, user.id, {
           userId: user.id,
           phone: formattedTo,
           type: 'outgoing',
@@ -813,7 +816,10 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
         
         // Create call record in database for this user
         const metadataObj = { twilioCallSid: CallSid };
-        const callRecord = await storage.createCall(incomingUser.id, {
+        const membership = await storage.ensureDefaultTenant(incomingUser.id);
+        const tenantId = membership.tenantId;
+
+        const callRecord = await storage.createCall(tenantId, incomingUser.id, {
           userId: incomingUser.id,
           phone: From,
           type: 'incoming',
