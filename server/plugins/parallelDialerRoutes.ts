@@ -376,7 +376,7 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
                   
                   const baseUrl = process.env.REPLIT_DOMAINS 
                     ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-                    : 'https://fallowl.com';
+                    : `https://${process.env.VITE_AUTH0_DOMAIN?.replace('auth.', 'app.') || 'fallowl.com'}`;
                   const webhookToken = generateWebhookToken(userId);
                   const conferenceSetting = await storage.getSetting(`parallel_dialer_conference_${userId}`);
                   

@@ -425,7 +425,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
 
   // Register Auth0 JWT verification plugin
   const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN;
-  const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE || 'https://api.fallowl.com';
+  const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE || `https://api.${process.env.VITE_AUTH0_DOMAIN?.replace('auth.', '') || 'fallowl.com'}`;
   
   if (!auth0Domain) {
     throw new Error('AUTH0_DOMAIN or VITE_AUTH0_DOMAIN environment variable is required');
