@@ -12,7 +12,7 @@ if (!domain) {
   console.error("❌ VITE_AUTH0_DOMAIN is not set. Authentication will fail.");
 }
 
-// Use a fixed origin if possible or window.location.origin
+// Ensure the redirect URI matches the actual URL the user is accessing
 const redirectUri = window.location.origin;
 
 console.log("Auth0 Config Details:", {
