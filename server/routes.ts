@@ -38,8 +38,12 @@ import {
 import { openaiService } from "./services/openaiService";
 
 // Auth0 JWT validation middleware
-const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN || 'dev-fallowl.us.auth0.com';
+const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN;
 const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE;
+
+if (!auth0Domain) {
+  console.warn('⚠️ AUTH0_DOMAIN or VITE_AUTH0_DOMAIN is not set in Express routes. Authentication will fail.');
+}
 
 console.log(`🛡️ Express Auth0 using domain: ${auth0Domain}`);
 

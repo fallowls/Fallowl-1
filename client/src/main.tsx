@@ -4,11 +4,15 @@ import App from "./App";
 import "./index.css";
 
 // Auth0 configuration
-const domain = import.meta.env.VITE_AUTH0_DOMAIN || "dev-6r83xajlz5akj8pu.us.auth0.com";
+const domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "d3sqfAaafC9UJOYeBJGLEODLu9fr9FD0";
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE || "https://api.fallowl.com";
 
-// Use the Replit URL for redirection to ensure it matches Auth0 settings
+if (!domain) {
+  console.error("❌ VITE_AUTH0_DOMAIN is not set. Authentication will fail.");
+}
+
+// Use a fixed origin if possible or window.location.origin
 const redirectUri = window.location.origin;
 
 console.log("Auth0 Config Details:", {
@@ -30,7 +34,7 @@ const onRedirectCallback = (appState: any) => {
 
 createRoot(document.getElementById("root")!).render(
   <Auth0Provider
-    domain={domain}
+    domain={domain!}
     clientId={clientId}
     authorizationParams={{
       redirect_uri: redirectUri,

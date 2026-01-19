@@ -47,13 +47,13 @@ ENCRYPTION_KEY="<your-encryption-key>"
 DATABASE_URL="<your-postgres-connection-string>"
 
 # Auth0 (Backend)
-AUTH0_DOMAIN="auth.fallowl.com"
+AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}"
 AUTH0_CLIENT_ID="<your-auth0-client-id>"
 AUTH0_CLIENT_SECRET="<your-auth0-client-secret>"
 AUTH0_AUDIENCE="https://api.fallowl.com"
 
 # Auth0 (Frontend - required for build)
-VITE_AUTH0_DOMAIN="auth.fallowl.com"
+VITE_AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}"
 VITE_AUTH0_CLIENT_ID="<your-auth0-client-id>"
 VITE_AUTH0_AUDIENCE="https://api.fallowl.com"
 
@@ -72,7 +72,7 @@ CLIENT_ORIGIN="https://app.fallowl.com"
 **IMPORTANT**: Export VITE_ variables before building to ensure they're baked into the frontend:
 
 ```bash
-export VITE_AUTH0_DOMAIN="auth.fallowl.com"
+export VITE_AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}"
 export VITE_AUTH0_CLIENT_ID="<your-auth0-client-id>"
 export VITE_AUTH0_AUDIENCE="https://api.fallowl.com"
 
@@ -164,7 +164,7 @@ cd ~/Fallowl
 git pull origin main
 
 # If VITE_ variables changed, export them again
-export VITE_AUTH0_DOMAIN="auth.fallowl.com"
+export VITE_AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}"
 export VITE_AUTH0_CLIENT_ID="<your-auth0-client-id>"
 export VITE_AUTH0_AUDIENCE="https://api.fallowl.com"
 

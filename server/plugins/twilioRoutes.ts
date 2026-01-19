@@ -13,7 +13,10 @@ import type { Twilio } from 'twilio';
 interface HasUserId {
   userId?: number;
 }
-const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN || 'dev-6r83xajlz5akj8pu.us.auth0.com';
+const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN;
+if (!auth0Domain) {
+  console.warn('⚠️ AUTH0_DOMAIN or VITE_AUTH0_DOMAIN is not set. Token verification may fail.');
+}
 const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE;
 
 // Use current origin but log it for debugging
