@@ -19,6 +19,17 @@ export function validateEnvironment(): EnvValidationResult {
   const environment = nodeEnv === 'production' ? 'production' : 
                      nodeEnv === 'development' ? 'development' : 'unknown';
   
+  // Auto-detect BASE_URL if not provided
+  if (!process.env.BASE_URL) {
+    if (process.env.REPLIT_DOMAINS) {
+      process.env.BASE_URL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+    } else if (process.env.REPLIT_DEV_DOMAIN) {
+      process.env.BASE_URL = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    } else if (environment === 'development') {
+      process.env.BASE_URL = 'http://localhost:5000';
+    }
+  }
+  
   console.log('\n🔍 Environment Validation');
   console.log('========================');
   console.log(`Environment: ${environment}`);

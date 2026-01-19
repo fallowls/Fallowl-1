@@ -2709,8 +2709,10 @@ export class DatabaseStorage implements IStorage {
     return membership || undefined;
   }
 
-  async getUserTenantMemberships(userId: number): Promise<TenantMembership[]> {
-    return await db.select().from(tenantMemberships).where(eq(tenantMemberships.userId, userId));
+  async getTenantMembershipsByUserId(userId: number): Promise<TenantMembership[]> {
+    return await db.select()
+      .from(tenantMemberships)
+      .where(eq(tenantMemberships.userId, userId));
   }
 
   async getTenantMembers(tenantId: number): Promise<TenantMembership[]> {
