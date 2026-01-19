@@ -134,7 +134,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center bg-white">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -145,11 +145,10 @@ function AppContent() {
     const isCallbackMismatch = authError.errorDescription?.toLowerCase().includes('callback') || 
                                 authError.error?.toLowerCase().includes('callback');
     const currentUrl = window.location.origin;
-    const isReplit = currentUrl.includes('replit.dev');
     
     return (
-      <div className="h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-2xl w-full p-6 bg-card border border-border rounded-lg shadow-lg">
+      <div className="h-screen flex items-center justify-center bg-white p-4">
+        <div className="max-w-2xl w-full p-6 bg-white border border-border rounded-lg shadow-lg">
           <div className="text-center">
             <div className="mb-4">
               <svg
@@ -246,7 +245,7 @@ function AppContent() {
 
   if (!user) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center bg-white">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
