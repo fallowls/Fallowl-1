@@ -25,7 +25,6 @@ export async function setupViteFastify(fastify: FastifyInstance, server: Server)
     hmr: { 
       server,
       host: 'localhost',
-      port: 443,
       protocol: 'wss'
     },
     allowedHosts: true as const,
