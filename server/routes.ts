@@ -1389,7 +1389,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/calls", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const calls = await storage.getAllCalls(userId);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const calls = await storage.getAllCalls(tenantId, userId);
       res.json(calls);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1399,8 +1401,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/calls/recent", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const calls = await storage.getRecentCalls(userId, limit);
+      const calls = await storage.getRecentCalls(tenantId, userId, limit);
       res.json(calls);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1410,7 +1414,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/calls/stats", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const stats = await storage.getCallStats(userId);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const stats = await storage.getCallStats(tenantId, userId);
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1420,7 +1426,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/calls/active", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const activeCalls = await storage.getActiveCalls(userId);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const activeCalls = await storage.getActiveCalls(tenantId, userId);
       res.json(activeCalls);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1430,14 +1438,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/calls/by-status", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const allCalls = await storage.getAllCalls(userId);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const allCalls = await storage.getAllCalls(tenantId, userId);
       
       const enrichedCalls = await Promise.all(allCalls.map(async (call) => {
         let contactName = null;
         let agentName = null;
         
         if (call.contactId) {
-          const contact = await storage.getContact(userId, call.contactId);
+          const contact = await storage.getContact(tenantId, userId, call.contactId);
           if (contact) {
             contactName = contact.name;
           }
@@ -1691,8 +1701,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/messages", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const messages = await storage.getAllMessages(userId);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const messages = await storage.getAllMessages(tenantId, userId);
       res.json(messages);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/recordings", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const recordings = await storage.getAllRecordings(tenantId, userId);
+      res.json(recordings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/voicemails", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const voicemails = await storage.getAllVoicemails(tenantId, userId);
+      res.json(voicemails);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1701,8 +1737,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/messages/contact/:contactId", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const contactId = parseInt(req.params.contactId);
-      const messages = await storage.getMessagesByContact(userId, contactId);
+      const messages = await storage.getMessagesByContact(tenantId, userId, contactId);
       res.json(messages);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1712,8 +1750,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/messages/phone/:phone", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const phone = req.params.phone;
-      const messages = await storage.getMessagesByPhone(userId, phone);
+      const messages = await storage.getMessagesByPhone(tenantId, userId, phone);
       res.json(messages);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1723,12 +1763,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/messages/search", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const query = req.query.q as string;
       if (!query) {
         return res.status(400).json({ message: "Query parameter 'q' is required" });
       }
-      const messages = await storage.searchMessages(userId, query);
-      res.json(messages);
+      const contacts = await storage.searchContacts(tenantId, userId, query);
+      res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1737,7 +1779,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/messages/unread/count", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const count = await storage.getUnreadMessageCount(userId);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const count = await storage.getUnreadMessageCount(tenantId, userId);
       res.json({ count });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1747,8 +1791,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/messages/:id/read", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const id = parseInt(req.params.id);
-      const message = await storage.markMessageAsRead(userId, id);
+      const message = await storage.markMessageAsRead(tenantId, userId, id);
       res.json(message);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1950,6 +1996,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recordings", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const {
         page = 1,
         limit = 50,
@@ -1982,7 +2030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         archived: archived === 'true'
       };
 
-      const recordings = await storage.getRecordings(userId, {
+      const recordings = await storage.getRecordings(tenantId, userId, {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         filters,
@@ -2002,8 +2050,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recordings/stats", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       console.log(`📊 Fetching recording stats for user ${userId}`);
-      const stats = await recordingService.getRecordingStats(userId);
+      const stats = await storage.getRecordingStats(tenantId, userId);
       res.json(stats);
     } catch (error: any) {
       console.error(`❌ Failed to fetch recording stats:`, error);
