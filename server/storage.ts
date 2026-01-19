@@ -1659,7 +1659,12 @@ export class DatabaseStorage implements IStorage {
   // Settings
   async getSetting(key: string, tenantId?: number): Promise<Setting | undefined> {
     const targetTenantId = tenantId || null;
-    const [setting] = await db.select().from(settings).where(and(eq(settings.key, key), eq(settings.tenantId, targetTenantId as any)));
+    const [setting] = await db.select().from(settings).where(
+      and(
+        eq(settings.key, key),
+        targetTenantId ? eq(settings.tenantId, targetTenantId) : isNull(settings.tenantId)
+      )
+    );
     return setting || undefined;
   }
 
