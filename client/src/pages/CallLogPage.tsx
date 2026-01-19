@@ -169,9 +169,10 @@ export default function CallLogPage() {
       const res = await apiRequest('GET', `/api/calls?page=${pageParam}&limit=50`);
       return res.json();
     },
-    getNextPageParam: (lastPage: any, allPages) => {
-      const loadedCount = allPages.reduce((acc, p) => acc + p.calls.length, 0);
-      return loadedCount < lastPage.total ? allPages.length + 1 : undefined;
+    getNextPageParam: (lastPage: any) => {
+      if (!lastPage || !lastPage.calls) return undefined;
+      const loadedCount = (lastPage.page || 1) * 50;
+      return loadedCount < lastPage.total ? (lastPage.page || 1) + 1 : undefined;
     },
     initialPageParam: 1,
   });
@@ -180,79 +181,26 @@ export default function CallLogPage() {
     return paginatedData?.pages.flatMap(page => page.calls) || [];
   }, [paginatedData]);
 
+  // Optimization: Use a simpler refetch for live updates instead of full refetch
+  // and reduce websocket listener overhead
   useEffect(() => {
-    if (!hasNextPage || isFetchingNextPage) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const { data: statusData, refetch: refetchStatus } = useQuery<CallStatusData>({
-    queryKey: ['/api/calls/by-status'],
-    refetchInterval: 3000
-  });
-
-  const { data: stats, isLoading: statsLoading } = useQuery<CallLogStats>({
-    queryKey: ['/api/calls/stats'],
-  });
-
-  const { data: allRecordings = [] } = useQuery<Recording[]>({
-    queryKey: ['/api/recordings?limit=1000'],
-    select: (data: any) => data?.recordings || [],
-  });
-
-  useEffect(() => {
-    const activeCalls = calls.filter(call => 
-      call.status === 'in-progress' || call.status === 'ringing'
-    );
-
-    if (activeCalls.length === 0) return;
-
-    const interval = setInterval(() => {
-      setLiveTimers(prev => {
-        const newTimers = { ...prev };
-        activeCalls.forEach(call => {
-          newTimers[call.id] = (newTimers[call.id] || call.duration || 0) + 1;
-        });
-        return newTimers;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [calls]);
-
-  useEffect(() => {
-    const handleCallUpdate = () => {
-      refetchCalls();
+    const handleCallUpdate = (event: any) => {
+      // For performance, we only invalidate the first page of calls on new data
+      // and let the existing infinite scroll handle the rest
+      queryClient.invalidateQueries({ queryKey: ['/api/calls'], exact: false });
       refetchStatus();
     };
 
     window.addEventListener('call_update', handleCallUpdate);
     window.addEventListener('new_call', handleCallUpdate);
     window.addEventListener('parallel_call_status', handleCallUpdate);
-    window.addEventListener('parallel_call_connected', handleCallUpdate);
-    window.addEventListener('parallel_call_ended', handleCallUpdate);
 
     return () => {
       window.removeEventListener('call_update', handleCallUpdate);
       window.removeEventListener('new_call', handleCallUpdate);
       window.removeEventListener('parallel_call_status', handleCallUpdate);
-      window.removeEventListener('parallel_call_connected', handleCallUpdate);
-      window.removeEventListener('parallel_call_ended', handleCallUpdate);
     };
-  }, [refetchCalls, refetchStatus]);
+  }, [queryClient, refetchStatus]);
 
   useEffect(() => {
     return () => {

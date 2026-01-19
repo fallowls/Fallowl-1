@@ -23,8 +23,16 @@ export default async function callsRoutes(fastify: FastifyInstance) {
       if (!tenantId) {
         return reply.code(400).send({ message: "Tenant context missing" });
       }
-      const calls = await storage.getAllCalls(tenantId, userId);
-      return reply.send(calls);
+      
+      const { page, limit } = request.query as { page?: string; limit?: string };
+      const pageNum = page ? parseInt(page) : 1;
+      const limitNum = limit ? parseInt(limit) : 50;
+
+      const result = await storage.getAllCalls(tenantId, userId, { 
+        page: pageNum, 
+        limit: limitNum 
+      });
+      return reply.send(result);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
     }

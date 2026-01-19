@@ -972,14 +972,14 @@ export class DatabaseStorage implements IStorage {
     const [totalResult] = await db
       .select({ count: count() })
       .from(calls)
-      .where(eq(calls.tenantId, tenantId));
+      .where(and(eq(calls.tenantId, tenantId), eq(calls.userId, userId)));
     
-    const total = totalResult?.count || 0;
+    const total = Number(totalResult?.count || 0);
 
     const results = await db
       .select()
       .from(calls)
-      .where(eq(calls.tenantId, tenantId))
+      .where(and(eq(calls.tenantId, tenantId), eq(calls.userId, userId)))
       .orderBy(desc(calls.createdAt))
       .limit(limit)
       .offset(offset);
