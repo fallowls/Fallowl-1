@@ -1395,8 +1395,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserIdFromRequest(req);
       const membership = await storage.ensureDefaultTenant(userId);
       const tenantId = membership.tenantId;
-      const calls = await storage.getAllCalls(tenantId, userId);
-      res.json(calls);
+      
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      
+      const result = await storage.getAllCalls(tenantId, userId, { page, limit });
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

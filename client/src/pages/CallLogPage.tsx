@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { format, isWithinInterval, formatDistanceToNow } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { 
@@ -154,10 +154,50 @@ export default function CallLogPage() {
   const { isConnected } = useWebSocket();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const { data: calls = [], isLoading: callsLoading, refetch: refetchCalls } = useQuery<CallWithRecordings[]>({
+  const {
+    data: paginatedData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: callsLoading,
+    refetch: refetchCalls
+  } = useInfiniteQuery({
     queryKey: ['/api/calls'],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await apiRequest('GET', `/api/calls?page=${pageParam}&limit=50`);
+      return res.json();
+    },
+    getNextPageParam: (lastPage: any, allPages) => {
+      const loadedCount = allPages.reduce((acc, p) => acc + p.calls.length, 0);
+      return loadedCount < lastPage.total ? allPages.length + 1 : undefined;
+    },
+    initialPageParam: 1,
   });
+
+  const calls = useMemo(() => {
+    return paginatedData?.pages.flatMap(page => page.calls) || [];
+  }, [paginatedData]);
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const { data: statusData, refetch: refetchStatus } = useQuery<CallStatusData>({
     queryKey: ['/api/calls/by-status'],

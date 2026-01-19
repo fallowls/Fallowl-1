@@ -114,7 +114,7 @@ export interface IStorage {
   createCall(tenantId: number, userId: number, call: InsertCall): Promise<Call>;
   updateCall(tenantId: number, userId: number, id: number, call: Partial<InsertCall>): Promise<Call>;
   deleteCall(tenantId: number, userId: number, id: number): Promise<void>;
-  getAllCalls(tenantId: number, userId: number): Promise<Call[]>;
+  getAllCalls(tenantId: number, userId: number, options?: { page?: number; limit?: number }): Promise<{ calls: Call[]; total: number }>;
   getCallsByContact(tenantId: number, userId: number, contactId: number): Promise<Call[]>;
   getRecentCalls(tenantId: number, userId: number, limit?: number): Promise<Call[]>;
   getCallsByStatus(tenantId: number, userId: number, statuses: string[]): Promise<Call[]>;
@@ -964,8 +964,27 @@ export class DatabaseStorage implements IStorage {
     await db.delete(calls).where(and(eq(calls.id, id), eq(calls.tenantId, tenantId)));
   }
 
-  async getAllCalls(tenantId: number, userId: number): Promise<Call[]> {
-    return await db.select().from(calls).where(eq(calls.tenantId, tenantId)).orderBy(desc(calls.createdAt));
+  async getAllCalls(tenantId: number, userId: number, options: { page?: number; limit?: number } = {}): Promise<{ calls: Call[]; total: number }> {
+    const page = options.page || 1;
+    const limit = options.limit || 50;
+    const offset = (page - 1) * limit;
+
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(eq(calls.tenantId, tenantId));
+    
+    const total = totalResult?.count || 0;
+
+    const results = await db
+      .select()
+      .from(calls)
+      .where(eq(calls.tenantId, tenantId))
+      .orderBy(desc(calls.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return { calls: results, total };
   }
 
   async getCallsByContact(tenantId: number, userId: number, contactId: number): Promise<Call[]> {
