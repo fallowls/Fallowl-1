@@ -22,8 +22,7 @@ import {
   Zap
 } from "lucide-react";
 
-import FallOwlLogo from "@assets/FallOwl_logo_1759278988195.png";
-import FallOwlLogoDark from "@assets/FallOwl_logo_1759339763714.png";
+import ClosoLogo from "@assets/closo_logo_png_1768808340025.png";
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -89,11 +88,11 @@ export default function Sidebar() {
           "flex items-center border-b border-gray-200/60 dark:border-gray-800/60 py-2.5 transition-all duration-200 ease-out",
           (sidebarExpanded || isMobile) ? "h-14 px-3" : "h-14 px-2 justify-center"
         )}>
-          <div className="transition-all duration-200 ease-out">
+          <div className="transition-all duration-200 ease-out group">
             <img 
-              src={darkMode ? FallOwlLogoDark : FallOwlLogo} 
-              alt="FallOwl" 
-              className="h-8 w-auto object-contain"
+              src={ClosoLogo} 
+              alt="Closo" 
+              className="h-7 w-auto object-contain brightness-0 dark:invert transition-transform duration-300 group-hover:scale-110"
             />
           </div>
         </div>

@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Shield } from "lucide-react";
-import FallOwlLogo from "@assets/FallOwl_logo_1759278988195.png";
+import ClosoLogo from "@assets/closo_logo_png_1768808340025.png";
 
 export default function LoginPage() {
   const { login, isLoading } = useAuth();
@@ -24,15 +24,15 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo and Header */}
         <div className="text-center">
-          <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center justify-center mb-6 group">
             <img 
-              src={FallOwlLogo} 
-              alt="FallOwl" 
-              className="h-24 w-auto"
+              src={ClosoLogo} 
+              alt="Closo" 
+              className="h-20 w-auto brightness-0 dark:invert transition-all duration-500 group-hover:scale-110 animate-in fade-in zoom-in"
             />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome to FallOwl
+            Welcome to Closo
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Sign in to access your account
@@ -67,7 +67,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>© 2025 FallOwl. All rights reserved.</p>
+          <p>© 2026 Closo. All rights reserved.</p>
         </div>
       </div>
     </div>

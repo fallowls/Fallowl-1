@@ -76,11 +76,8 @@ import {
   Smartphone as SmartphoneIcon
 } from "lucide-react";
 
-// Import FallOwl logos
-import DialPaxWhiteLogo from "@assets/DialPax logo White_1752697593557.png";
-import DialPaxBlackLogo from "@assets/DialPax logo black_1752697593558.png";
-import DialPaxWhiteIcon from "@assets/Dialpax Icon White_1752697593556.png";
-import DialPaxBlackIcon from "@assets/Dialpax Icon Black_1752697593557.png";
+// Import logos
+import ClosoLogo from "@assets/closo_logo_png_1768808340025.png";
 
 export default function LandingPage() {
   const heroFeatures = [
@@ -178,7 +175,7 @@ export default function LandingPage() {
       role: "Sales Director",
       company: "TechCorp",
       avatar: "/api/placeholder/60/60",
-      content: "FallOwl transformed our sales process. We increased call volume by 300% and improved conversion rates significantly.",
+      content: "Closo transformed our sales process. We increased call volume by 300% and improved conversion rates significantly.",
       rating: 5
     },
     {
@@ -264,26 +261,11 @@ export default function LandingPage() {
       <nav className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 group">
               <img 
-                src={DialPaxBlackIcon} 
-                alt="FallOwl" 
-                className="h-8 w-8 dark:hidden"
-              />
-              <img 
-                src={DialPaxWhiteIcon} 
-                alt="FallOwl" 
-                className="h-8 w-8 hidden dark:block"
-              />
-              <img 
-                src={DialPaxBlackLogo} 
-                alt="FallOwl" 
-                className="h-6 dark:hidden"
-              />
-              <img 
-                src={DialPaxWhiteLogo} 
-                alt="FallOwl" 
-                className="h-6 hidden dark:block"
+                src={ClosoLogo} 
+                alt="Closo" 
+                className="h-8 w-auto brightness-0 dark:invert transition-transform duration-300 group-hover:scale-105"
               />
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -326,7 +308,7 @@ export default function LandingPage() {
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
               Transform Your Communication with{" "}
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                FallOwl
+                Closo
               </span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
@@ -426,7 +408,7 @@ export default function LandingPage() {
               Built for Every Team
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              FallOwl adapts to your industry and workflow, providing specialized solutions for different business needs.
+              Closo adapts to your industry and workflow, providing specialized solutions for different business needs.
             </p>
           </div>
 
@@ -466,7 +448,7 @@ export default function LandingPage() {
               Trusted by Industry Leaders
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300">
-              See what our customers are saying about FallOwl
+              See what our customers are saying about Closo
             </p>
           </div>
 
@@ -560,7 +542,7 @@ export default function LandingPage() {
             Ready to Transform Your Communication?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join thousands of businesses that trust FallOwl for their communication needs.
+            Join thousands of businesses that trust Closo for their communication needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/login">
