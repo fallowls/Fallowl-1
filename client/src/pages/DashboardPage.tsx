@@ -64,9 +64,10 @@ export default function DashboardPage() {
   const { setCurrentView } = useStore();
 
   // Fetch all dashboard data
-  const { data: calls = [], isLoading: callsLoading } = useQuery<Call[]>({
+  const { data: callsData, isLoading: callsLoading } = useQuery<any>({
     queryKey: ['/api/calls'],
   });
+  const calls = Array.isArray(callsData) ? callsData : (callsData?.calls || []);
 
   const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
     queryKey: ['/api/messages'],
@@ -76,9 +77,10 @@ export default function DashboardPage() {
     queryKey: ['/api/contacts'],
   });
 
-  const { data: recordings = [], isLoading: recordingsLoading } = useQuery<Recording[]>({
+  const { data: recordingsData, isLoading: recordingsLoading } = useQuery<any>({
     queryKey: ['/api/recordings'],
   });
+  const recordings = Array.isArray(recordingsData) ? recordingsData : (recordingsData?.recordings || []);
 
   const { data: voicemails = [], isLoading: voicemailsLoading } = useQuery<Voicemail[]>({
     queryKey: ['/api/voicemails'],
