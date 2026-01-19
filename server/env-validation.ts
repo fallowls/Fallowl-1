@@ -20,15 +20,17 @@ export function validateEnvironment(): EnvValidationResult {
                      nodeEnv === 'development' ? 'development' : 'unknown';
   
   // Auto-detect BASE_URL if not provided
-  if (!process.env.BASE_URL) {
-    if (process.env.REPLIT_DOMAINS) {
-      process.env.BASE_URL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
-    } else if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-      process.env.BASE_URL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
-    } else if (environment === 'development') {
-      process.env.BASE_URL = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
+    if (!process.env.BASE_URL) {
+      if (process.env.REPLIT_DEV_DOMAIN) {
+        process.env.BASE_URL = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+      } else if (process.env.REPLIT_DOMAINS) {
+        process.env.BASE_URL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+      } else if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+        process.env.BASE_URL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      } else if (environment === 'development') {
+        process.env.BASE_URL = 'http://localhost:5000';
+      }
     }
-  }
   
   console.log('\n🔍 Environment Validation');
   console.log('========================');

@@ -6,7 +6,7 @@ import "./index.css";
 // Auth0 configuration
 const domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "d3sqfAaafC9UJOYeBJGLEODLu9fr9FD0";
-const audience = import.meta.env.VITE_AUTH0_AUDIENCE || `https://api.${import.meta.env.VITE_AUTH0_DOMAIN?.replace('auth.', '') || "fallowl.com"}`;
+const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
 if (!domain) {
   console.error("❌ VITE_AUTH0_DOMAIN is not set. Authentication will fail.");
