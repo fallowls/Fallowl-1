@@ -30,11 +30,19 @@ export function validateEnvironment(): EnvValidationResult {
   }
   
   if (!process.env.DATABASE_URL) {
-    errors.push('DATABASE_URL is required for database connectivity');
-  } else {
+    // Check if we have parts to reconstruct it or if it's just missing
+    if (process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE) {
+      process.env.DATABASE_URL = `postgresql://${process.env.PGUSER}:${process.env.PGPASSWORD}@${process.env.PGHOST}:${process.env.PGPORT || 5432}/${process.env.PGDATABASE}`;
+      console.log('✓ DATABASE_URL reconstructed from individual PG variables');
+    } else {
+      errors.push('DATABASE_URL is required for database connectivity');
+    }
+  }
+
+  if (process.env.DATABASE_URL) {
     // Validate DATABASE_URL format
     try {
-      const url = new URL(process.env.DATABASE_URL.replace('postgresql://', 'http://'));
+      const url = new URL(process.env.DATABASE_URL.replace('postgresql://', 'http://').replace('postgres://', 'http://'));
       console.log(`✓ Database configured: ${url.hostname}`);
     } catch (e) {
       errors.push('DATABASE_URL has invalid format');

@@ -324,6 +324,7 @@ export const calls = pgTable("calls", {
   bitrate: integer("bitrate"), // Audio bitrate
   jitter: integer("jitter"), // Network jitter (ms)
   packetLoss: decimal("packet_loss", { precision: 5, scale: 2 }), // Packet loss percentage
+  callQuality: integer("call_quality"), // Add this field
   
   // Custom fields and metadata
   customFields: jsonb("custom_fields").default({}), // Additional custom data
