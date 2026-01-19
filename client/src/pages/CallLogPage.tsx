@@ -181,27 +181,63 @@ export default function CallLogPage() {
     return paginatedData?.pages.flatMap(page => page.calls) || [];
   }, [paginatedData]);
 
-  const { data: statusData, refetch: refetchStatus } = useQuery<CallStatusData>({
+  const { data: statusData, refetch: refetchStatus } = useQuery<any>({
     queryKey: ['/api/calls/by-status'],
-    refetchInterval: 10000 // Increased interval for performance
+    refetchInterval: 10000 
   });
 
-  const { data: stats, isLoading: statsLoading } = useQuery<CallLogStats>({
-    queryKey: ['/api/calls/stats'],
-    staleTime: 30000 // Cache stats for longer
+  const summary = useMemo(() => statusData?.summary || {
+    totalCalls: 0,
+    active: 0,
+    connected: 0,
+    completed: 0,
+    failed: 0,
+    voicemail: 0,
+    dropped: 0
+  }, [statusData]);
+
+  const activeCalls = useMemo(() => {
+    return calls.filter((call: any) => 
+      call.status === 'in-progress' || call.status === 'ringing'
+    );
+  }, [calls]);
+
+  const filteredCalls = useMemo(() => {
+    return calls.filter((call: any) => {
+      if (filters.quickFilter === 'active') return call.status === 'in-progress' || call.status === 'ringing';
+      if (filters.quickFilter === 'completed') return call.status === 'completed';
+      if (filters.quickFilter === 'failed') return ['failed', 'busy', 'no-answer', 'canceled'].includes(call.status);
+      return true;
+    });
+  }, [calls, filters.quickFilter]);
+
+  const toggleCallExpanded = (id: number) => {
+    setExpandedCallId(expandedCallId === id ? null : id);
+  };
+
+  const handlePlay = (recording: Recording) => {
+    setPlayingRecording({ recording, audioUrl: `/api/recordings/${recording.id}/play` });
+  };
+
+  const handleDownload = (recording: Recording) => {
+    window.open(`/api/recordings/${recording.id}/download`, '_blank');
+  };
+
+  const deleteRecordingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest('DELETE', `/api/recordings/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recordings'] });
+      toast({ title: "Recording deleted" });
+    }
   });
 
-  const { data: allRecordings = [] } = useQuery<Recording[]>({
-    queryKey: ['/api/recordings?limit=100'], // Reduced limit for better initial load
-    select: (data: any) => data?.recordings || [],
-  });
+  const handleClosePlayer = () => setPlayingRecording(null);
+  const formatRecordingDuration = (s: number) => formatDuration(s);
 
-  // Optimization: Use a simpler refetch for live updates instead of full refetch
-  // and reduce websocket listener overhead
   useEffect(() => {
     const handleCallUpdate = (event: any) => {
-      // For performance, we only invalidate the first page of calls on new data
-      // and let the existing infinite scroll handle the rest
       queryClient.invalidateQueries({ queryKey: ['/api/calls'], exact: false });
       refetchStatus();
     };
@@ -217,7 +253,6 @@ export default function CallLogPage() {
     };
   }, [queryClient, refetchStatus]);
 
-  // Re-implement the intersection observer for smart pagination
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage) return;
 
@@ -227,7 +262,7 @@ export default function CallLogPage() {
           fetchNextPage();
         }
       },
-      { threshold: 0.1, rootMargin: '200px' } // Load earlier for smoother scroll
+      { threshold: 0.1, rootMargin: '200px' }
     );
 
     const currentRef = loadMoreRef.current;
@@ -243,16 +278,12 @@ export default function CallLogPage() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   useEffect(() => {
-    const activeCalls = calls.filter(call => 
-      call.status === 'in-progress' || call.status === 'ringing'
-    );
-
     if (activeCalls.length === 0) return;
 
     const interval = setInterval(() => {
       setLiveTimers(prev => {
         const newTimers = { ...prev };
-        activeCalls.forEach(call => {
+        activeCalls.forEach((call: any) => {
           newTimers[call.id] = (newTimers[call.id] || call.duration || 0) + 1;
         });
         return newTimers;
@@ -260,9 +291,9 @@ export default function CallLogPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [calls]);
+  }, [activeCalls]);
 
-  if (callsLoading || statsLoading) {
+  if (callsLoading || (statsLoading && !stats)) {
     return <CallLogPageSkeleton />;
   }
 
