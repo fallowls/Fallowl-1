@@ -26,7 +26,7 @@ export function validateEnvironment(): EnvValidationResult {
     } else if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
       process.env.BASE_URL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
     } else if (environment === 'development') {
-      process.env.BASE_URL = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://127.0.0.1:5000';
+      process.env.BASE_URL = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
     }
   }
   

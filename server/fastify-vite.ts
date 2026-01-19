@@ -22,7 +22,10 @@ export function log(message: string, source = "fastify") {
 export async function setupViteFastify(fastify: FastifyInstance, server: Server) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    hmr: { 
+      server,
+      port: 5000
+    },
     allowedHosts: true as const,
   };
 
