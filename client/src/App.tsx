@@ -145,6 +145,7 @@ function AppContent() {
     const isCallbackMismatch = authError.errorDescription?.toLowerCase().includes('callback') || 
                                 authError.error?.toLowerCase().includes('callback');
     const currentUrl = window.location.origin;
+    const isReplit = currentUrl.includes('replit.dev');
     
     return (
       <div className="h-screen flex items-center justify-center bg-background p-4">
