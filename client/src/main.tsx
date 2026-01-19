@@ -4,9 +4,11 @@ import App from "./App";
 import "./index.css";
 
 // Auth0 configuration
-const domain = import.meta.env.VITE_AUTH0_DOMAIN || "dev-fallowl.us.auth0.com";
-const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
-const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
+const domain = import.meta.env.VITE_AUTH0_DOMAIN || "dev-6r83xajlz5akj8pu.us.auth0.com";
+const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "d3sqfAaafC9UJOYeBJGLEODLu9fr9FD0";
+const audience = import.meta.env.VITE_AUTH0_AUDIENCE || "https://api.fallowl.com";
+
+// Use the Replit URL for redirection to ensure it matches Auth0 settings
 const redirectUri = window.location.origin;
 
 console.log("Auth0 Config Details:", {
@@ -31,13 +33,12 @@ createRoot(document.getElementById("root")!).render(
     domain={domain}
     clientId={clientId}
     authorizationParams={{
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectUri,
       ...(audience ? { audience } : {}),
       scope: "openid profile email"
     }}
     onRedirectCallback={onRedirectCallback}
     cacheLocation="localstorage"
-    useRefreshTokens={true}
   >
     <App />
   </Auth0Provider>
