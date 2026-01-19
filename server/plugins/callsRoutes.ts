@@ -18,12 +18,6 @@ export default async function callsRoutes(fastify: FastifyInstance) {
     preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId;
-      if (!tenantId) {
-        return reply.code(400).send({ message: "Tenant context missing" });
-      }
-      
       const { page, limit } = request.query as { page?: string; limit?: string };
       const pageNum = page ? parseInt(page) : 1;
       const limitNum = limit ? parseInt(limit) : 50;

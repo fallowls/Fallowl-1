@@ -181,6 +181,21 @@ export default function CallLogPage() {
     return paginatedData?.pages.flatMap(page => page.calls) || [];
   }, [paginatedData]);
 
+  const { data: statusData, refetch: refetchStatus } = useQuery<CallStatusData>({
+    queryKey: ['/api/calls/by-status'],
+    refetchInterval: 10000 // Increased interval for performance
+  });
+
+  const { data: stats, isLoading: statsLoading } = useQuery<CallLogStats>({
+    queryKey: ['/api/calls/stats'],
+    staleTime: 30000 // Cache stats for longer
+  });
+
+  const { data: allRecordings = [] } = useQuery<Recording[]>({
+    queryKey: ['/api/recordings?limit=100'], // Reduced limit for better initial load
+    select: (data: any) => data?.recordings || [],
+  });
+
   // Optimization: Use a simpler refetch for live updates instead of full refetch
   // and reduce websocket listener overhead
   useEffect(() => {
@@ -202,134 +217,50 @@ export default function CallLogPage() {
     };
   }, [queryClient, refetchStatus]);
 
+  // Re-implement the intersection observer for smart pagination
   useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' } // Load earlier for smoother scroll
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
     return () => {
-      if (playingRecording?.audioUrl) {
-        URL.revokeObjectURL(playingRecording.audioUrl);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
-  }, [playingRecording]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const deleteRecordingMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/recordings/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recordings?limit=1000"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/calls"] });
-      toast({
-        title: "Recording deleted",
-        description: "Recording has been deleted successfully.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete recording",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const callsWithRecordings = calls.map(call => ({
-    ...call,
-    recordings: allRecordings.filter((rec: Recording) => rec.callId === call.id)
-  }));
-
-  const filteredCalls = callsWithRecordings.filter(call => {
-    if (filters.quickFilter === 'active') {
-      if (!['queued', 'initiated', 'ringing', 'in-progress'].includes(call.status)) return false;
-    } else if (filters.quickFilter === 'completed') {
-      if (call.status !== 'completed') return false;
-    } else if (filters.quickFilter === 'failed') {
-      if (!['failed', 'busy', 'no-answer', 'missed', 'voicemail', 'dropped'].includes(call.status)) return false;
-    }
-
-    const matchesSearch = !filters.search || 
-      call.phone.includes(filters.search) || 
-      call.location?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      call.summary?.toLowerCase().includes(filters.search.toLowerCase());
-    const matchesStatus = !filters.status || filters.status === 'all' || call.status === filters.status;
-    const matchesType = !filters.type || filters.type === 'all' || call.type === filters.type;
-    const matchesDisposition = !filters.disposition || filters.disposition === 'all' || call.disposition === filters.disposition;
-    
-    const matchesDateRange = !filters.dateRange?.from || (
-      call.createdAt && isWithinInterval(new Date(call.createdAt), {
-        start: filters.dateRange.from,
-        end: filters.dateRange.to || filters.dateRange.from,
-      })
+  useEffect(() => {
+    const activeCalls = calls.filter(call => 
+      call.status === 'in-progress' || call.status === 'ringing'
     );
-    
-    return matchesSearch && matchesStatus && matchesType && matchesDisposition && matchesDateRange;
-  });
 
-  const { grouped = {} as CallStatusGroups, summary = {} as CallSummary } = statusData || {};
-  const activeCalls = [
-    ...(grouped.queued || []),
-    ...(grouped.initiated || []),
-    ...(grouped.ringing || []),
-    ...(grouped.inProgress || [])
-  ];
+    if (activeCalls.length === 0) return;
 
-  const handlePlay = async (recording: Recording) => {
-    try {
-      if (playingRecording?.audioUrl) {
-        URL.revokeObjectURL(playingRecording.audioUrl);
-      }
-      const response = await apiRequest("GET", `/api/recordings/${recording.id}/play`);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      setPlayingRecording({ recording, audioUrl: blobUrl });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to play recording",
-        variant: "destructive",
+    const interval = setInterval(() => {
+      setLiveTimers(prev => {
+        const newTimers = { ...prev };
+        activeCalls.forEach(call => {
+          newTimers[call.id] = (newTimers[call.id] || call.duration || 0) + 1;
+        });
+        return newTimers;
       });
-    }
-  };
+    }, 1000);
 
-  const handleClosePlayer = () => {
-    if (playingRecording?.audioUrl) {
-      URL.revokeObjectURL(playingRecording.audioUrl);
-    }
-    setPlayingRecording(null);
-  };
-
-  const handleDownload = async (recording: Recording) => {
-    try {
-      const response = await apiRequest("GET", `/api/recordings/${recording.id}/download`);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `recording_${recording.twilioRecordingSid}_${recording.phone}.mp3`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 100);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to download recording",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const formatRecordingDuration = (duration: number) => {
-    const hours = Math.floor(duration / 3600);
-    const minutes = Math.floor((duration % 3600) / 60);
-    const seconds = duration % 60;
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const toggleCallExpanded = (callId: number) => {
-    setExpandedCallId(expandedCallId === callId ? null : callId);
-  };
+    return () => clearInterval(interval);
+  }, [calls]);
 
   if (callsLoading || statsLoading) {
     return <CallLogPageSkeleton />;
