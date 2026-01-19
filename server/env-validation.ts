@@ -23,10 +23,10 @@ export function validateEnvironment(): EnvValidationResult {
   if (!process.env.BASE_URL) {
     if (process.env.REPLIT_DOMAINS) {
       process.env.BASE_URL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
-    } else if (process.env.REPLIT_DEV_DOMAIN) {
-      process.env.BASE_URL = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    } else if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+      process.env.BASE_URL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
     } else if (environment === 'development') {
-      process.env.BASE_URL = 'http://localhost:5000';
+      process.env.BASE_URL = 'http://127.0.0.1:5000';
     }
   }
   
