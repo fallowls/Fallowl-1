@@ -22,7 +22,7 @@ import {
   type Tenant, type InsertTenant, type TenantMembership, type InsertTenantMembership
 } from "@shared/schema";
 import { normalizePhoneNumber, arePhoneNumbersEqual } from "@shared/phoneUtils";
-import { eq, and, or, desc, asc, count, sum, gte, lte, lt, gt, ilike, isNotNull, sql, inArray } from "drizzle-orm";
+import { eq, and, or, desc, asc, count, sum, gte, lte, lt, gt, ilike, isNotNull, isNull, sql, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { encryptCredential, decryptCredential } from "./encryption";

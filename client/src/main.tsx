@@ -33,17 +33,17 @@ const onRedirectCallback = (appState: any) => {
 };
 
 createRoot(document.getElementById("root")!).render(
-  <Auth0Provider
-    domain={domain!}
-    clientId={clientId}
-    authorizationParams={{
-      redirect_uri: redirectUri,
-      ...(audience ? { audience } : {}),
-      scope: "openid profile email"
-    }}
-    onRedirectCallback={onRedirectCallback}
-    cacheLocation="localstorage"
-  >
+    <Auth0Provider
+      domain={domain!}
+      clientId={clientId}
+      authorizationParams={{
+        redirect_uri: window.location.origin,
+        ...(audience ? { audience } : {}),
+        scope: "openid profile email"
+      }}
+      onRedirectCallback={onRedirectCallback}
+      cacheLocation="localstorage"
+    >
     <App />
   </Auth0Provider>
 );
