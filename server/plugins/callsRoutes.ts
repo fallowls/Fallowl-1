@@ -18,6 +18,12 @@ export default async function callsRoutes(fastify: FastifyInstance) {
     preHandler: (fastify as any).requireAuth
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
+      const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
+
       const { page, limit } = request.query as { page?: string; limit?: string };
       const pageNum = page ? parseInt(page) : 1;
       const limitNum = limit ? parseInt(limit) : 50;
@@ -103,14 +109,20 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const allCalls = await storage.getAllCalls(userId);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
+
+      const result = await storage.getAllCalls(tenantId, userId);
+      const allCalls = result.calls;
       
-      const enrichedCalls = await Promise.all(allCalls.map(async (call) => {
+      const enrichedCalls = await Promise.all(allCalls.map(async (call: any) => {
         let contactName = null;
         let agentName = null;
         
         if (call.contactId) {
-          const contact = await storage.getContact(userId, call.contactId);
+          const contact = await storage.getContact(tenantId, userId, call.contactId);
           if (contact) {
             contactName = contact.name;
           }
@@ -129,17 +141,17 @@ export default async function callsRoutes(fastify: FastifyInstance) {
       }));
       
       const grouped = {
-        queued: enrichedCalls.filter(call => call.status === 'queued'),
-        initiated: enrichedCalls.filter(call => call.status === 'initiated'),
-        ringing: enrichedCalls.filter(call => call.status === 'ringing'),
-        inProgress: enrichedCalls.filter(call => call.status === 'in-progress'),
-        completed: enrichedCalls.filter(call => call.status === 'completed'),
-        busy: enrichedCalls.filter(call => call.status === 'busy'),
-        failed: enrichedCalls.filter(call => call.status === 'failed'),
-        noAnswer: enrichedCalls.filter(call => call.status === 'no-answer'),
-        voicemail: enrichedCalls.filter(call => call.outcome === 'voicemail' || call.status === 'voicemail'),
-        dropped: enrichedCalls.filter(call => call.status === 'call-dropped'),
-        canceled: enrichedCalls.filter(call => call.status === 'canceled')
+        queued: enrichedCalls.filter((call: any) => call.status === 'queued'),
+        initiated: enrichedCalls.filter((call: any) => call.status === 'initiated'),
+        ringing: enrichedCalls.filter((call: any) => call.status === 'ringing'),
+        inProgress: enrichedCalls.filter((call: any) => call.status === 'in-progress'),
+        completed: enrichedCalls.filter((call: any) => call.status === 'completed'),
+        busy: enrichedCalls.filter((call: any) => call.status === 'busy'),
+        failed: enrichedCalls.filter((call: any) => call.status === 'failed'),
+        noAnswer: enrichedCalls.filter((call: any) => call.status === 'no-answer'),
+        voicemail: enrichedCalls.filter((call: any) => call.outcome === 'voicemail' || call.status === 'voicemail'),
+        dropped: enrichedCalls.filter((call: any) => call.status === 'call-dropped'),
+        canceled: enrichedCalls.filter((call: any) => call.status === 'canceled')
       };
       
       const summary = {
@@ -240,7 +252,7 @@ export default async function callsRoutes(fastify: FastifyInstance) {
 
       const createdCalls = [];
       for (const call of testCalls) {
-        const created = await storage.createCall(userId, call);
+        const created = await storage.createCall(tenantId, userId, call);
         createdCalls.push(created);
       }
 
@@ -260,8 +272,12 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
       const callData = insertCallSchema.parse(request.body);
-      const call = await storage.createCall(userId, callData);
+      const call = await storage.createCall(tenantId, userId, callData);
       wsService.broadcastNewCall(userId, call);
       return reply.send(call);
     } catch (error: any) {
@@ -278,6 +294,10 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
       const { id } = request.params as { id: string };
       const callId = parseInt(id);
       
@@ -286,7 +306,7 @@ export default async function callsRoutes(fastify: FastifyInstance) {
       }
       
       const callData = insertCallSchema.partial().parse(request.body);
-      const call = await storage.updateCall(userId, callId, callData);
+      const call = await storage.updateCall(tenantId, userId, callId, callData);
       wsService.broadcastCallUpdate(userId, call);
       return reply.send(call);
     } catch (error: any) {
@@ -303,6 +323,10 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
       const { id } = request.params as { id: string };
       const callId = parseInt(id);
       
@@ -310,7 +334,7 @@ export default async function callsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ message: "Invalid call ID" });
       }
       
-      await storage.deleteCall(userId, callId);
+      await storage.deleteCall(tenantId, userId, callId);
       return reply.send({ message: "Call deleted successfully" });
     } catch (error: any) {
       return reply.code(400).send({ message: error.message });
@@ -469,11 +493,15 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const stats = await storage.getCallStats(userId);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
+      const stats = await storage.getCallStats(tenantId, userId);
       
       return reply.send({
         totalCalls: stats?.totalCalls || 0,
-        answeredCalls: stats?.answeredCalls || 0,
+        answeredCalls: stats?.completedCalls || 0,
         missedCalls: stats?.missedCalls || 0,
         totalDuration: stats?.totalDuration || 0,
         averageDuration: stats?.averageDuration || 0,
