@@ -3,12 +3,11 @@ import { Auth0Provider } from "@auth0/auth0-react";
 import App from "./App";
 import "./index.css";
 
-const domain = import.meta.env.VITE_AUTH0_DOMAIN;
+// Auth0 configuration
+const domain = import.meta.env.VITE_AUTH0_DOMAIN || "dev-fallowl.us.auth0.com";
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
-
-// Use current origin but log it for debugging
-const redirectUri = window.location.origin;
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
+const redirectUri = window.location.origin;
 
 console.log("Auth0 Config Details:", {
   domain,
@@ -20,17 +19,6 @@ console.log("Auth0 Config Details:", {
 });
 
 const onRedirectCallback = (appState: any) => {
-  const params = new URLSearchParams(window.location.search);
-  const error = params.get('error');
-  const errorDescription = params.get('error_description');
-  
-  if (error) {
-    console.error('Auth0 Error:', error, errorDescription);
-    // Store error in sessionStorage so App can display it
-    sessionStorage.setItem('auth0_error', JSON.stringify({ error, errorDescription }));
-  }
-  
-  // Navigate to the target URL or home
   window.history.replaceState(
     {},
     document.title,
@@ -49,6 +37,7 @@ createRoot(document.getElementById("root")!).render(
     }}
     onRedirectCallback={onRedirectCallback}
     cacheLocation="localstorage"
+    useRefreshTokens={true}
   >
     <App />
   </Auth0Provider>
