@@ -31,6 +31,11 @@ class WebSocketService {
     this.wss = new WebSocketServer({ 
       server,
       path: "/ws",
+      handleProtocols: (protocols) => {
+        // Find the auth protocol and return it
+        const authProtocol = Array.from(protocols).find(p => p.startsWith('auth-'));
+        return authProtocol || false;
+      },
       verifyClient: async (info, callback) => {
         try {
           const authHeader = info.req.headers['authorization'];
