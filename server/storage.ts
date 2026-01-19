@@ -1163,7 +1163,8 @@ export class DatabaseStorage implements IStorage {
   async createConversationThread(tenantId: number, userId: number, thread: InsertConversationThread): Promise<ConversationThread> {
     const threadData = {
       ...thread,
-      userId: userId
+      userId: userId,
+      tenantId: tenantId
     };
     const [created] = await db
       .insert(conversationThreads)
@@ -1232,9 +1233,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSmsTemplate(userId: number, template: InsertSmsTemplate): Promise<SmsTemplate> {
+    const membership = await this.ensureDefaultTenant(userId);
     const templateData = {
       ...template,
-      userId: userId
+      userId: userId,
+      tenantId: membership.tenantId
     };
     const [created] = await db
       .insert(smsTemplates)
@@ -1296,9 +1299,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSmsCampaign(userId: number, campaign: InsertSmsCampaign): Promise<SmsCampaign> {
+    const membership = await this.ensureDefaultTenant(userId);
     const campaignData = {
       ...campaign,
-      userId: userId
+      userId: userId,
+      tenantId: membership.tenantId
     };
     const [created] = await db
       .insert(smsCampaigns)
@@ -1652,15 +1657,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Settings
-  async getSetting(key: string): Promise<Setting | undefined> {
-    const [setting] = await db.select().from(settings).where(eq(settings.key, key));
+  async getSetting(key: string, tenantId?: number): Promise<Setting | undefined> {
+    const targetTenantId = tenantId || null;
+    const [setting] = await db.select().from(settings).where(and(eq(settings.key, key), eq(settings.tenantId, targetTenantId as any)));
     return setting || undefined;
   }
 
-  async setSetting(key: string, value: any): Promise<Setting> {
+  async setSetting(key: string, value: any, tenantId?: number): Promise<Setting> {
+    const targetTenantId = tenantId || null;
     const [setting] = await db
       .insert(settings)
-      .values({ key, value })
+      .values({ key, value, tenantId: targetTenantId as any })
       .onConflictDoUpdate({
         target: settings.key,
         set: { value, updatedAt: new Date() }
@@ -1680,6 +1687,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCallNote(userId: number, insertNote: InsertCallNote): Promise<CallNote> {
+    const membership = await this.ensureDefaultTenant(userId);
     // Normalize phone number
     const normalized = normalizePhoneNumber(insertNote.phone);
     const normalizedPhone = normalized.isValid ? normalized.normalized : insertNote.phone;
@@ -1687,8 +1695,7 @@ export class DatabaseStorage implements IStorage {
     // Smart contact linking - try to find the contact using smart phone matching
     let contactIdToUse = insertNote.contactId;
     if (!contactIdToUse) {
-      const defaultTenant = await this.ensureDefaultTenant(userId);
-      const existingContact = await this.findContactByAnyPhoneFormat(defaultTenant.tenantId, userId, insertNote.phone);
+      const existingContact = await this.findContactByAnyPhoneFormat(membership.tenantId, userId, insertNote.phone);
       if (existingContact) {
         contactIdToUse = existingContact.id;
       }
@@ -1697,6 +1704,7 @@ export class DatabaseStorage implements IStorage {
     const noteData = {
       ...insertNote,
       userId: userId,
+      tenantId: membership.tenantId,
       phone: normalizedPhone,
       contactId: contactIdToUse
     };
@@ -1852,7 +1860,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLeadSource(userId: number, source: InsertLeadSource): Promise<LeadSource> {
-    const sourceData = { ...source, userId };
+    const membership = await this.ensureDefaultTenant(userId);
+    const sourceData = { ...source, userId, tenantId: membership.tenantId };
     const [created] = await db.insert(leadSources).values(sourceData).returning();
     return created;
   }
@@ -1886,7 +1895,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLeadStatus(userId: number, status: InsertLeadStatus): Promise<LeadStatus> {
-    const statusData = { ...status, userId };
+    const membership = await this.ensureDefaultTenant(userId);
+    const statusData = { ...status, userId, tenantId: membership.tenantId };
     const [created] = await db.insert(leadStatuses).values(statusData).returning();
     return created;
   }
@@ -1915,7 +1925,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLeadCampaign(userId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign> {
-    const campaignData = { ...campaign, userId };
+    const membership = await this.ensureDefaultTenant(userId);
+    const campaignData = { ...campaign, userId, tenantId: membership.tenantId };
     const [created] = await db.insert(leadCampaigns).values(campaignData).returning();
     return created;
   }
@@ -2693,7 +2704,7 @@ export class DatabaseStorage implements IStorage {
     return membership || undefined;
   }
 
-  async getUserTenantMemberships(userId: number): Promise<TenantMembership[]> {
+  async getTenantMembershipsByUserId(userId: number): Promise<TenantMembership[]> {
     return await db.select()
       .from(tenantMemberships)
       .where(eq(tenantMemberships.userId, userId));

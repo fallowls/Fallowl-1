@@ -300,17 +300,7 @@ export const calls = pgTable("calls", {
   dialAttempts: integer("dial_attempts").default(1), // Number of dial attempts
   hangupReason: text("hangup_reason"), // Reason for call termination
   userAgent: text("user_agent"), // SIP user agent string
-  
-  // Parallel Dialer Enhanced Metrics
-  ringDuration: integer("ring_duration"), // Time from initiated to answered (seconds)
-  connectionTime: timestamp("connection_time"), // Exact timestamp when call connected
-  answeredBy: text("answered_by"), // human, machine, machine_start, machine_end_beep, machine_end_silence, machine_end_other, fax, unknown (AMD result)
-  amdComment: text("amd_comment"), // AMD detection details/confidence
-  disposition: text("disposition"), // Auto-assigned: answered, voicemail, machine_detected, busy, no_answer, failed, canceled, call_dropped, callback
-  isParallelDialer: boolean("is_parallel_dialer").default(false), // Track if from parallel dialer
-  lineId: text("line_id"), // Parallel dialer line identifier
-  droppedReason: text("dropped_reason"), // Why call was dropped (if secondary call)
-  
+
   // Smart categorization
   tags: text("tags").array().default([]), // Call tags (urgent, follow-up, etc)
   priority: text("priority").default("normal"), // high, normal, low
@@ -493,6 +483,7 @@ export const messages = pgTable("messages", {
 // SMS Templates for quick messaging
 export const smsTemplates = pgTable("sms_templates", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   content: text("content").notNull(),
@@ -508,6 +499,7 @@ export const smsTemplates = pgTable("sms_templates", {
 // SMS Campaigns for bulk messaging
 export const smsCampaigns = pgTable("sms_campaigns", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   description: text("description"),
@@ -531,6 +523,7 @@ export const smsCampaigns = pgTable("sms_campaigns", {
 // Conversation threads for better organization
 export const conversationThreads = pgTable("conversation_threads", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   threadId: text("thread_id").unique().notNull(),
   contactId: integer("contact_id").references(() => contacts.id),
@@ -670,6 +663,7 @@ export const voicemails = pgTable("voicemails", {
 
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   key: text("key").notNull().unique(),
   value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -677,6 +671,7 @@ export const settings = pgTable("settings", {
 
 export const callNotes = pgTable("call_notes", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   callId: integer("call_id").references(() => calls.id),
   contactId: integer("contact_id").references(() => contacts.id),
@@ -757,6 +752,7 @@ export const invoices = pgTable("invoices", {
 // Lead Management Tables
 export const leadSources = pgTable("lead_sources", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   type: text("type").notNull(), // website, referral, social, ads, cold_call, event, email, webinar, etc.
@@ -772,6 +768,7 @@ export const leadSources = pgTable("lead_sources", {
 
 export const leadStatuses = pgTable("lead_statuses", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   stage: text("stage").notNull(), // new, contacted, qualified, proposal, negotiation, closed-won, closed-lost
@@ -785,6 +782,7 @@ export const leadStatuses = pgTable("lead_statuses", {
 
 export const leadCampaigns = pgTable("lead_campaigns", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   description: text("description"),

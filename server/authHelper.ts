@@ -63,10 +63,9 @@ export async function requireAuth(
     req.userId = user.id;
     
     // Get tenant ID for multi-tenancy
-    const memberships = await storage.getTenantMembershipsByUserId(user.id);
-    const defaultMembership = memberships.find(m => m.isDefault) || memberships[0];
-    if (defaultMembership) {
-      (req as any).tenantId = defaultMembership.tenantId;
+    const membership = await storage.ensureDefaultTenant(user.id);
+    if (membership) {
+      (req as any).tenantId = membership.tenantId;
     }
 
     next();

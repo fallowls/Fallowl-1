@@ -917,7 +917,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/search", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const tenantId = req.tenantId!;
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const query = (req.query.q as string || '').trim();
       
       if (!query || query.length < 2) {
@@ -976,7 +977,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/contacts", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const tenantId = req.tenantId!;
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const contacts = await storage.getAllContacts(tenantId, userId);
       res.json(contacts);
     } catch (error: any) {
@@ -987,7 +989,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/contacts/search", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const tenantId = req.tenantId!;
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const query = req.query.q as string;
       if (!query) {
         return res.status(400).json({ message: "Query parameter 'q' is required" });
@@ -1002,7 +1005,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contacts", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const tenantId = req.tenantId!;
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const contactData = insertContactSchema.parse(req.body);
       
       // Check if contact with this phone number already exists
@@ -1028,7 +1032,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contacts/upsert", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const tenantId = req.tenantId!;
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const contactData = insertContactSchema.parse(req.body);
       const contact = await storage.upsertContact(tenantId, userId, contactData);
       res.json(contact);
