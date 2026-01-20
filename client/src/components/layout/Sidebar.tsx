@@ -89,13 +89,27 @@ export default function Sidebar() {
           "flex items-center border-b border-gray-200/60 dark:border-gray-800/60 py-2.5 transition-all duration-200 ease-out",
           (sidebarExpanded || isMobile) ? "h-14 px-3" : "h-14 px-2 justify-center"
         )}>
-          <div className="transition-all duration-200 ease-out group">
+          <div className="relative flex items-center justify-center w-full h-full overflow-hidden">
             <img 
-              src={(sidebarExpanded || isMobile) ? ClosoLogo : ClosoIcon} 
+              src={ClosoLogo} 
               alt="Closo" 
               className={cn(
-                "w-auto object-contain brightness-0 dark:invert transition-transform duration-300 group-hover:scale-110",
-                (sidebarExpanded || isMobile) ? "h-9" : "h-8"
+                "absolute transition-all duration-500 ease-in-out object-contain brightness-0 dark:invert",
+                (sidebarExpanded || isMobile) 
+                  ? "opacity-100 scale-100 h-9 translate-x-0" 
+                  : "opacity-0 scale-95 h-9 -translate-x-full pointer-events-none"
+              )}
+              style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
+              loading="lazy"
+            />
+            <img 
+              src={ClosoIcon} 
+              alt="Closo" 
+              className={cn(
+                "absolute transition-all duration-500 ease-in-out object-contain brightness-0 dark:invert",
+                !(sidebarExpanded || isMobile) 
+                  ? "opacity-100 scale-100 h-8 translate-x-0" 
+                  : "opacity-0 scale-95 h-8 translate-x-full pointer-events-none"
               )}
               style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
               loading="lazy"
