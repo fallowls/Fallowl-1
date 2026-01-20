@@ -2045,24 +2045,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLead(tenantId: number, userId: number, lead: InsertLead): Promise<Lead> {
-    if (!lead) {
-      throw new Error('Lead data is required');
-    }
     const leadData = {
       ...lead,
       userId: userId,
       tenantId: tenantId,
-      // Ensure integer fields are properly cast if they come as strings
-      leadStatusId: typeof (lead as any).leadStatusId === 'string' ? parseInt((lead as any).leadStatusId) : (lead as any).leadStatusId,
-      leadSourceId: typeof (lead as any).leadSourceId === 'string' ? parseInt((lead as any).leadSourceId) : (lead as any).leadSourceId,
-      leadScore: typeof (lead as any).leadScore === 'string' ? parseInt((lead as any).leadScore) : (lead as any).leadScore,
     };
     const [created] = await db.insert(leads).values(leadData).returning();
     return created;
   }
 
   async updateLead(tenantId: number, userId: number, id: number, lead: Partial<InsertLead>): Promise<Lead> {
-    const [updated] = await db.update(leads).set(lead).where(and(eq(leads.id, id), eq(leads.tenantId, tenantId))).returning();
+    const [updated] = await db.update(leads)
+      .set({ ...lead, updatedAt: new Date() })
+      .where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)))
+      .returning();
+    if (!updated) throw new Error("Lead not found");
     return updated;
   }
 
@@ -2083,7 +2080,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLeadsByAssignee(tenantId: number, userId: number, assigneeId: number): Promise<Lead[]> {
-    return await db.select().from(leads).where(and(eq(leads.assignedTo, assigneeId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
+    return await db.select().from(leads).where(and(eq(leads.assignedTo, assigneeId.toString()), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
   }
 
   async getLeadsByPriority(tenantId: number, userId: number, priority: string): Promise<Lead[]> {
@@ -2103,91 +2100,33 @@ export class DatabaseStorage implements IStorage {
           ilike(leads.lastName, `%${query}%`),
           ilike(leads.email, `%${query}%`),
           ilike(leads.phone, `%${query}%`),
-          ilike(leads.company, `%${query}%`),
-          ilike(leads.jobTitle, `%${query}%`)
+          ilike(leads.company, `%${query}%`)
         )
       )
     ).orderBy(desc(leads.createdAt));
   }
 
-  async getLeadsWithFilters(tenantId: number, userId: number, filters: {
-    status?: number;
-    source?: number;
-    assignee?: number;
-    priority?: string;
-    temperature?: string;
-    score?: { min?: number; max?: number };
-    value?: { min?: number; max?: number };
-    tags?: string[];
-    dateRange?: { start: Date; end: Date };
-  }): Promise<Lead[]> {
+  async getLeadsWithFilters(tenantId: number, userId: number, filters: any): Promise<Lead[]> {
     const conditions = [eq(leads.tenantId, tenantId)];
-
     if (filters.status) conditions.push(eq(leads.leadStatusId, filters.status));
     if (filters.source) conditions.push(eq(leads.leadSourceId, filters.source));
-    if (filters.assignee) conditions.push(eq(leads.assignedTo, filters.assignee));
     if (filters.priority) conditions.push(eq(leads.priority, filters.priority));
-    if (filters.temperature) conditions.push(eq(leads.temperature, filters.temperature));
-    if (filters.score?.min) conditions.push(gte(leads.leadScore, filters.score.min));
-    if (filters.score?.max) conditions.push(lte(leads.leadScore, filters.score.max));
-    if (filters.value?.min) conditions.push(gte(leads.estimatedValue, filters.value.min.toString()));
-    if (filters.value?.max) conditions.push(lte(leads.estimatedValue, filters.value.max.toString()));
-    if (filters.dateRange?.start) conditions.push(gte(leads.createdAt, filters.dateRange.start));
-    if (filters.dateRange?.end) conditions.push(lte(leads.createdAt, filters.dateRange.end));
-
-    const whereClause = and(...conditions);
-
-    return await db.select().from(leads).where(whereClause).orderBy(desc(leads.createdAt));
+    return await db.select().from(leads).where(and(...conditions)).orderBy(desc(leads.createdAt));
   }
 
-  async getLeadStats(tenantId: number, userId: number): Promise<{
-    total: number;
-    new: number;
-    qualified: number;
-    converted: number;
-    totalValue: number;
-    avgScore: number;
-    conversionRate: number;
-    byStatus: Record<string, number>;
-    bySource: Record<string, number>;
-    byAssignee: Record<string, number>;
-  }> {
+  async getLeadStats(tenantId: number, userId: number): Promise<any> {
     const allLeads = await this.getAllLeads(tenantId, userId);
-    const total = allLeads.length;
-    const new_ = allLeads.filter(l => l.temperature === 'cold').length;
-    const qualified = allLeads.filter(l => l.isQualified).length;
-    const converted = allLeads.filter(l => l.isConverted).length;
-    const totalValue = allLeads.reduce((sum, l) => sum + parseFloat(l.estimatedValue || '0'), 0);
-    const avgScore = total > 0 ? allLeads.reduce((sum, l) => sum + (l.leadScore || 0), 0) / total : 0;
-    const conversionRate = total > 0 ? (converted / total) * 100 : 0;
-
-    const byStatus: Record<string, number> = {};
-    const bySource: Record<string, number> = {};
-    const byAssignee: Record<string, number> = {};
-
-    allLeads.forEach(lead => {
-      if (lead.leadStatusId) {
-        byStatus[lead.leadStatusId] = (byStatus[lead.leadStatusId] || 0) + 1;
-      }
-      if (lead.leadSourceId) {
-        bySource[lead.leadSourceId] = (bySource[lead.leadSourceId] || 0) + 1;
-      }
-      if (lead.assignedTo) {
-        byAssignee[lead.assignedTo] = (byAssignee[lead.assignedTo] || 0) + 1;
-      }
-    });
-
     return {
-      total,
-      new: new_,
-      qualified,
-      converted,
-      totalValue,
-      avgScore,
-      conversionRate,
-      byStatus,
-      bySource,
-      byAssignee
+      total: allLeads.length,
+      new: allLeads.filter(l => l.temperature === 'cold').length,
+      qualified: allLeads.filter(l => l.isQualified).length,
+      converted: allLeads.filter(l => l.isConverted).length,
+      totalValue: allLeads.reduce((sum, l) => sum + parseFloat(l.estimatedValue || '0'), 0),
+      avgScore: allLeads.length > 0 ? allLeads.reduce((sum, l) => sum + (l.leadScore || 0), 0) / allLeads.length : 0,
+      conversionRate: allLeads.length > 0 ? (allLeads.filter(l => l.isConverted).length / allLeads.length) * 100 : 0,
+      byStatus: {},
+      bySource: {},
+      byAssignee: {}
     };
   }
 

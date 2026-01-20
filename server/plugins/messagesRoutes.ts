@@ -73,7 +73,10 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = await getUserIdFromJWT(request);
-      const messages = await storage.getAllMessages(userId);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      
+      const messages = await storage.getAllMessages(tenantId, userId);
       return reply.send(messages);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -89,8 +92,11 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = await getUserIdFromJWT(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      
       const { contactId } = request.params as { contactId: string };
-      const messages = await storage.getMessagesByContact(userId, parseInt(contactId));
+      const messages = await storage.getMessagesByContact(tenantId, userId, parseInt(contactId));
       return reply.send(messages);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -106,8 +112,11 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = await getUserIdFromJWT(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      
       const { phone } = request.params as { phone: string };
-      const messages = await storage.getMessagesByPhone(userId, phone);
+      const messages = await storage.getMessagesByPhone(tenantId, userId, phone);
       return reply.send(messages);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -123,11 +132,14 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = await getUserIdFromJWT(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      
       const { q } = request.query as { q?: string };
       if (!q) {
         return reply.code(400).send({ message: "Query parameter 'q' is required" });
       }
-      const messages = await storage.searchMessages(userId, q);
+      const messages = await storage.searchMessages(tenantId, userId, q);
       return reply.send(messages);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -143,7 +155,10 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = await getUserIdFromJWT(request);
-      const count = await storage.getUnreadMessageCount(userId);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      
+      const count = await storage.getUnreadMessageCount(tenantId, userId);
       return reply.send({ count });
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -159,8 +174,11 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = await getUserIdFromJWT(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      
       const { id } = request.params as { id: string };
-      const message = await storage.markMessageAsRead(userId, parseInt(id));
+      const message = await storage.markMessageAsRead(tenantId, userId, parseInt(id));
       return reply.send(message);
     } catch (error: any) {
       return reply.code(400).send({ message: error.message });
@@ -187,6 +205,9 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ message: "User not found" });
       }
 
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+
       const { contactId, phone, content, type = "sent" } = request.body as any;
       
       if (!phone || !content) {
@@ -211,6 +232,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
 
       const messageData = {
         userId: user.id,
+        tenantId,
         contactId,
         phone,
         content,
@@ -223,7 +245,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
         }
       };
       
-      const message = await storage.createMessage(user.id, messageData);
+      const message = await storage.createMessage(tenantId, user.id, messageData);
       
       wsService.broadcastNewSms(user.id, message);
       
@@ -247,8 +269,11 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = await getUserIdFromJWT(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      
       const { id } = request.params as { id: string };
-      await storage.deleteMessage(userId, parseInt(id));
+      await storage.deleteMessage(tenantId, userId, parseInt(id));
       return reply.send({ message: "Message deleted successfully" });
     } catch (error: any) {
       return reply.code(400).send({ message: error.message });
@@ -264,7 +289,10 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = await getUserIdFromJWT(request);
-      const analytics = await storage.getMessageAnalytics(userId);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      
+      const analytics = await storage.getMessageAnalytics(tenantId, userId);
       return reply.send(analytics);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });

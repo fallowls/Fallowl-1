@@ -18,7 +18,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const contacts = await storage.getAllContacts(tenantId, userId);
       return reply.send(contacts);
     } catch (error: any) {
@@ -35,7 +38,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { q } = request.query as { q?: string };
       if (!q) {
         return reply.code(400).send({ message: "Query parameter 'q' is required" });
@@ -56,7 +62,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const contactData = insertContactSchema.parse(request.body);
       
       // Check if contact with this phone number already exists
@@ -88,7 +97,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const contactData = insertContactSchema.parse(request.body);
       const contact = await storage.upsertContact(tenantId, userId, contactData);
       return reply.send(contact);
@@ -106,7 +118,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       
@@ -155,7 +170,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       
@@ -204,7 +222,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       
@@ -233,7 +254,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       const { isFavorite } = request.body as { isFavorite?: boolean };
@@ -269,7 +293,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       const { disposition } = request.body as { disposition?: string };
@@ -319,7 +346,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { id } = request.params as { id: string };
       const contactId = parseInt(id);
       const contact = await storage.getContact(tenantId, userId, contactId);
@@ -356,7 +386,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { contactIds } = request.body as { contactIds?: number[] };
       let contacts;
       
@@ -401,7 +434,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { contactIds } = request.body as { contactIds?: number[] };
       
       if (!contactIds || contactIds.length === 0) {
@@ -439,7 +475,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { contactIds, message } = request.body as { contactIds?: number[]; message?: string };
       
       if (!contactIds || contactIds.length === 0) {
@@ -478,7 +517,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       const { contactIds, subject, message } = request.body as { contactIds?: number[]; subject?: string; message?: string };
       
       if (!contactIds || contactIds.length === 0) {
@@ -587,7 +629,10 @@ export default async function contactsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Tenant context missing" });
+      }
       if (!userId) {
         return reply.code(401).send({ message: "Not authenticated" });
       }

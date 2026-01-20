@@ -48,14 +48,13 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ message: "User not found" });
     }
 
-    return reply.send({
-      totalLeads: 0,
-      activeLeads: 0,
-      closedLeads: 0,
-      conversionRate: 0,
-      averageValue: 0,
-      lastUpdated: new Date().toISOString()
-    });
+    const tenantId = (request as any).tenantId;
+    if (!tenantId) {
+      return reply.code(401).send({ message: "Tenant context missing" });
+    }
+
+    const stats = await (fastify as any).storage.getLeadStats(tenantId, user.id);
+    return reply.send(stats);
   });
 
   // GET /lead-sources/active - Get active lead sources
@@ -72,7 +71,8 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ message: "User not found" });
     }
 
-    return reply.send([]);
+    const sources = await (fastify as any).storage.getActiveLeadSources(user.id);
+    return reply.send(sources || []);
   });
 
   // GET /lead-statuses/active - Get active lead statuses
@@ -89,7 +89,8 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ message: "User not found" });
     }
 
-    return reply.send([]);
+    const statuses = await (fastify as any).storage.getActiveLeadStatuses(user.id);
+    return reply.send(statuses || []);
   });
 
   // POST /leads - Create a new lead
@@ -106,14 +107,13 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ message: "User not found" });
     }
 
-    const body = request.body as any;
-    return reply.code(201).send({
-      id: Math.floor(Math.random() * 10000),
-      ...body,
-      userId: user.id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
+    const tenantId = (request as any).tenantId;
+    if (!tenantId) {
+      return reply.code(401).send({ message: "Tenant context missing" });
+    }
+
+    const lead = await (fastify as any).storage.createLead(tenantId, user.id, request.body);
+    return reply.code(201).send(lead);
   });
 
   // PUT /leads/:id - Update a lead
@@ -130,15 +130,14 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ message: "User not found" });
     }
 
+    const tenantId = (request as any).tenantId;
+    if (!tenantId) {
+      return reply.code(401).send({ message: "Tenant context missing" });
+    }
+
     const { id } = request.params as any;
-    const body = request.body as any;
-    
-    return reply.send({
-      id: parseInt(id),
-      ...body,
-      userId: user.id,
-      updatedAt: new Date().toISOString()
-    });
+    const lead = await (fastify as any).storage.updateLead(tenantId, user.id, parseInt(id), request.body);
+    return reply.send(lead);
   });
 
   // DELETE /leads/:id - Delete a lead
@@ -155,6 +154,13 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ message: "User not found" });
     }
 
+    const tenantId = (request as any).tenantId;
+    if (!tenantId) {
+      return reply.code(401).send({ message: "Tenant context missing" });
+    }
+
+    const { id } = request.params as any;
+    await (fastify as any).storage.deleteLead(tenantId, user.id, parseInt(id));
     return reply.send({ message: "Lead deleted successfully" });
   });
 
