@@ -2748,8 +2748,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Create new membership
-    return await this.createContactListMembership({
-      tenantId,
+    return await this.createContactListMembership(tenantId, {
       userId: addedBy || 0, // Fallback to 0 if not provided, assuming it's required by schema now
       contactId,
       listId,

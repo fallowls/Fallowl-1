@@ -200,9 +200,9 @@ export async function seedLeadData() {
     let sourcesCreated = 0;
     for (const source of sources) {
       try {
-        const existing = await storage.getLeadSourceByName(adminUser.id, source.name);
+        const existing = await storage.getLeadSourceByName(1, source.name);
         if (!existing) {
-          await storage.createLeadSource(adminUser.id, source);
+          await storage.createLeadSource(1, source);
           sourcesCreated++;
         }
       } catch (error: any) {
@@ -291,9 +291,9 @@ export async function seedLeadData() {
     let statusesCreated = 0;
     for (const status of statuses) {
       try {
-        const existing = await storage.getLeadStatusByName(adminUser.id, status.name);
+        const existing = await storage.getLeadStatusByName(1, status.name);
         if (!existing) {
-          await storage.createLeadStatus(adminUser.id, status);
+          await storage.createLeadStatus(1, status);
           statusesCreated++;
         }
       } catch (error: any) {
