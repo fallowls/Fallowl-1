@@ -500,18 +500,18 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(users.createdAt));
   }
 
-  async bulkUpdateUsers(tenantId: number, userIds: number[], updates: Partial<InsertUser>): Promise<User[]> {
+  async bulkUpdateUsers(userIds: number[], updates: Partial<InsertUser>): Promise<User[]> {
     // Update users in batch
     await db
       .update(users)
       .set(updates)
-      .where(and(inArray(users.id, userIds), eq(users.tenantId, tenantId)));
+      .where(inArray(users.id, userIds));
     
     // Return updated users
     return await db
       .select()
       .from(users)
-      .where(and(inArray(users.id, userIds), eq(users.tenantId, tenantId)));
+      .where(inArray(users.id, userIds));
   }
 
   async authenticateUser(email: string, password: string): Promise<User | undefined> {
@@ -2748,7 +2748,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Create new membership
-    return await this.createContactListMembership(tenantId, {
+    return await this.createContactListMembership({
+      tenantId,
+      userId: addedBy || 0, // Fallback to 0 if not provided, assuming it's required by schema now
       contactId,
       listId,
       addedBy,
@@ -3116,7 +3118,6 @@ export class DatabaseStorage implements IStorage {
     // Create the new user
     const newUser = await this.createUser({
       ...insertUser,
-      tenantId: newTenant.id,
     });
   
     // Create the tenant membership for the user

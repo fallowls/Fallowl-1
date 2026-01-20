@@ -468,7 +468,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
             const user = await storage.getUser(userId);
             if (user) {
               request.userId = user.id;
-              request.auth0UserId = user.auth0Id;
+              request.auth0UserId = user.auth0Id || undefined;
               const membership = await storage.ensureDefaultTenant(user.id);
               request.tenantId = membership.tenantId;
               request.tenantRole = membership.role;
