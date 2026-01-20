@@ -80,7 +80,7 @@ export async function seedSmsData() {
 
     // Create templates
     for (const template of templates) {
-      await storage.createSmsTemplate(adminUser.id, template);
+      await storage.createSmsTemplate(adminUser.id, 1, template);
     }
 
     console.log("✅ SMS templates seeded successfully");
@@ -112,7 +112,7 @@ export async function seedSmsData() {
 
     // Create campaigns
     for (const campaign of campaigns) {
-      await storage.createSmsCampaign(adminUser.id, campaign);
+      await storage.createSmsCampaign(adminUser.id, 1, campaign);
     }
 
     console.log("✅ SMS campaigns seeded successfully");
@@ -346,7 +346,7 @@ export async function seedLeadData() {
     ];
 
     for (const campaign of campaigns) {
-      await storage.createLeadCampaign(adminUser.id, campaign);
+      await storage.createLeadCampaign(adminUser.id, 1, campaign);
     }
 
     console.log("✅ Lead campaigns seeded successfully");
@@ -602,7 +602,7 @@ export async function seedContactLists() {
     // Create contact lists
     const createdLists = [];
     for (const list of contactLists) {
-      const created = await storage.createContactList(adminUser.id, list);
+      const created = await storage.createContactList(1, { ...list, userId: adminUser.id });
       createdLists.push(created);
     }
 

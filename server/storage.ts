@@ -1825,7 +1825,7 @@ export class DatabaseStorage implements IStorage {
       .insert(settings)
       .values({ key, value, tenantId })
       .onConflictDoUpdate({
-        target: [settings.tenantId, settings.key],
+        target: [settings.key, settings.tenantId],
         set: { value, updatedAt: new Date() }
       })
       .returning();
