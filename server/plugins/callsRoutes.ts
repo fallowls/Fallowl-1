@@ -252,7 +252,7 @@ export default async function callsRoutes(fastify: FastifyInstance) {
 
       const createdCalls = [];
       for (const call of testCalls) {
-        const created = await storage.createCall(tenantId, userId, call);
+        const created = await storage.createCall(tenantId, userId, { ...call, tenantId });
         createdCalls.push(created);
       }
 

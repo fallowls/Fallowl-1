@@ -237,8 +237,12 @@ export default async function recordingsRoutes(fastify: FastifyInstance) {
       console.log(`📊 Recording migration status requested by user ${userId}`);
 
       const { bunnycdnService } = await import('../services/bunnycdnService');
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(401).send({ message: "Not authenticated" });
+      }
       
-      const allRecordings = await storage.getAllRecordings(userId);
+      const allRecordings = await storage.getAllRecordings(tenantId, userId);
       
       const fullyMigrated = allRecordings.filter((r: any) => 
         r.bunnycdnUrl && r.bunnycdnUploadedAt && r.twilioDeletedAt

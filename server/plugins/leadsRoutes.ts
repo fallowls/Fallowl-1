@@ -20,10 +20,13 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ message: "User not found" });
     }
 
+    const tenantId = (request as any).tenantId;
+    if (!tenantId) {
+      return reply.code(401).send({ message: "Tenant context missing" });
+    }
+
     try {
-      const leads = await (fastify as any).storage.db.query.leads.findMany({
-        where: (table: any) => table.userId === user.id,
-      });
+      const leads = await (fastify as any).storage.getAllLeads(tenantId, user.id);
       return reply.send(leads || []);
     } catch (error: any) {
       console.error('Error fetching leads:', error);
