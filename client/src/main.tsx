@@ -9,7 +9,7 @@ const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "d3sqfAaafC9UJOYeBJGLEO
 // The error "Service not found: https://api.thecloso.com" indicates this audience is invalid or not set up in Auth0.
 // We will omit the audience if it matches the problematic one to allow basic authentication to proceed.
 const rawAudience = import.meta.env.VITE_AUTH0_AUDIENCE;
-const audience = (rawAudience === 'https://api.thecloso.com' || !rawAudience) ? undefined : rawAudience;
+const audience = rawAudience;
 
 if (!domain) {
   console.error("❌ VITE_AUTH0_DOMAIN is not set. Authentication will fail.");
@@ -20,15 +20,13 @@ const auth0Domain = domain.startsWith('http') ? domain.replace(/^https?:\/\//, '
 
 // Redirect URI is critical for Auth0. We must ensure it's precisely what's configured in Auth0.
 const redirectUri = window.location.origin;
-
 console.log("Auth0 Config Details:", {
   domain: auth0Domain,
   clientId,
   redirect_uri: redirectUri,
-  audience: audience || 'none (problematic audience omitted)',
+  audience: audience || 'none',
   window_location: window.location.href,
-  origin: window.location.origin,
-  public_url: import.meta.env.VITE_PUBLIC_URL || 'not set'
+  origin: window.location.origin
 });
 
 const onRedirectCallback = (appState: any) => {

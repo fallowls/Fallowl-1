@@ -13,6 +13,17 @@ export async function requireAuth(
   next: NextFunction
 ) {
   try {
+    // If we have a session userId, we use that (local login)
+    if (req.session && (req.session as any).userId) {
+      req.userId = (req.session as any).userId;
+      
+      const membership = await storage.ensureDefaultTenant(req.userId!);
+      if (membership) {
+        req.tenantId = membership.tenantId;
+      }
+      return next();
+    }
+
     const auth = req.auth;
     
     if (!auth || !auth.sub) {
@@ -65,7 +76,7 @@ export async function requireAuth(
     // Get tenant ID for multi-tenancy
     const membership = await storage.ensureDefaultTenant(user.id);
     if (membership) {
-      (req as any).tenantId = membership.tenantId;
+      req.tenantId = membership.tenantId;
     }
 
     next();

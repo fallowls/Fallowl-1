@@ -339,46 +339,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     env: process.env.NODE_ENV
   });
 
-  app.get("/api/auth/me", checkJwt, async (req, res) => {
+  app.get("/api/auth/me", async (req, res) => {
     try {
-      const auth = (req as any).auth;
-      if (!auth || !auth.sub) {
+      let userId = (req as any).session?.userId;
+      
+      // Also check if we have a JWT from Auth0
+      if (!userId && (req as any).auth?.sub) {
+        const auth0UserId = (req as any).auth.sub;
+        const user = await storage.getUserByAuth0Id(auth0UserId);
+        if (user) {
+          userId = user.id;
+          (req as any).session.userId = user.id;
+        }
+      }
+
+      if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      // Extract user info from Auth0 token with better fallbacks
-      const auth0UserId = auth.sub;
-      const email = auth['https://app.com/email'] || auth.email || '';
-      
-      // Extract username with multiple fallbacks - ensure it's never empty
-      let username = auth['https://app.com/name'] || auth.name || auth.nickname || '';
-      
-      // If still empty, use email prefix or Auth0 ID
-      if (!username || username.trim() === '') {
-        if (email) {
-          username = email.split('@')[0]; // Use email prefix
-        } else {
-          username = `user_${auth0UserId.split('|')[1] || auth0UserId}`; // Use Auth0 ID
-        }
-      }
-      
-      const role = auth['https://app.com/roles']?.[0] || 'user';
-
-      // Get user from database to include ID and tenant context
-      let user = await storage.getUserByAuth0Id(auth0UserId);
-      if (!user && email) {
-        user = await storage.getUserByEmail(email);
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
 
-      const memberships = user ? await storage.getTenantMembershipsByUserId(user.id) : [];
+      const memberships = await storage.getUserTenantMemberships(user.id);
       const tenantId = (memberships.find(m => m.isDefault) || memberships[0])?.tenantId;
 
       res.json({
-        id: user?.id || 0,
-        username,
-        email,
-        role,
-        status: 'active',
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status,
         tenantId
       });
     } catch (error: any) {

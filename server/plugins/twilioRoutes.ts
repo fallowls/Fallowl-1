@@ -159,7 +159,11 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.api
     },
     preHandler: async (request, reply) => {
-      await request.jwtVerify();
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        return reply.code(401).send({ message: "No Authorization was found in request.headers" });
+      }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -266,7 +270,11 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.api
     },
     preHandler: async (request, reply) => {
-      await request.jwtVerify();
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        return reply.code(401).send({ message: "No Authorization was found in request.headers" });
+      }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -368,7 +376,11 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.api
     },
     preHandler: async (request, reply) => {
-      await request.jwtVerify();
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        return reply.code(401).send({ message: "No Authorization was found in request.headers" });
+      }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
