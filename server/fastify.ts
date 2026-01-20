@@ -444,7 +444,34 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // Add requireAuth decorator for route protection
   fastify.decorate('requireAuth', async function requireAuthFastify(request: FastifyRequest, reply: FastifyReply) {
     try {
-      await request.jwtVerify();
+      // First try to verify JWT from header
+      try {
+        await request.jwtVerify();
+      } catch (jwtError: any) {
+        // If JWT verification fails because of missing header, we check if it's an extension or session-based request
+        // This helps prevent hard 401s when the frontend is still initializing
+        if (jwtError.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER') {
+          // Check if session exists as a fallback (for browser-based requests)
+          if ((request as any).session?.userId) {
+            const { storage } = await import('./storage');
+            const userId = (request as any).session.userId;
+            const user = await storage.getUser(userId);
+            if (user) {
+              request.userId = user.id;
+              request.auth0UserId = user.auth0Id;
+              const membership = await storage.ensureDefaultTenant(user.id);
+              request.tenantId = membership.tenantId;
+              request.tenantRole = membership.role;
+              return; // Success via session
+            }
+          }
+          // If no session and no header, return 401
+          return reply.code(401).send({ message: "No Authorization was found in request.headers" });
+        }
+        // For other JWT errors (invalid token, expired), re-throw to be caught by outer catch
+        throw jwtError;
+      }
+
       const auth = (request as any).user;
       
       if (!auth || !auth.sub) {
@@ -504,7 +531,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
       request.tenantRole = membership.role;
     } catch (error: any) {
       console.error('Auth helper error:', error);
-      return reply.code(500).send({ message: "Authentication error" });
+      return reply.code(401).send({ message: error.message || "Authentication error" });
     }
   });
 
