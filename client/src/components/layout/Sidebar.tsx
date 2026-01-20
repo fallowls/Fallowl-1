@@ -89,31 +89,27 @@ export default function Sidebar() {
           "flex items-center border-b border-gray-200/60 dark:border-gray-800/60 py-2.5 transition-all duration-200 ease-out",
           (sidebarExpanded || isMobile) ? "h-14 px-3" : "h-14 px-2 justify-center"
         )}>
-          <div className="relative flex items-center justify-center w-full h-full overflow-hidden">
-            <img 
-              src={ClosoLogo} 
-              alt="Closo" 
-              className={cn(
-                "absolute transition-all duration-500 ease-in-out object-contain brightness-0 dark:invert",
-                (sidebarExpanded || isMobile) 
-                  ? "opacity-100 scale-100 h-9 translate-x-0" 
-                  : "opacity-0 scale-95 h-9 -translate-x-full pointer-events-none"
-              )}
-              style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
-              loading="lazy"
-            />
-            <img 
-              src={ClosoIcon} 
-              alt="Closo" 
-              className={cn(
-                "absolute transition-all duration-500 ease-in-out object-contain brightness-0 dark:invert",
-                !(sidebarExpanded || isMobile) 
-                  ? "opacity-100 scale-100 h-8 translate-x-0" 
-                  : "opacity-0 scale-95 h-8 translate-x-full pointer-events-none"
-              )}
-              style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
-              loading="lazy"
-            />
+          <div className="relative flex items-center w-full h-full">
+            <div className={cn(
+              "flex items-center transition-all duration-500 ease-in-out origin-left",
+              (sidebarExpanded || isMobile) ? "w-full opacity-100" : "w-8 opacity-100"
+            )}>
+              <img 
+                src={ClosoIcon} 
+                alt="Closo" 
+                className="h-8 w-8 min-w-[32px] object-contain brightness-0 dark:invert"
+                style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
+                loading="lazy"
+              />
+              <div className={cn(
+                "overflow-hidden transition-all duration-500 ease-in-out whitespace-nowrap",
+                (sidebarExpanded || isMobile) ? "max-w-[150px] opacity-100 ml-2" : "max-w-0 opacity-0 ml-0"
+              )}>
+                <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+                  Closo
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
