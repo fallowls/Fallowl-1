@@ -27,6 +27,29 @@ import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { encryptCredential, decryptCredential } from "./encryption";
 
+function warnIfTenantScopedParamsInvalid(
+  method: string,
+  params: Record<string, unknown>
+): void {
+  // Only log when params are suspicious; avoids spamming normal traffic.
+  const isBadInt = (v: unknown) =>
+    typeof v !== 'number' || !Number.isFinite(v) || Number.isNaN(v) || !Number.isInteger(v);
+
+  const badKeys = Object.entries(params)
+    .filter(([k, v]) => k.endsWith('Id') && v !== undefined && isBadInt(v))
+    .map(([k]) => k);
+
+  if (badKeys.length === 0) return;
+
+  // This is the most common failure mode when legacy call-sites still use the old
+  // (userId, id) signature after migrating to (tenantId, userId, id).
+  console.warn(`[MULTITENANT][PARAMS] Suspicious call to storage.${method}: bad=${badKeys.join(',')} params=${JSON.stringify(params)}`);
+  const stack = new Error().stack;
+  if (stack) {
+    console.warn(`[MULTITENANT][PARAMS] stack (top):\n${stack.split('\n').slice(0, 6).join('\n')}`);
+  }
+}
+
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
@@ -757,6 +780,7 @@ export class DatabaseStorage implements IStorage {
 
   // Contacts (tenant-scoped)
   async getContact(tenantId: number, userId: number, id: number): Promise<Contact | undefined> {
+    warnIfTenantScopedParamsInvalid('getContact', { tenantId, userId, id });
     const [contact] = await db.select().from(contacts).where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)));
     return contact || undefined;
   }
@@ -798,6 +822,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createContact(tenantId: number, userId: number, insertContact: InsertContact): Promise<Contact> {
+    warnIfTenantScopedParamsInvalid('createContact', { tenantId, userId });
     // Normalize phone number before creating
     const normalized = normalizePhoneNumber(insertContact.phone);
     const contactData = {
@@ -815,6 +840,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateContact(tenantId: number, userId: number, id: number, updateData: Partial<InsertContact>): Promise<Contact> {
+    warnIfTenantScopedParamsInvalid('updateContact', { tenantId, userId, id });
     // Normalize phone number if being updated
     const normalizedUpdateData = { ...updateData };
     if (updateData.phone) {
@@ -884,10 +910,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteContact(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteContact', { tenantId, userId, id });
     await db.delete(contacts).where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)));
   }
 
   async getAllContacts(tenantId: number, userId: number): Promise<Contact[]> {
+    warnIfTenantScopedParamsInvalid('getAllContacts', { tenantId, userId });
     return await db.select().from(contacts).where(eq(contacts.tenantId, tenantId)).orderBy(asc(contacts.name));
   }
 
@@ -910,11 +938,13 @@ export class DatabaseStorage implements IStorage {
 
   // Calls (tenant-scoped)
   async getCall(tenantId: number, userId: number, id: number): Promise<Call | undefined> {
+    warnIfTenantScopedParamsInvalid('getCall', { tenantId, userId, id });
     const [call] = await db.select().from(calls).where(and(eq(calls.id, id), eq(calls.tenantId, tenantId)));
     return call || undefined;
   }
 
   async createCall(tenantId: number, userId: number, insertCall: InsertCall): Promise<Call> {
+    warnIfTenantScopedParamsInvalid('createCall', { tenantId, userId });
     try {
       const [call] = await db
         .insert(calls)
@@ -952,6 +982,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCall(tenantId: number, userId: number, id: number, updateData: Partial<InsertCall>): Promise<Call> {
+    warnIfTenantScopedParamsInvalid('updateCall', { tenantId, userId, id });
     const [call] = await db
       .update(calls)
       .set(updateData)
@@ -961,10 +992,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCall(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteCall', { tenantId, userId, id });
     await db.delete(calls).where(and(eq(calls.id, id), eq(calls.tenantId, tenantId)));
   }
 
   async getAllCalls(tenantId: number, userId: number, options: { page?: number; limit?: number } = {}): Promise<{ calls: Call[]; total: number }> {
+    warnIfTenantScopedParamsInvalid('getAllCalls', { tenantId, userId });
     const page = options.page || 1;
     const limit = options.limit || 50;
     const offset = (page - 1) * limit;
@@ -996,6 +1029,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentCalls(tenantId: number, userId: number, limit: number = 10): Promise<Call[]> {
+    warnIfTenantScopedParamsInvalid('getRecentCalls', { tenantId, userId });
     return await db
       .select()
       .from(calls)
@@ -1005,6 +1039,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCallsByStatus(tenantId: number, userId: number, statuses: string[]): Promise<Call[]> {
+    warnIfTenantScopedParamsInvalid('getCallsByStatus', { tenantId, userId });
     if (statuses.length === 0) {
       return [];
     }
@@ -1019,6 +1054,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveCalls(tenantId: number, userId: number): Promise<Call[]> {
+    warnIfTenantScopedParamsInvalid('getActiveCalls', { tenantId, userId });
     const activeStatuses = ['queued', 'initiated', 'ringing', 'in-progress'];
     return this.getCallsByStatus(tenantId, userId, activeStatuses);
   }
@@ -1064,6 +1100,7 @@ export class DatabaseStorage implements IStorage {
     callSuccessRate: number;
     averageCallQuality: number;
   }> {
+    warnIfTenantScopedParamsInvalid('getCallStats', { tenantId, userId });
     const allCalls = await db.select().from(calls).where(eq(calls.tenantId, tenantId));
     const totalCalls = allCalls.length;
     
@@ -1098,6 +1135,7 @@ export class DatabaseStorage implements IStorage {
 
   // Messages (tenant-scoped)
   async getMessage(tenantId: number, userId: number, id: number): Promise<Message | undefined> {
+    warnIfTenantScopedParamsInvalid('getMessage', { tenantId, userId, id });
     const [message] = await db.select().from(messages).where(and(eq(messages.id, id), eq(messages.tenantId, tenantId)));
     return message || undefined;
   }
@@ -1110,6 +1148,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessage(tenantId: number, userId: number, insertMessage: InsertMessage): Promise<Message> {
+    warnIfTenantScopedParamsInvalid('createMessage', { tenantId, userId });
     const messageData = {
       ...insertMessage,
       userId: userId,
@@ -1123,6 +1162,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateMessage(tenantId: number, userId: number, id: number, updateData: Partial<InsertMessage>): Promise<Message> {
+    warnIfTenantScopedParamsInvalid('updateMessage', { tenantId, userId, id });
     const [message] = await db
       .update(messages)
       .set(updateData)
@@ -1132,10 +1172,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMessage(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteMessage', { tenantId, userId, id });
     await db.delete(messages).where(and(eq(messages.id, id), eq(messages.tenantId, tenantId)));
   }
 
   async getAllMessages(tenantId: number, userId: number): Promise<Message[]> {
+    warnIfTenantScopedParamsInvalid('getAllMessages', { tenantId, userId });
     return await db.select().from(messages).where(eq(messages.tenantId, tenantId)).orderBy(desc(messages.createdAt));
   }
 
@@ -1371,6 +1413,7 @@ export class DatabaseStorage implements IStorage {
 
   // Advanced Recording Management (tenant-scoped)
   async getRecording(tenantId: number, userId: number, id: number): Promise<Recording | undefined> {
+    warnIfTenantScopedParamsInvalid('getRecording', { tenantId, userId, id });
     const [recording] = await db.select().from(recordings).where(and(eq(recordings.id, id), eq(recordings.tenantId, tenantId)));
     return recording || undefined;
   }
@@ -1384,6 +1427,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRecording(tenantId: number, userId: number, insertRecording: InsertRecording): Promise<Recording> {
+    warnIfTenantScopedParamsInvalid('createRecording', { tenantId, userId });
     const recordingData = {
       ...insertRecording,
       userId: userId,
@@ -1397,6 +1441,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateRecording(tenantId: number, userId: number, id: number, updateData: Partial<InsertRecording>): Promise<Recording> {
+    warnIfTenantScopedParamsInvalid('updateRecording', { tenantId, userId, id });
     const [recording] = await db
       .update(recordings)
       .set({ ...updateData, updatedAt: new Date() })
@@ -1406,10 +1451,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteRecording(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteRecording', { tenantId, userId, id });
     await db.delete(recordings).where(and(eq(recordings.id, id), eq(recordings.tenantId, tenantId)));
   }
 
   async getAllRecordings(tenantId: number, userId: number): Promise<Recording[]> {
+    warnIfTenantScopedParamsInvalid('getAllRecordings', { tenantId, userId });
     return await db.select().from(recordings).where(eq(recordings.tenantId, tenantId)).orderBy(desc(recordings.createdAt));
   }
 
@@ -1625,11 +1672,13 @@ export class DatabaseStorage implements IStorage {
 
   // Voicemails (tenant-scoped)
   async getVoicemail(tenantId: number, userId: number, id: number): Promise<Voicemail | undefined> {
+    warnIfTenantScopedParamsInvalid('getVoicemail', { tenantId, userId, id });
     const [voicemail] = await db.select().from(voicemails).where(and(eq(voicemails.id, id), eq(voicemails.tenantId, tenantId)));
     return voicemail || undefined;
   }
 
   async createVoicemail(tenantId: number, userId: number, insertVoicemail: InsertVoicemail): Promise<Voicemail> {
+    warnIfTenantScopedParamsInvalid('createVoicemail', { tenantId, userId });
     const voicemailData = {
       ...insertVoicemail,
       userId: userId,
@@ -1643,6 +1692,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateVoicemail(tenantId: number, userId: number, id: number, updateData: Partial<InsertVoicemail>): Promise<Voicemail> {
+    warnIfTenantScopedParamsInvalid('updateVoicemail', { tenantId, userId, id });
     const [voicemail] = await db
       .update(voicemails)
       .set(updateData)
@@ -1652,10 +1702,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteVoicemail(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteVoicemail', { tenantId, userId, id });
     await db.delete(voicemails).where(and(eq(voicemails.id, id), eq(voicemails.tenantId, tenantId)));
   }
 
   async getAllVoicemails(tenantId: number, userId: number): Promise<Voicemail[]> {
+    warnIfTenantScopedParamsInvalid('getAllVoicemails', { tenantId, userId });
     return await db.select().from(voicemails).where(eq(voicemails.tenantId, tenantId)).orderBy(desc(voicemails.createdAt));
   }
 
