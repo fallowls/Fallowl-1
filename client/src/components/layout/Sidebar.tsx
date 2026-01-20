@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import ClosoLogo from "@assets/closo_logo_png_1768808340025.png";
+import ClosoIcon from "@assets/closo_icon_png_1768905355569.png";
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -90,9 +91,12 @@ export default function Sidebar() {
         )}>
           <div className="transition-all duration-200 ease-out group">
             <img 
-              src={ClosoLogo} 
+              src={(sidebarExpanded || isMobile) ? ClosoLogo : ClosoIcon} 
               alt="Closo" 
-              className="h-7 w-auto object-contain brightness-0 dark:invert transition-transform duration-300 group-hover:scale-110"
+              className={cn(
+                "w-auto object-contain brightness-0 dark:invert transition-transform duration-300 group-hover:scale-110",
+                (sidebarExpanded || isMobile) ? "h-7" : "h-6"
+              )}
               style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
               loading="lazy"
             />
