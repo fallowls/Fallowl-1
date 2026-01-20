@@ -95,7 +95,7 @@ export default function Sidebar() {
               alt="Closo" 
               className={cn(
                 "w-auto object-contain brightness-0 dark:invert transition-transform duration-300 group-hover:scale-110",
-                (sidebarExpanded || isMobile) ? "h-7" : "h-6"
+                (sidebarExpanded || isMobile) ? "h-9" : "h-8"
               )}
               style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
               loading="lazy"
