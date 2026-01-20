@@ -130,6 +130,7 @@ export const tenantMemberships = pgTable("tenant_memberships", {
 // Contact Lists for smart organization
 export const contactLists = pgTable("contact_lists", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   description: text("description"),
@@ -170,6 +171,7 @@ export const contactLists = pgTable("contact_lists", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
+  tenantIdx: index("contact_lists_tenant_id_idx").on(table.tenantId),
   userIdIdx: index("contact_lists_user_id_idx").on(table.userId),
   typeIdx: index("contact_lists_type_idx").on(table.type),
   statusIdx: index("contact_lists_status_idx").on(table.status),
@@ -179,6 +181,7 @@ export const contactLists = pgTable("contact_lists", {
 // Junction table for many-to-many relationship between contacts and lists
 export const contactListMemberships = pgTable("contact_list_memberships", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
   contactId: integer("contact_id").references(() => contacts.id).notNull(),
   listId: integer("list_id").references(() => contactLists.id).notNull(),
@@ -201,6 +204,7 @@ export const contactListMemberships = pgTable("contact_list_memberships", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
+  tenantIdx: index("contact_list_memberships_tenant_id_idx").on(table.tenantId),
   userIdIdx: index("contact_list_memberships_user_id_idx").on(table.userId),
   contactIdIdx: index("contact_list_memberships_contact_id_idx").on(table.contactId),
   listIdIdx: index("contact_list_memberships_list_id_idx").on(table.listId),
@@ -1194,6 +1198,7 @@ export const activities = pgTable("activities", {
 // AI-Powered Features Tables
 export const aiLeadScores = pgTable("ai_lead_scores", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
   contactId: integer("contact_id").references(() => contacts.id).notNull(),
   
@@ -1225,6 +1230,7 @@ export const aiLeadScores = pgTable("ai_lead_scores", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
+  tenantIdx: index("ai_lead_scores_tenant_id_idx").on(table.tenantId),
   userIdIdx: index("ai_lead_scores_user_id_idx").on(table.userId),
   contactIdIdx: index("ai_lead_scores_contact_id_idx").on(table.contactId),
   scoreIdx: index("ai_lead_scores_score_idx").on(table.overallScore),
@@ -1233,6 +1239,7 @@ export const aiLeadScores = pgTable("ai_lead_scores", {
 
 export const callIntelligence = pgTable("call_intelligence", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
   callId: integer("call_id").references(() => calls.id).notNull(),
   contactId: integer("contact_id").references(() => contacts.id),
@@ -1282,6 +1289,7 @@ export const callIntelligence = pgTable("call_intelligence", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
+  tenantIdx: index("call_intelligence_tenant_id_idx").on(table.tenantId),
   userIdIdx: index("call_intelligence_user_id_idx").on(table.userId),
   callIdIdx: index("call_intelligence_call_id_idx").on(table.callId),
   contactIdIdx: index("call_intelligence_contact_id_idx").on(table.contactId),
@@ -1291,6 +1299,7 @@ export const callIntelligence = pgTable("call_intelligence", {
 
 export const aiInsights = pgTable("ai_insights", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
   
   // Insight Details
@@ -1330,6 +1339,7 @@ export const aiInsights = pgTable("ai_insights", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
+  tenantIdx: index("ai_insights_tenant_id_idx").on(table.tenantId),
   userIdIdx: index("ai_insights_user_id_idx").on(table.userId),
   typeIdx: index("ai_insights_type_idx").on(table.type),
   statusIdx: index("ai_insights_status_idx").on(table.status),

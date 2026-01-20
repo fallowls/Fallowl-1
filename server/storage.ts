@@ -64,6 +64,7 @@ export interface IStorage {
   searchUsers(query: string): Promise<User[]>;
   bulkUpdateUsers(userIds: number[], updates: Partial<InsertUser>): Promise<User[]>;
   authenticateUser(email: string, password: string): Promise<User | undefined>;
+  createUserWithTenant(user: InsertUser): Promise<User>;
   
   // Per-user Twilio credentials
   updateUserTwilioCredentials(userId: number, credentials: {
@@ -133,7 +134,8 @@ export interface IStorage {
 
   // Calls (tenant-scoped)
   getCall(tenantId: number, userId: number, id: number): Promise<Call | undefined>;
-  getCallByTwilioSid(twilioCallSid: string): Promise<Call | undefined>;
+  getCallByTwilioSid(tenantId: number, twilioCallSid: string): Promise<Call | undefined>;
+  getCallBySipCallId(tenantId: number, sipCallId: string): Promise<Call | null>;
   createCall(tenantId: number, userId: number, call: InsertCall): Promise<Call>;
   updateCall(tenantId: number, userId: number, id: number, call: Partial<InsertCall>): Promise<Call>;
   deleteCall(tenantId: number, userId: number, id: number): Promise<void>;
@@ -157,7 +159,7 @@ export interface IStorage {
 
   // Messages (tenant-scoped)
   getMessage(tenantId: number, userId: number, id: number): Promise<Message | undefined>;
-  getMessageByTwilioSid(twilioMessageSid: string): Promise<Message | undefined>;
+  getMessageByTwilioSid(tenantId: number, twilioMessageSid: string): Promise<Message | undefined>;
   createMessage(tenantId: number, userId: number, message: InsertMessage): Promise<Message>;
   updateMessage(tenantId: number, userId: number, id: number, message: Partial<InsertMessage>): Promise<Message>;
   deleteMessage(tenantId: number, userId: number, id: number): Promise<void>;
@@ -172,23 +174,23 @@ export interface IStorage {
   getUnreadMessageCount(tenantId: number, userId: number): Promise<number>;
   getMessageAnalytics(tenantId: number, userId: number): Promise<any>;
 
-  // SMS Templates
-  getSmsTemplate(userId: number, id: number): Promise<SmsTemplate | undefined>;
-  createSmsTemplate(userId: number, template: InsertSmsTemplate): Promise<SmsTemplate>;
-  updateSmsTemplate(userId: number, id: number, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate>;
-  deleteSmsTemplate(userId: number, id: number): Promise<void>;
-  getAllSmsTemplates(userId: number): Promise<SmsTemplate[]>;
-  getSmsTemplatesByCategory(userId: number, category: string): Promise<SmsTemplate[]>;
-  incrementTemplateUsage(userId: number, id: number): Promise<void>;
+  // SMS Templates (tenant-scoped)
+  getSmsTemplate(tenantId: number, userId: number, id: number): Promise<SmsTemplate | undefined>;
+  createSmsTemplate(tenantId: number, userId: number, template: InsertSmsTemplate): Promise<SmsTemplate>;
+  updateSmsTemplate(tenantId: number, userId: number, id: number, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate>;
+  deleteSmsTemplate(tenantId: number, userId: number, id: number): Promise<void>;
+  getAllSmsTemplates(tenantId: number, userId: number): Promise<SmsTemplate[]>;
+  getSmsTemplatesByCategory(tenantId: number, userId: number, category: string): Promise<SmsTemplate[]>;
+  incrementTemplateUsage(tenantId: number, userId: number, id: number): Promise<void>;
 
-  // SMS Campaigns
-  getSmsCampaign(userId: number, id: number): Promise<SmsCampaign | undefined>;
-  createSmsCampaign(userId: number, campaign: InsertSmsCampaign): Promise<SmsCampaign>;
-  updateSmsCampaign(userId: number, id: number, campaign: Partial<InsertSmsCampaign>): Promise<SmsCampaign>;
-  deleteSmsCampaign(userId: number, id: number): Promise<void>;
-  getAllSmsCampaigns(userId: number): Promise<SmsCampaign[]>;
-  getCampaignsByStatus(userId: number, status: string): Promise<SmsCampaign[]>;
-  updateCampaignStats(userId: number, id: number, stats: Partial<SmsCampaign>): Promise<SmsCampaign>;
+  // SMS Campaigns (tenant-scoped)
+  getSmsCampaign(tenantId: number, userId: number, id: number): Promise<SmsCampaign | undefined>;
+  createSmsCampaign(tenantId: number, userId: number, campaign: InsertSmsCampaign): Promise<SmsCampaign>;
+  updateSmsCampaign(tenantId: number, userId: number, id: number, campaign: Partial<InsertSmsCampaign>): Promise<SmsCampaign>;
+  deleteSmsCampaign(tenantId: number, userId: number, id: number): Promise<void>;
+  getAllSmsCampaigns(tenantId: number, userId: number): Promise<SmsCampaign[]>;
+  getCampaignsByStatus(tenantId: number, userId: number, status: string): Promise<SmsCampaign[]>;
+  updateCampaignStats(tenantId: number, userId: number, id: number, stats: Partial<SmsCampaign>): Promise<SmsCampaign>;
 
   // Advanced Recording Management (tenant-scoped)
   getRecording(tenantId: number, userId: number, id: number): Promise<Recording | undefined>;
@@ -241,47 +243,47 @@ export interface IStorage {
   getVoicemailsByContact(tenantId: number, userId: number, contactId: number): Promise<Voicemail[]>;
   getUnreadVoicemails(tenantId: number, userId: number): Promise<Voicemail[]>;
 
-  // Settings
-  getSetting(key: string): Promise<Setting | undefined>;
-  setSetting(key: string, value: any): Promise<Setting>;
-  getAllSettings(): Promise<Setting[]>;
+  // Settings (tenant-scoped)
+  getSetting(tenantId: number, key: string): Promise<Setting | undefined>;
+  setSetting(tenantId: number, key: string, value: any): Promise<Setting>;
+  getAllSettings(tenantId: number): Promise<Setting[]>;
 
-  // Call Notes
-  getCallNote(userId: number, id: number): Promise<CallNote | undefined>;
-  createCallNote(userId: number, note: InsertCallNote): Promise<CallNote>;
-  updateCallNote(userId: number, id: number, note: Partial<InsertCallNote>): Promise<CallNote>;
-  deleteCallNote(userId: number, id: number): Promise<void>;
-  getAllCallNotes(userId: number): Promise<CallNote[]>;
-  getCallNotesByCall(userId: number, callId: number): Promise<CallNote[]>;
-  getCallNotesByContact(userId: number, contactId: number): Promise<CallNote[]>;
-  getCallNotesByPhone(userId: number, phone: string): Promise<CallNote[]>;
+  // Call Notes (tenant-scoped)
+  getCallNote(tenantId: number, userId: number, id: number): Promise<CallNote | undefined>;
+  createCallNote(tenantId: number, userId: number, note: InsertCallNote): Promise<CallNote>;
+  updateCallNote(tenantId: number, userId: number, id: number, note: Partial<InsertCallNote>): Promise<CallNote>;
+  deleteCallNote(tenantId: number, userId: number, id: number): Promise<void>;
+  getAllCallNotes(tenantId: number, userId: number): Promise<CallNote[]>;
+  getCallNotesByCall(tenantId: number, userId: number, callId: number): Promise<CallNote[]>;
+  getCallNotesByContact(tenantId: number, userId: number, contactId: number): Promise<CallNote[]>;
+  getCallNotesByPhone(tenantId: number, userId: number, phone: string): Promise<CallNote[]>;
 
-  // Lead Sources
-  getLeadSource(userId: number, id: number): Promise<LeadSource | undefined>;
-  getLeadSourceByName(userId: number, name: string): Promise<LeadSource | undefined>;
-  createLeadSource(userId: number, source: InsertLeadSource): Promise<LeadSource>;
-  updateLeadSource(userId: number, id: number, source: Partial<InsertLeadSource>): Promise<LeadSource>;
-  deleteLeadSource(userId: number, id: number): Promise<void>;
-  getAllLeadSources(userId: number): Promise<LeadSource[]>;
-  getActiveLeadSources(userId: number): Promise<LeadSource[]>;
+  // Lead Sources (tenant-scoped)
+  getLeadSource(tenantId: number, userId: number, id: number): Promise<LeadSource | undefined>;
+  getLeadSourceByName(tenantId: number, userId: number, name: string): Promise<LeadSource | undefined>;
+  createLeadSource(tenantId: number, userId: number, source: InsertLeadSource): Promise<LeadSource>;
+  updateLeadSource(tenantId: number, userId: number, id: number, source: Partial<InsertLeadSource>): Promise<LeadSource>;
+  deleteLeadSource(tenantId: number, userId: number, id: number): Promise<void>;
+  getAllLeadSources(tenantId: number, userId: number): Promise<LeadSource[]>;
+  getActiveLeadSources(tenantId: number, userId: number): Promise<LeadSource[]>;
 
-  // Lead Statuses
-  getLeadStatus(userId: number, id: number): Promise<LeadStatus | undefined>;
-  getLeadStatusByName(userId: number, name: string): Promise<LeadStatus | undefined>;
-  createLeadStatus(userId: number, status: InsertLeadStatus): Promise<LeadStatus>;
-  updateLeadStatus(userId: number, id: number, status: Partial<InsertLeadStatus>): Promise<LeadStatus>;
-  deleteLeadStatus(userId: number, id: number): Promise<void>;
-  getAllLeadStatuses(userId: number): Promise<LeadStatus[]>;
-  getActiveLeadStatuses(userId: number): Promise<LeadStatus[]>;
+  // Lead Statuses (tenant-scoped)
+  getLeadStatus(tenantId: number, userId: number, id: number): Promise<LeadStatus | undefined>;
+  getLeadStatusByName(tenantId: number, userId: number, name: string): Promise<LeadStatus | undefined>;
+  createLeadStatus(tenantId: number, userId: number, status: InsertLeadStatus): Promise<LeadStatus>;
+  updateLeadStatus(tenantId: number, userId: number, id: number, status: Partial<InsertLeadStatus>): Promise<LeadStatus>;
+  deleteLeadStatus(tenantId: number, userId: number, id: number): Promise<void>;
+  getAllLeadStatuses(tenantId: number, userId: number): Promise<LeadStatus[]>;
+  getActiveLeadStatuses(tenantId: number, userId: number): Promise<LeadStatus[]>;
 
-  // Lead Campaigns
-  getLeadCampaign(userId: number, id: number): Promise<LeadCampaign | undefined>;
-  createLeadCampaign(userId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign>;
-  updateLeadCampaign(userId: number, id: number, campaign: Partial<InsertLeadCampaign>): Promise<LeadCampaign>;
-  deleteLeadCampaign(userId: number, id: number): Promise<void>;
-  getAllLeadCampaigns(userId: number): Promise<LeadCampaign[]>;
-  getLeadCampaignsByStatus(userId: number, status: string): Promise<LeadCampaign[]>;
-  getLeadCampaignsByType(userId: number, type: string): Promise<LeadCampaign[]>;
+  // Lead Campaigns (tenant-scoped)
+  getLeadCampaign(tenantId: number, userId: number, id: number): Promise<LeadCampaign | undefined>;
+  createLeadCampaign(tenantId: number, userId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign>;
+  updateLeadCampaign(tenantId: number, userId: number, id: number, campaign: Partial<InsertLeadCampaign>): Promise<LeadCampaign>;
+  deleteLeadCampaign(tenantId: number, userId: number, id: number): Promise<void>;
+  getAllLeadCampaigns(tenantId: number, userId: number): Promise<LeadCampaign[]>;
+  getLeadCampaignsByStatus(tenantId: number, userId: number, status: string): Promise<LeadCampaign[]>;
+  getLeadCampaignsByType(tenantId: number, userId: number, type: string): Promise<LeadCampaign[]>;
 
   // Leads (tenant-scoped)
   getLead(tenantId: number, userId: number, id: number): Promise<Lead | undefined>;
@@ -321,81 +323,81 @@ export interface IStorage {
     byAssignee: Record<string, number>;
   }>;
 
-  // Lead Activities
-  getLeadActivity(userId: number, id: number): Promise<LeadActivity | undefined>;
-  createLeadActivity(userId: number, activity: InsertLeadActivity): Promise<LeadActivity>;
-  updateLeadActivity(userId: number, id: number, activity: Partial<InsertLeadActivity>): Promise<LeadActivity>;
-  deleteLeadActivity(userId: number, id: number): Promise<void>;
-  getLeadActivities(userId: number, leadId: number): Promise<LeadActivity[]>;
-  getLeadActivitiesByType(userId: number, leadId: number, type: string): Promise<LeadActivity[]>;
-  getLeadActivitiesByUser(userId: number, performedByUserId: number): Promise<LeadActivity[]>;
-  getRecentLeadActivities(userId: number, limit?: number): Promise<LeadActivity[]>;
+  // Lead Activities (tenant-scoped)
+  getLeadActivity(tenantId: number, userId: number, id: number): Promise<LeadActivity | undefined>;
+  createLeadActivity(tenantId: number, userId: number, activity: InsertLeadActivity): Promise<LeadActivity>;
+  updateLeadActivity(tenantId: number, userId: number, id: number, activity: Partial<InsertLeadActivity>): Promise<LeadActivity>;
+  deleteLeadActivity(tenantId: number, userId: number, id: number): Promise<void>;
+  getLeadActivities(tenantId: number, userId: number, leadId: number): Promise<LeadActivity[]>;
+  getLeadActivitiesByType(tenantId: number, userId: number, leadId: number, type: string): Promise<LeadActivity[]>;
+  getLeadActivitiesByUser(tenantId: number, userId: number, performedByUserId: number): Promise<LeadActivity[]>;
+  getRecentLeadActivities(tenantId: number, userId: number, limit?: number): Promise<LeadActivity[]>;
 
-  // Lead Tasks
-  getLeadTask(userId: number, id: number): Promise<LeadTask | undefined>;
-  createLeadTask(userId: number, task: InsertLeadTask): Promise<LeadTask>;
-  updateLeadTask(userId: number, id: number, task: Partial<InsertLeadTask>): Promise<LeadTask>;
-  deleteLeadTask(userId: number, id: number): Promise<void>;
-  getLeadTasks(userId: number, leadId: number): Promise<LeadTask[]>;
-  getLeadTasksByAssignee(userId: number, assigneeId: number): Promise<LeadTask[]>;
-  getLeadTasksByStatus(userId: number, status: string): Promise<LeadTask[]>;
-  getOverdueTasks(userId: number): Promise<LeadTask[]>;
-  getUpcomingTasks(userId: number, days?: number): Promise<LeadTask[]>;
+  // Lead Tasks (tenant-scoped)
+  getLeadTask(tenantId: number, userId: number, id: number): Promise<LeadTask | undefined>;
+  createLeadTask(tenantId: number, userId: number, task: InsertLeadTask): Promise<LeadTask>;
+  updateLeadTask(tenantId: number, userId: number, id: number, task: Partial<InsertLeadTask>): Promise<LeadTask>;
+  deleteLeadTask(tenantId: number, userId: number, id: number): Promise<void>;
+  getLeadTasks(tenantId: number, userId: number, leadId: number): Promise<LeadTask[]>;
+  getLeadTasksByAssignee(tenantId: number, userId: number, assigneeId: number): Promise<LeadTask[]>;
+  getLeadTasksByStatus(tenantId: number, userId: number, status: string): Promise<LeadTask[]>;
+  getOverdueTasks(tenantId: number, userId: number): Promise<LeadTask[]>;
+  getUpcomingTasks(tenantId: number, userId: number, days?: number): Promise<LeadTask[]>;
 
-  // Lead Scoring
-  getLeadScoring(userId: number, id: number): Promise<LeadScoring | undefined>;
-  getLeadScoringByLead(userId: number, leadId: number): Promise<LeadScoring[]>;
-  createLeadScoring(userId: number, scoring: InsertLeadScoring): Promise<LeadScoring>;
-  updateLeadScoring(userId: number, id: number, scoring: Partial<InsertLeadScoring>): Promise<LeadScoring>;
-  deleteLeadScoring(userId: number, id: number): Promise<void>;
-  getLeadScoringHistory(userId: number, leadId: number): Promise<LeadScoring[]>;
+  // Lead Scoring (tenant-scoped)
+  getLeadScoring(tenantId: number, userId: number, id: number): Promise<LeadScoring | undefined>;
+  getLeadScoringByLead(tenantId: number, userId: number, leadId: number): Promise<LeadScoring[]>;
+  createLeadScoring(tenantId: number, userId: number, scoring: InsertLeadScoring): Promise<LeadScoring>;
+  updateLeadScoring(tenantId: number, userId: number, id: number, scoring: Partial<InsertLeadScoring>): Promise<LeadScoring>;
+  deleteLeadScoring(tenantId: number, userId: number, id: number): Promise<void>;
+  getLeadScoringHistory(tenantId: number, userId: number, leadId: number): Promise<LeadScoring[]>;
 
-  // Lead Nurturing
-  getLeadNurturing(userId: number, id: number): Promise<LeadNurturing | undefined>;
-  getLeadNurturingByLead(userId: number, leadId: number): Promise<LeadNurturing[]>;
-  createLeadNurturing(userId: number, nurturing: InsertLeadNurturing): Promise<LeadNurturing>;
-  updateLeadNurturing(userId: number, id: number, nurturing: Partial<InsertLeadNurturing>): Promise<LeadNurturing>;
-  deleteLeadNurturing(userId: number, id: number): Promise<void>;
-  getActiveNurturingSequences(userId: number): Promise<LeadNurturing[]>;
-  getNurturingSequencesByStatus(userId: number, status: string): Promise<LeadNurturing[]>;
+  // Lead Nurturing (tenant-scoped)
+  getLeadNurturing(tenantId: number, userId: number, id: number): Promise<LeadNurturing | undefined>;
+  getLeadNurturingByLead(tenantId: number, userId: number, leadId: number): Promise<LeadNurturing[]>;
+  createLeadNurturing(tenantId: number, userId: number, nurturing: InsertLeadNurturing): Promise<LeadNurturing>;
+  updateLeadNurturing(tenantId: number, userId: number, id: number, nurturing: Partial<InsertLeadNurturing>): Promise<LeadNurturing>;
+  deleteLeadNurturing(tenantId: number, userId: number, id: number): Promise<void>;
+  getActiveNurturingSequences(tenantId: number, userId: number): Promise<LeadNurturing[]>;
+  getNurturingSequencesByStatus(tenantId: number, userId: number, status: string): Promise<LeadNurturing[]>;
 
-  // Contact Lists
-  getContactList(userId: number, id: number): Promise<ContactList | undefined>;
-  getContactListByName(userId: number, name: string): Promise<ContactList | undefined>;
-  createContactList(userId: number, list: InsertContactList): Promise<ContactList>;
-  updateContactList(userId: number, id: number, list: Partial<InsertContactList>): Promise<ContactList>;
-  deleteContactList(userId: number, id: number): Promise<void>;
-  getAllContactLists(userId: number): Promise<ContactList[]>;
-  getContactListsByCategory(userId: number, category: string): Promise<ContactList[]>;
-  getContactListsByType(userId: number, type: string): Promise<ContactList[]>;
+  // Contact Lists (tenant-scoped)
+  getContactList(tenantId: number, id: number): Promise<ContactList | undefined>;
+  getContactListByName(tenantId: number, name: string): Promise<ContactList | undefined>;
+  createContactList(tenantId: number, list: InsertContactList): Promise<ContactList>;
+  updateContactList(tenantId: number, id: number, list: Partial<InsertContactList>): Promise<ContactList>;
+  deleteContactList(tenantId: number, id: number): Promise<void>;
+  getAllContactLists(tenantId: number): Promise<ContactList[]>;
+  getContactListsByCategory(tenantId: number, category: string): Promise<ContactList[]>;
+  getContactListsByType(tenantId: number, type: string): Promise<ContactList[]>;
 
-  // Contact List Memberships
-  getContactListMembership(userId: number, id: number): Promise<ContactListMembership | undefined>;
-  createContactListMembership(userId: number, membership: InsertContactListMembership): Promise<ContactListMembership>;
-  updateContactListMembership(userId: number, id: number, membership: Partial<InsertContactListMembership>): Promise<ContactListMembership>;
-  deleteContactListMembership(userId: number, id: number): Promise<void>;
-  getContactListMemberships(userId: number, listId: number): Promise<ContactListMembership[]>;
-  getContactMemberships(userId: number, contactId: number): Promise<ContactListMembership[]>;
-  addContactToList(userId: number, contactId: number, listId: number, addedBy?: number): Promise<ContactListMembership>;
-  removeContactFromList(userId: number, contactId: number, listId: number): Promise<void>;
-  getContactsInList(userId: number, listId: number): Promise<Contact[]>;
+  // Contact List Memberships (tenant-scoped)
+  getContactListMembership(tenantId: number, id: number): Promise<ContactListMembership | undefined>;
+  createContactListMembership(tenantId: number, membership: InsertContactListMembership): Promise<ContactListMembership>;
+  updateContactListMembership(tenantId: number, id: number, membership: Partial<InsertContactListMembership>): Promise<ContactListMembership>;
+  deleteContactListMembership(tenantId: number, id: number): Promise<void>;
+  getContactListMemberships(tenantId: number, listId: number): Promise<ContactListMembership[]>;
+  getContactMemberships(tenantId: number, contactId: number): Promise<ContactListMembership[]>;
+  addContactToList(tenantId: number, contactId: number, listId: number, addedBy?: number): Promise<ContactListMembership>;
+  removeContactFromList(tenantId: number, contactId: number, listId: number): Promise<void>;
+  getContactsInList(tenantId: number, listId: number): Promise<Contact[]>;
 
-  // AI Lead Scoring
-  getAiLeadScore(userId: number, contactId: number): Promise<AiLeadScore | undefined>;
-  upsertAiLeadScore(userId: number, score: Omit<InsertAiLeadScore, 'userId'>): Promise<AiLeadScore>;
-  getTopScoredContacts(userId: number, limit: number): Promise<Array<Contact & { aiScore: AiLeadScore }>>;
+  // AI Lead Scoring (tenant-scoped)
+  getAiLeadScore(tenantId: number, contactId: number): Promise<AiLeadScore | undefined>;
+  upsertAiLeadScore(tenantId: number, score: Omit<InsertAiLeadScore, 'tenantId'>): Promise<AiLeadScore>;
+  getTopScoredContacts(tenantId: number, limit: number): Promise<Array<Contact & { aiScore: AiLeadScore }>>;
 
-  // Call Intelligence
-  getCallIntelligence(userId: number, callId: number): Promise<CallIntelligence | undefined>;
-  createCallIntelligence(userId: number, intelligence: Omit<InsertCallIntelligence, 'userId'>): Promise<CallIntelligence>;
-  updateCallIntelligence(userId: number, id: number, intelligence: Partial<InsertCallIntelligence>): Promise<CallIntelligence>;
+  // Call Intelligence (tenant-scoped)
+  getCallIntelligence(tenantId: number, callId: number): Promise<CallIntelligence | undefined>;
+  createCallIntelligence(tenantId: number, intelligence: Omit<InsertCallIntelligence, 'tenantId'>): Promise<CallIntelligence>;
+  updateCallIntelligence(tenantId: number, id: number, intelligence: Partial<InsertCallIntelligence>): Promise<CallIntelligence>;
 
-  // AI Insights
-  getAiInsight(userId: number, id: number): Promise<AiInsight | undefined>;
-  getAiInsights(userId: number, filters: { status?: string; type?: string }): Promise<AiInsight[]>;
-  createAiInsight(userId: number, insight: Omit<InsertAiInsight, 'userId'>): Promise<AiInsight>;
-  updateAiInsight(userId: number, id: number, insight: Partial<InsertAiInsight>): Promise<AiInsight>;
-  deleteAiInsight(userId: number, id: number): Promise<void>;
+  // AI Insights (tenant-scoped)
+  getAiInsight(tenantId: number, id: number): Promise<AiInsight | undefined>;
+  getAiInsights(tenantId: number, filters: { status?: string; type?: string }): Promise<AiInsight[]>;
+  createAiInsight(tenantId: number, insight: Omit<InsertAiInsight, 'tenantId'>): Promise<AiInsight>;
+  updateAiInsight(tenantId: number, id: number, insight: Partial<InsertAiInsight>): Promise<AiInsight>;
+  deleteAiInsight(tenantId: number, id: number): Promise<void>;
 
   // Tenants
   getTenant(id: number): Promise<Tenant | undefined>;
@@ -407,7 +409,7 @@ export interface IStorage {
   
   // Tenant Memberships
   getTenantMembership(tenantId: number, userId: number): Promise<TenantMembership | undefined>;
-  getUserTenantMemberships(userId: number): Promise<TenantMembership[]>;
+  getTenantMembershipsByUserId(userId: number): Promise<TenantMembership[]>;
   getTenantMembers(tenantId: number): Promise<TenantMembership[]>;
   createTenantMembership(membership: InsertTenantMembership): Promise<TenantMembership>;
   updateTenantMembership(id: number, membership: Partial<InsertTenantMembership>): Promise<TenantMembership>;
@@ -498,18 +500,18 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(users.createdAt));
   }
 
-  async bulkUpdateUsers(userIds: number[], updates: Partial<InsertUser>): Promise<User[]> {
+  async bulkUpdateUsers(tenantId: number, userIds: number[], updates: Partial<InsertUser>): Promise<User[]> {
     // Update users in batch
     await db
       .update(users)
       .set(updates)
-      .where(eq(users.id, userIds[0])); // Simplified for now
+      .where(and(inArray(users.id, userIds), eq(users.tenantId, tenantId)));
     
     // Return updated users
     return await db
       .select()
       .from(users)
-      .where(eq(users.id, userIds[0]));
+      .where(and(inArray(users.id, userIds), eq(users.tenantId, tenantId)));
   }
 
   async authenticateUser(email: string, password: string): Promise<User | undefined> {
@@ -1040,20 +1042,7 @@ export class DatabaseStorage implements IStorage {
     const total = Number(totalResult?.count || 0);
 
     const results = await db
-      .select({
-        id: calls.id,
-        tenantId: calls.tenantId,
-        userId: calls.userId,
-        contactId: calls.contactId,
-        phone: calls.phone,
-        type: calls.type,
-        status: calls.status,
-        duration: calls.duration,
-        createdAt: calls.createdAt,
-        cost: calls.cost,
-        disposition: calls.disposition,
-        isParallelDialer: calls.isParallelDialer,
-      })
+      .select()
       .from(calls)
       .where(and(eq(calls.tenantId, tenantId), eq(calls.userId, userId)))
       .orderBy(desc(calls.createdAt))
@@ -1074,21 +1063,11 @@ export class DatabaseStorage implements IStorage {
   async getRecentCalls(tenantId: number, userId: number, limit: number = 10): Promise<Call[]> {
     warnIfTenantScopedParamsInvalid('getRecentCalls', { tenantId, userId });
     return await db
-      .select({
-        id: calls.id,
-        tenantId: calls.tenantId,
-        userId: calls.userId,
-        contactId: calls.contactId,
-        phone: calls.phone,
-        type: calls.type,
-        status: calls.status,
-        duration: calls.duration,
-        createdAt: calls.createdAt,
-      })
+      .select()
       .from(calls)
       .where(eq(calls.tenantId, tenantId))
       .orderBy(desc(calls.createdAt))
-      .limit(limit) as Call[];
+      .limit(limit);
   }
 
   async getCallsByStatus(tenantId: number, userId: number, statuses: string[]): Promise<Call[]> {
@@ -1112,11 +1091,12 @@ export class DatabaseStorage implements IStorage {
     return this.getCallsByStatus(tenantId, userId, activeStatuses);
   }
 
-  async getCallByTwilioSid(callSid: string): Promise<Call | undefined> {
+  async getCallByTwilioSid(tenantId: number, callSid: string): Promise<Call | undefined> {
+    warnIfTenantScopedParamsInvalid('getCallByTwilioSid', { tenantId });
     const results = await db
       .select()
       .from(calls)
-      .where(eq(calls.sipCallId, callSid))
+      .where(and(eq(calls.sipCallId, callSid), eq(calls.tenantId, tenantId)))
       .limit(1);
     
     if (results.length > 0) {
@@ -1126,17 +1106,21 @@ export class DatabaseStorage implements IStorage {
     const metadataResults = await db
       .select()
       .from(calls)
-      .where(sql`${calls.metadata}->>'twilioCallSid' = ${callSid}`)
+      .where(and(
+        sql`${calls.metadata}->>'twilioCallSid' = ${callSid}`,
+        eq(calls.tenantId, tenantId)
+      ))
       .limit(1);
     
     return metadataResults.length > 0 ? metadataResults[0] : undefined;
   }
 
-  async getCallBySipCallId(sipCallId: string): Promise<Call | null> {
+  async getCallBySipCallId(tenantId: number, sipCallId: string): Promise<Call | null> {
+    warnIfTenantScopedParamsInvalid('getCallBySipCallId', { tenantId });
     const results = await db
       .select()
       .from(calls)
-      .where(eq(calls.sipCallId, sipCallId))
+      .where(and(eq(calls.sipCallId, sipCallId), eq(calls.tenantId, tenantId)))
       .limit(1);
     return results.length > 0 ? results[0] : null;
   }
@@ -1181,7 +1165,7 @@ export class DatabaseStorage implements IStorage {
     const callsWithQuality = allCalls.filter(call => call.callQuality !== null);
     const averageCallQuality = callsWithQuality.length > 0 ? 
       callsWithQuality.reduce((sum, call) => sum + (call.callQuality || 0), 0) / callsWithQuality.length : 0;
-
+ 
     return {
       totalCalls,
       completedCalls,
@@ -1203,9 +1187,13 @@ export class DatabaseStorage implements IStorage {
     return message || undefined;
   }
 
-  async getMessageByTwilioSid(twilioMessageSid: string): Promise<Message | undefined> {
+  async getMessageByTwilioSid(tenantId: number, twilioMessageSid: string): Promise<Message | undefined> {
+    warnIfTenantScopedParamsInvalid('getMessageByTwilioSid', { tenantId });
     const [message] = await db.select().from(messages).where(
-      sql`${messages.metadata}->>'twilioMessageSid' = ${twilioMessageSid}`
+      and(
+        sql`${messages.metadata}->>'twilioMessageSid' = ${twilioMessageSid}`,
+        eq(messages.tenantId, tenantId)
+      )
     );
     return message || undefined;
   }
@@ -1295,7 +1283,7 @@ export class DatabaseStorage implements IStorage {
     const [thread] = await db
       .select()
       .from(conversationThreads)
-      .where(and(eq(conversationThreads.contactId, contactId), eq(conversationThreads.userId, userId)));
+      .where(and(eq(conversationThreads.contactId, contactId), eq(conversationThreads.tenantId, tenantId)));
     return thread || undefined;
   }
 
@@ -1316,7 +1304,7 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(conversationThreads)
       .set(thread)
-      .where(and(eq(conversationThreads.threadId, threadId), eq(conversationThreads.userId, userId)))
+      .where(and(eq(conversationThreads.threadId, threadId), eq(conversationThreads.tenantId, tenantId)))
       .returning();
     return updated;
   }
@@ -1362,21 +1350,22 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // SMS Templates
-  async getSmsTemplate(userId: number, id: number): Promise<SmsTemplate | undefined> {
+  // SMS Templates (tenant-scoped)
+  async getSmsTemplate(tenantId: number, userId: number, id: number): Promise<SmsTemplate | undefined> {
+    warnIfTenantScopedParamsInvalid('getSmsTemplate', { tenantId, userId, id });
     const [template] = await db
       .select()
       .from(smsTemplates)
-      .where(and(eq(smsTemplates.id, id), eq(smsTemplates.userId, userId)));
+      .where(and(eq(smsTemplates.id, id), eq(smsTemplates.tenantId, tenantId)));
     return template || undefined;
   }
 
-  async createSmsTemplate(userId: number, template: InsertSmsTemplate): Promise<SmsTemplate> {
-    const membership = await this.ensureDefaultTenant(userId);
+  async createSmsTemplate(tenantId: number, userId: number, template: InsertSmsTemplate): Promise<SmsTemplate> {
+    warnIfTenantScopedParamsInvalid('createSmsTemplate', { tenantId, userId });
     const templateData = {
       ...template,
       userId: userId,
-      tenantId: membership.tenantId
+      tenantId: tenantId
     };
     const [created] = await db
       .insert(smsTemplates)
@@ -1385,64 +1374,70 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateSmsTemplate(userId: number, id: number, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate> {
+  async updateSmsTemplate(tenantId: number, userId: number, id: number, template: Partial<InsertSmsTemplate>): Promise<SmsTemplate> {
+    warnIfTenantScopedParamsInvalid('updateSmsTemplate', { tenantId, userId, id });
     const [updated] = await db
       .update(smsTemplates)
       .set(template)
-      .where(and(eq(smsTemplates.id, id), eq(smsTemplates.userId, userId)))
+      .where(and(eq(smsTemplates.id, id), eq(smsTemplates.tenantId, tenantId)))
       .returning();
     return updated;
   }
 
-  async deleteSmsTemplate(userId: number, id: number): Promise<void> {
-    await db.delete(smsTemplates).where(and(eq(smsTemplates.id, id), eq(smsTemplates.userId, userId)));
+  async deleteSmsTemplate(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteSmsTemplate', { tenantId, userId, id });
+    await db.delete(smsTemplates).where(and(eq(smsTemplates.id, id), eq(smsTemplates.tenantId, tenantId)));
   }
 
-  async getAllSmsTemplates(userId: number): Promise<SmsTemplate[]> {
+  async getAllSmsTemplates(tenantId: number, userId: number): Promise<SmsTemplate[]> {
+    warnIfTenantScopedParamsInvalid('getAllSmsTemplates', { tenantId, userId });
     return await db
       .select()
       .from(smsTemplates)
       .where(and(
         eq(smsTemplates.isActive, true),
-        eq(smsTemplates.userId, userId)
+        eq(smsTemplates.tenantId, tenantId)
       ))
       .orderBy(asc(smsTemplates.name));
   }
 
-  async getSmsTemplatesByCategory(userId: number, category: string): Promise<SmsTemplate[]> {
+  async getSmsTemplatesByCategory(tenantId: number, userId: number, category: string): Promise<SmsTemplate[]> {
+    warnIfTenantScopedParamsInvalid('getSmsTemplatesByCategory', { tenantId, userId });
     return await db
       .select()
       .from(smsTemplates)
       .where(and(
         eq(smsTemplates.category, category),
         eq(smsTemplates.isActive, true),
-        eq(smsTemplates.userId, userId)
+        eq(smsTemplates.tenantId, tenantId)
       ))
       .orderBy(asc(smsTemplates.name));
   }
 
-  async incrementTemplateUsage(userId: number, id: number): Promise<void> {
+  async incrementTemplateUsage(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('incrementTemplateUsage', { tenantId, userId, id });
     await db
       .update(smsTemplates)
       .set({ usageCount: sql`${smsTemplates.usageCount} + 1` })
-      .where(and(eq(smsTemplates.id, id), eq(smsTemplates.userId, userId)));
+      .where(and(eq(smsTemplates.id, id), eq(smsTemplates.tenantId, tenantId)));
   }
 
-  // SMS Campaigns
-  async getSmsCampaign(userId: number, id: number): Promise<SmsCampaign | undefined> {
+  // SMS Campaigns (tenant-scoped)
+  async getSmsCampaign(tenantId: number, userId: number, id: number): Promise<SmsCampaign | undefined> {
+    warnIfTenantScopedParamsInvalid('getSmsCampaign', { tenantId, userId, id });
     const [campaign] = await db
       .select()
       .from(smsCampaigns)
-      .where(and(eq(smsCampaigns.id, id), eq(smsCampaigns.userId, userId)));
+      .where(and(eq(smsCampaigns.id, id), eq(smsCampaigns.tenantId, tenantId)));
     return campaign || undefined;
   }
 
-  async createSmsCampaign(userId: number, campaign: InsertSmsCampaign): Promise<SmsCampaign> {
-    const membership = await this.ensureDefaultTenant(userId);
+  async createSmsCampaign(tenantId: number, userId: number, campaign: InsertSmsCampaign): Promise<SmsCampaign> {
+    warnIfTenantScopedParamsInvalid('createSmsCampaign', { tenantId, userId });
     const campaignData = {
       ...campaign,
       userId: userId,
-      tenantId: membership.tenantId
+      tenantId: tenantId
     };
     const [created] = await db
       .insert(smsCampaigns)
@@ -1451,40 +1446,45 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateSmsCampaign(userId: number, id: number, campaign: Partial<InsertSmsCampaign>): Promise<SmsCampaign> {
+  async updateSmsCampaign(tenantId: number, userId: number, id: number, campaign: Partial<InsertSmsCampaign>): Promise<SmsCampaign> {
+    warnIfTenantScopedParamsInvalid('updateSmsCampaign', { tenantId, userId, id });
     const [updated] = await db
       .update(smsCampaigns)
       .set(campaign)
-      .where(and(eq(smsCampaigns.id, id), eq(smsCampaigns.userId, userId)))
+      .where(and(eq(smsCampaigns.id, id), eq(smsCampaigns.tenantId, tenantId)))
       .returning();
     return updated;
   }
 
-  async deleteSmsCampaign(userId: number, id: number): Promise<void> {
-    await db.delete(smsCampaigns).where(and(eq(smsCampaigns.id, id), eq(smsCampaigns.userId, userId)));
+  async deleteSmsCampaign(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteSmsCampaign', { tenantId, userId, id });
+    await db.delete(smsCampaigns).where(and(eq(smsCampaigns.id, id), eq(smsCampaigns.tenantId, tenantId)));
   }
 
-  async getAllSmsCampaigns(userId: number): Promise<SmsCampaign[]> {
+  async getAllSmsCampaigns(tenantId: number, userId: number): Promise<SmsCampaign[]> {
+    warnIfTenantScopedParamsInvalid('getAllSmsCampaigns', { tenantId, userId });
     return await db
       .select()
       .from(smsCampaigns)
-      .where(eq(smsCampaigns.userId, userId))
+      .where(eq(smsCampaigns.tenantId, tenantId))
       .orderBy(desc(smsCampaigns.createdAt));
   }
 
-  async getCampaignsByStatus(userId: number, status: string): Promise<SmsCampaign[]> {
+  async getCampaignsByStatus(tenantId: number, userId: number, status: string): Promise<SmsCampaign[]> {
+    warnIfTenantScopedParamsInvalid('getCampaignsByStatus', { tenantId, userId });
     return await db
       .select()
       .from(smsCampaigns)
-      .where(and(eq(smsCampaigns.status, status), eq(smsCampaigns.userId, userId)))
+      .where(and(eq(smsCampaigns.status, status), eq(smsCampaigns.tenantId, tenantId)))
       .orderBy(desc(smsCampaigns.createdAt));
   }
 
-  async updateCampaignStats(userId: number, id: number, stats: Partial<SmsCampaign>): Promise<SmsCampaign> {
+  async updateCampaignStats(tenantId: number, userId: number, id: number, stats: Partial<SmsCampaign>): Promise<SmsCampaign> {
+    warnIfTenantScopedParamsInvalid('updateCampaignStats', { tenantId, userId, id });
     const [updated] = await db
       .update(smsCampaigns)
       .set(stats)
-      .where(and(eq(smsCampaigns.id, id), eq(smsCampaigns.userId, userId)))
+      .where(and(eq(smsCampaigns.id, id), eq(smsCampaigns.tenantId, tenantId)))
       .returning();
     return updated;
   }
@@ -1790,6 +1790,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getVoicemailsByContact(tenantId: number, userId: number, contactId: number): Promise<Voicemail[]> {
+    warnIfTenantScopedParamsInvalid('getVoicemailsByContact', { tenantId, userId, contactId });
     return await db
       .select()
       .from(voicemails)
@@ -1798,6 +1799,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUnreadVoicemails(tenantId: number, userId: number): Promise<Voicemail[]> {
+    warnIfTenantScopedParamsInvalid('getUnreadVoicemails', { tenantId, userId });
     return await db
       .select()
       .from(voicemails)
@@ -1805,43 +1807,54 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(voicemails.createdAt));
   }
 
-  // Settings
-  async getSetting(key: string, tenantId?: number): Promise<Setting | undefined> {
-    const targetTenantId = tenantId || null;
+  // Settings (tenant-scoped)
+  async getSetting(tenantId: number, key: string): Promise<Setting | undefined> {
+    warnIfTenantScopedParamsInvalid('getSetting', { tenantId });
     const [setting] = await db.select().from(settings).where(
       and(
         eq(settings.key, key),
-        targetTenantId ? eq(settings.tenantId, targetTenantId) : isNull(settings.tenantId)
+        eq(settings.tenantId, tenantId)
       )
     );
     return setting || undefined;
   }
 
-  async setSetting(key: string, value: any, tenantId?: number): Promise<Setting> {
-    const targetTenantId = tenantId || null;
+  async setSetting(tenantId: number, key: string, value: any): Promise<Setting> {
+    warnIfTenantScopedParamsInvalid('setSetting', { tenantId });
     const [setting] = await db
       .insert(settings)
-      .values({ key, value, tenantId: targetTenantId as any })
+      .values({ key, value, tenantId })
       .onConflictDoUpdate({
-        target: settings.key,
+        target: [settings.tenantId, settings.key],
         set: { value, updatedAt: new Date() }
       })
       .returning();
     return setting;
   }
 
-  async getAllSettings(): Promise<Setting[]> {
-    return await db.select().from(settings).orderBy(asc(settings.key));
+  async getAllSettings(tenantId: number): Promise<Setting[]> {
+    warnIfTenantScopedParamsInvalid('getAllSettings', { tenantId });
+    return await db
+      .select()
+      .from(settings)
+      .where(eq(settings.tenantId, tenantId))
+      .orderBy(asc(settings.key));
   }
 
-  // Call Notes
-  async getCallNote(userId: number, id: number): Promise<CallNote | undefined> {
-    const [note] = await db.select().from(callNotes).where(and(eq(callNotes.id, id), eq(callNotes.userId, userId)));
+  // Call Notes (tenant-scoped)
+  async getCallNote(tenantId: number, userId: number, id: number): Promise<CallNote | undefined> {
+    warnIfTenantScopedParamsInvalid('getCallNote', { tenantId, userId, id });
+    const [note] = await db.select().from(callNotes).where(
+      and(
+        eq(callNotes.id, id),
+        eq(callNotes.tenantId, tenantId)
+      )
+    );
     return note || undefined;
   }
 
-  async createCallNote(userId: number, insertNote: InsertCallNote): Promise<CallNote> {
-    const membership = await this.ensureDefaultTenant(userId);
+  async createCallNote(tenantId: number, userId: number, insertNote: InsertCallNote): Promise<CallNote> {
+    warnIfTenantScopedParamsInvalid('createCallNote', { tenantId, userId });
     // Normalize phone number
     const normalized = normalizePhoneNumber(insertNote.phone);
     const normalizedPhone = normalized.isValid ? normalized.normalized : insertNote.phone;
@@ -1849,7 +1862,7 @@ export class DatabaseStorage implements IStorage {
     // Smart contact linking - try to find the contact using smart phone matching
     let contactIdToUse = insertNote.contactId;
     if (!contactIdToUse) {
-      const existingContact = await this.findContactByAnyPhoneFormat(membership.tenantId, userId, insertNote.phone);
+      const existingContact = await this.findContactByAnyPhoneFormat(tenantId, userId, insertNote.phone);
       if (existingContact) {
         contactIdToUse = existingContact.id;
       }
@@ -1858,7 +1871,7 @@ export class DatabaseStorage implements IStorage {
     const noteData = {
       ...insertNote,
       userId: userId,
-      tenantId: membership.tenantId,
+      tenantId: tenantId,
       phone: normalizedPhone,
       contactId: contactIdToUse
     };
@@ -1870,45 +1883,295 @@ export class DatabaseStorage implements IStorage {
     return note;
   }
 
-  async updateCallNote(userId: number, id: number, updateData: Partial<InsertCallNote>): Promise<CallNote> {
+  async updateCallNote(tenantId: number, userId: number, id: number, updateData: Partial<InsertCallNote>): Promise<CallNote> {
+    warnIfTenantScopedParamsInvalid('updateCallNote', { tenantId, userId, id });
     const [note] = await db
       .update(callNotes)
       .set({ ...updateData, updatedAt: new Date() })
-      .where(and(eq(callNotes.id, id), eq(callNotes.userId, userId)))
+      .where(and(eq(callNotes.id, id), eq(callNotes.tenantId, tenantId)))
       .returning();
     return note;
   }
 
-  async deleteCallNote(userId: number, id: number): Promise<void> {
-    await db.delete(callNotes).where(and(eq(callNotes.id, id), eq(callNotes.userId, userId)));
+  async deleteCallNote(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteCallNote', { tenantId, userId, id });
+    await db.delete(callNotes).where(and(eq(callNotes.id, id), eq(callNotes.tenantId, tenantId)));
   }
 
-  async getAllCallNotes(userId: number): Promise<CallNote[]> {
-    return await db.select().from(callNotes).where(eq(callNotes.userId, userId)).orderBy(desc(callNotes.createdAt));
+  async getAllCallNotes(tenantId: number, userId: number): Promise<CallNote[]> {
+    warnIfTenantScopedParamsInvalid('getAllCallNotes', { tenantId, userId });
+    return await db.select().from(callNotes).where(eq(callNotes.tenantId, tenantId)).orderBy(desc(callNotes.createdAt));
   }
 
-  async getCallNotesByCall(userId: number, callId: number): Promise<CallNote[]> {
+  async getCallNotesByCall(tenantId: number, userId: number, callId: number): Promise<CallNote[]> {
+    warnIfTenantScopedParamsInvalid('getCallNotesByCall', { tenantId, userId, callId });
     return await db
       .select()
       .from(callNotes)
-      .where(and(eq(callNotes.callId, callId), eq(callNotes.userId, userId)))
+      .where(and(eq(callNotes.callId, callId), eq(callNotes.tenantId, tenantId)))
       .orderBy(desc(callNotes.createdAt));
   }
 
-  async getCallNotesByContact(userId: number, contactId: number): Promise<CallNote[]> {
+  async getCallNotesByContact(tenantId: number, userId: number, contactId: number): Promise<CallNote[]> {
+    warnIfTenantScopedParamsInvalid('getCallNotesByContact', { tenantId, userId, contactId });
     return await db
       .select()
       .from(callNotes)
-      .where(and(eq(callNotes.contactId, contactId), eq(callNotes.userId, userId)))
+      .where(and(eq(callNotes.contactId, contactId), eq(callNotes.tenantId, tenantId)))
       .orderBy(desc(callNotes.createdAt));
   }
 
-  async getCallNotesByPhone(userId: number, phone: string): Promise<CallNote[]> {
+  async getCallNotesByPhone(tenantId: number, userId: number, phone: string): Promise<CallNote[]> {
+    warnIfTenantScopedParamsInvalid('getCallNotesByPhone', { tenantId, userId });
     return await db
       .select()
       .from(callNotes)
-      .where(and(eq(callNotes.phone, phone), eq(callNotes.userId, userId)))
+      .where(and(eq(callNotes.phone, phone), eq(callNotes.tenantId, tenantId)))
       .orderBy(desc(callNotes.createdAt));
+  }
+
+  // Lead Sources (tenant-scoped)
+  async getLeadSource(tenantId: number, userId: number, id: number): Promise<LeadSource | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadSource', { tenantId, userId, id });
+    const [source] = await db.select().from(leadSources).where(and(eq(leadSources.id, id), eq(leadSources.tenantId, tenantId)));
+    return source || undefined;
+  }
+
+  async getLeadSourceByName(tenantId: number, userId: number, name: string): Promise<LeadSource | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadSourceByName', { tenantId, userId });
+    const [source] = await db.select().from(leadSources).where(and(eq(leadSources.name, name), eq(leadSources.tenantId, tenantId)));
+    return source || undefined;
+  }
+
+  async createLeadSource(tenantId: number, userId: number, source: InsertLeadSource): Promise<LeadSource> {
+    warnIfTenantScopedParamsInvalid('createLeadSource', { tenantId, userId });
+    const sourceData = { ...source, userId, tenantId };
+    const [created] = await db.insert(leadSources).values(sourceData).returning();
+    return created;
+  }
+
+  async updateLeadSource(tenantId: number, userId: number, id: number, source: Partial<InsertLeadSource>): Promise<LeadSource> {
+    warnIfTenantScopedParamsInvalid('updateLeadSource', { tenantId, userId, id });
+    const [updated] = await db.update(leadSources).set(source).where(and(eq(leadSources.id, id), eq(leadSources.tenantId, tenantId))).returning();
+    return updated;
+  }
+
+  async deleteLeadSource(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteLeadSource', { tenantId, userId, id });
+    await db.delete(leadSources).where(and(eq(leadSources.id, id), eq(leadSources.tenantId, tenantId)));
+  }
+
+  async getAllLeadSources(tenantId: number, userId: number): Promise<LeadSource[]> {
+    warnIfTenantScopedParamsInvalid('getAllLeadSources', { tenantId, userId });
+    return await db.select().from(leadSources).where(eq(leadSources.tenantId, tenantId)).orderBy(asc(leadSources.name));
+  }
+
+  async getActiveLeadSources(tenantId: number, userId: number): Promise<LeadSource[]> {
+    warnIfTenantScopedParamsInvalid('getActiveLeadSources', { tenantId, userId });
+    return await db.select().from(leadSources).where(and(eq(leadSources.isActive, true), eq(leadSources.tenantId, tenantId))).orderBy(asc(leadSources.name));
+  }
+
+  // Lead Statuses (tenant-scoped)
+  async getLeadStatus(tenantId: number, userId: number, id: number): Promise<LeadStatus | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadStatus', { tenantId, userId, id });
+    const [status] = await db.select().from(leadStatuses).where(and(eq(leadStatuses.id, id), eq(leadStatuses.tenantId, tenantId)));
+    return status || undefined;
+  }
+
+  async getLeadStatusByName(tenantId: number, userId: number, name: string): Promise<LeadStatus | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadStatusByName', { tenantId, userId });
+    const [status] = await db.select().from(leadStatuses).where(and(eq(leadStatuses.name, name), eq(leadStatuses.tenantId, tenantId)));
+    return status || undefined;
+  }
+
+  async createLeadStatus(tenantId: number, userId: number, status: InsertLeadStatus): Promise<LeadStatus> {
+    warnIfTenantScopedParamsInvalid('createLeadStatus', { tenantId, userId });
+    const statusData = { ...status, userId, tenantId };
+    const [created] = await db.insert(leadStatuses).values(statusData).returning();
+    return created;
+  }
+
+  async updateLeadStatus(tenantId: number, userId: number, id: number, status: Partial<InsertLeadStatus>): Promise<LeadStatus> {
+    warnIfTenantScopedParamsInvalid('updateLeadStatus', { tenantId, userId, id });
+    const [updated] = await db.update(leadStatuses).set(status).where(and(eq(leadStatuses.id, id), eq(leadStatuses.tenantId, tenantId))).returning();
+    return updated;
+  }
+
+  async deleteLeadStatus(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteLeadStatus', { tenantId, userId, id });
+    await db.delete(leadStatuses).where(and(eq(leadStatuses.id, id), eq(leadStatuses.tenantId, tenantId)));
+  }
+
+  async getAllLeadStatuses(tenantId: number, userId: number): Promise<LeadStatus[]> {
+    warnIfTenantScopedParamsInvalid('getAllLeadStatuses', { tenantId, userId });
+    return await db.select().from(leadStatuses).where(eq(leadStatuses.tenantId, tenantId)).orderBy(asc(leadStatuses.sortOrder));
+  }
+
+  async getActiveLeadStatuses(tenantId: number, userId: number): Promise<LeadStatus[]> {
+    warnIfTenantScopedParamsInvalid('getActiveLeadStatuses', { tenantId, userId });
+    return await db.select().from(leadStatuses).where(and(eq(leadStatuses.isActive, true), eq(leadStatuses.tenantId, tenantId))).orderBy(asc(leadStatuses.sortOrder));
+  }
+
+  // Lead Campaigns (tenant-scoped)
+  async getLeadCampaign(tenantId: number, userId: number, id: number): Promise<LeadCampaign | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadCampaign', { tenantId, userId, id });
+    const [campaign] = await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.tenantId, tenantId)));
+    return campaign || undefined;
+  }
+
+  async createLeadCampaign(tenantId: number, userId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign> {
+    warnIfTenantScopedParamsInvalid('createLeadCampaign', { tenantId, userId });
+    const campaignData = { ...campaign, userId, tenantId };
+    const [created] = await db.insert(leadCampaigns).values(campaignData).returning();
+    return created;
+  }
+
+  async updateLeadCampaign(tenantId: number, userId: number, id: number, campaign: Partial<InsertLeadCampaign>): Promise<LeadCampaign> {
+    warnIfTenantScopedParamsInvalid('updateLeadCampaign', { tenantId, userId, id });
+    const [updated] = await db.update(leadCampaigns).set(campaign).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.tenantId, tenantId))).returning();
+    return updated;
+  }
+
+  async deleteLeadCampaign(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteLeadCampaign', { tenantId, userId, id });
+    await db.delete(leadCampaigns).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.tenantId, tenantId)));
+  }
+
+  async getAllLeadCampaigns(tenantId: number, userId: number): Promise<LeadCampaign[]> {
+    warnIfTenantScopedParamsInvalid('getAllLeadCampaigns', { tenantId, userId });
+    return await db.select().from(leadCampaigns).where(eq(leadCampaigns.tenantId, tenantId)).orderBy(desc(leadCampaigns.createdAt));
+  }
+
+  async getLeadCampaignsByStatus(tenantId: number, userId: number, status: string): Promise<LeadCampaign[]> {
+    warnIfTenantScopedParamsInvalid('getLeadCampaignsByStatus', { tenantId, userId });
+    return await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.status, status), eq(leadCampaigns.tenantId, tenantId))).orderBy(desc(leadCampaigns.createdAt));
+  }
+
+  async getLeadCampaignsByType(tenantId: number, userId: number, type: string): Promise<LeadCampaign[]> {
+    warnIfTenantScopedParamsInvalid('getLeadCampaignsByType', { tenantId, userId });
+    return await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.type, type), eq(leadCampaigns.tenantId, tenantId))).orderBy(desc(leadCampaigns.createdAt));
+  }
+
+  // Leads (tenant-scoped)
+  async getLead(tenantId: number, userId: number, id: number): Promise<Lead | undefined> {
+    warnIfTenantScopedParamsInvalid('getLead', { tenantId, userId, id });
+    const [lead] = await db.select().from(leads).where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)));
+    return lead || undefined;
+  }
+
+  async getLeadByEmail(tenantId: number, userId: number, email: string): Promise<Lead | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadByEmail', { tenantId, userId });
+    const [lead] = await db.select().from(leads).where(and(eq(leads.email, email), eq(leads.tenantId, tenantId)));
+    return lead || undefined;
+  }
+
+  async getLeadByPhone(tenantId: number, userId: number, phone: string): Promise<Lead | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadByPhone', { tenantId, userId });
+    const [lead] = await db.select().from(leads).where(and(eq(leads.phone, phone), eq(leads.tenantId, tenantId)));
+    return lead || undefined;
+  }
+
+  async createLead(tenantId: number, userId: number, lead: InsertLead): Promise<Lead> {
+    warnIfTenantScopedParamsInvalid('createLead', { tenantId, userId });
+    const leadData = {
+      ...lead,
+      userId: userId,
+      tenantId: tenantId,
+    };
+    const [created] = await db.insert(leads).values(leadData).returning();
+    return created;
+  }
+
+  async updateLead(tenantId: number, userId: number, id: number, lead: Partial<InsertLead>): Promise<Lead> {
+    warnIfTenantScopedParamsInvalid('updateLead', { tenantId, userId, id });
+    const [updated] = await db.update(leads)
+      .set({ ...lead, updatedAt: new Date() })
+      .where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)))
+      .returning();
+    if (!updated) throw new Error("Lead not found");
+    return updated;
+  }
+
+  async deleteLead(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteLead', { tenantId, userId, id });
+    await db.delete(leads).where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)));
+  }
+
+  async getAllLeads(tenantId: number, userId: number): Promise<Lead[]> {
+    warnIfTenantScopedParamsInvalid('getAllLeads', { tenantId, userId });
+    return await db
+      .select()
+      .from(leads)
+      .where(eq(leads.tenantId, tenantId))
+      .orderBy(desc(leads.createdAt));
+  }
+
+  async getLeadsByStatus(tenantId: number, userId: number, statusId: number): Promise<Lead[]> {
+    warnIfTenantScopedParamsInvalid('getLeadsByStatus', { tenantId, userId, statusId });
+    return await db.select().from(leads).where(and(eq(leads.leadStatusId, statusId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
+  }
+
+  async getLeadsBySource(tenantId: number, userId: number, sourceId: number): Promise<Lead[]> {
+    warnIfTenantScopedParamsInvalid('getLeadsBySource', { tenantId, userId, sourceId });
+    return await db.select().from(leads).where(and(eq(leads.leadSourceId, sourceId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
+  }
+
+  async getLeadsByAssignee(tenantId: number, userId: number, assigneeId: number): Promise<Lead[]> {
+    warnIfTenantScopedParamsInvalid('getLeadsByAssignee', { tenantId, userId, assigneeId });
+    return await db.select().from(leads).where(and(eq(leads.assignedTo, assigneeId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
+  }
+
+  async getLeadsByPriority(tenantId: number, userId: number, priority: string): Promise<Lead[]> {
+    warnIfTenantScopedParamsInvalid('getLeadsByPriority', { tenantId, userId });
+    return await db.select().from(leads).where(and(eq(leads.priority, priority), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
+  }
+
+  async getLeadsByTemperature(tenantId: number, userId: number, temperature: string): Promise<Lead[]> {
+    warnIfTenantScopedParamsInvalid('getLeadsByTemperature', { tenantId, userId });
+    return await db.select().from(leads).where(and(eq(leads.temperature, temperature), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
+  }
+
+  async searchLeads(tenantId: number, userId: number, query: string): Promise<Lead[]> {
+    warnIfTenantScopedParamsInvalid('searchLeads', { tenantId, userId });
+    return await db.select().from(leads).where(
+      and(
+        eq(leads.tenantId, tenantId),
+        or(
+          ilike(leads.firstName, `%${query}%`),
+          ilike(leads.lastName, `%${query}%`),
+          ilike(leads.email, `%${query}%`),
+          ilike(leads.phone, `%${query}%`),
+          ilike(leads.company, `%${query}%`)
+        )
+      )
+    ).orderBy(desc(leads.createdAt));
+  }
+
+  async getLeadsWithFilters(tenantId: number, userId: number, filters: any): Promise<Lead[]> {
+    warnIfTenantScopedParamsInvalid('getLeadsWithFilters', { tenantId, userId });
+    const conditions = [eq(leads.tenantId, tenantId)];
+    if (filters.status) conditions.push(eq(leads.leadStatusId, filters.status));
+    if (filters.source) conditions.push(eq(leads.leadSourceId, filters.source));
+    if (filters.assignee) conditions.push(eq(leads.assignedTo, filters.assignee));
+    if (filters.priority) conditions.push(eq(leads.priority, filters.priority));
+    return await db.select().from(leads).where(and(...conditions)).orderBy(desc(leads.createdAt));
+  }
+
+  async getLeadStats(tenantId: number, userId: number): Promise<any> {
+    warnIfTenantScopedParamsInvalid('getLeadStats', { tenantId, userId });
+    const allLeads = await this.getAllLeads(tenantId, userId);
+    return {
+      total: allLeads.length,
+      new: allLeads.filter(l => l.temperature === 'cold').length,
+      qualified: allLeads.filter(l => l.isQualified).length,
+      converted: allLeads.filter(l => l.isConverted).length,
+      totalValue: allLeads.reduce((sum, l) => sum + parseFloat(l.estimatedValue || '0'), 0),
+      avgScore: allLeads.length > 0 ? allLeads.reduce((sum, l) => sum + (l.leadScore || 0), 0) / allLeads.length : 0,
+      conversionRate: allLeads.length > 0 ? (allLeads.filter(l => l.isConverted).length / allLeads.length) * 100 : 0,
+      byStatus: {},
+      bySource: {},
+      byAssignee: {}
+    };
   }
 
   // Initialize default data (admin user and sample data)
@@ -1938,20 +2201,20 @@ export class DatabaseStorage implements IStorage {
         console.log('✓ Admin user created successfully');
       }
 
-      // Note: Sample data initialization is disabled for multi-tenant setup
-      // Each user will need to create their own data
-      const hasInitializedSetting = await this.getSetting('sample_data_initialized');
-      
-      if (!hasInitializedSetting) {
-        // Mark that sample data initialization has been checked
-        await this.setSetting('sample_data_initialized', true);
-        console.log('✓ Sample data initialization skipped (multi-tenant mode)');
+      // Resolve tenant for the admin user
+      const admin = await this.getUserByEmail('admin@demonflare.com');
+      if (admin) {
+          
       }
 
+      // Mark that sample data initialization has been checked
+      await this.setSetting(1, 'sample_data_initialized', true); // Use tenant 1 for system setting
+      console.log('✓ Sample data initialization skipped (multi-tenant mode)');
+
       // Initialize default system and twilio settings to prevent 404 errors
-      const systemSetting = await this.getSetting('system');
+      const systemSetting = await this.getSetting(1, 'system');
       if (!systemSetting) {
-        await this.setSetting('system', {
+        await this.setSetting(1, 'system', {
           appName: 'DialPax CRM',
           timezone: 'America/New_York',
           dateFormat: 'MM/DD/YYYY',
@@ -1962,9 +2225,9 @@ export class DatabaseStorage implements IStorage {
         console.log('✓ Default system settings created');
       }
 
-      const twilioSetting = await this.getSetting('twilio');
+      const twilioSetting = await this.getSetting(1, 'twilio');
       if (!twilioSetting) {
-        await this.setSetting('twilio', {
+        await this.setSetting(1, 'twilio', {
           configured: false,
           accountSid: null,
           authToken: null,
@@ -1976,264 +2239,24 @@ export class DatabaseStorage implements IStorage {
         console.log('✓ Default twilio settings created');
       }
 
-      const callSettings = await this.getSetting('call-settings');
-      if (!callSettings) {
-        await this.setSetting('call-settings', {
-          autoRecord: false,
-          callTimeout: 300,
-          callWaiting: true,
-          conferencing: true,
-          transfer: true,
-          enableVoicemail: true,
-          voicemailTimeout: 30,
-          callQualityReporting: true
-        });
-        console.log('✓ Default call settings created');
-      }
-
-      const parallelDialerGreeting = await this.getSetting('parallel_dialer_greeting');
-      if (!parallelDialerGreeting) {
-        await this.setSetting('parallel_dialer_greeting', '');
-        console.log('✓ Default parallel dialer greeting setting created');
-      }
-
     } catch (error) {
       console.error('Error initializing default data:', error);
     }
   }
 
-  // Lead Sources
-  async getLeadSource(userId: number, id: number): Promise<LeadSource | undefined> {
-    const [source] = await db.select().from(leadSources).where(and(eq(leadSources.id, id), eq(leadSources.userId, userId)));
-    return source || undefined;
+  // Lead Activities (tenant-scoped)
+  async getLeadActivity(tenantId: number, userId: number, id: number): Promise<LeadActivity | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadActivity', { tenantId, userId, id });
+    const result = await db
+      .select({ activity: leadActivities })
+      .from(leadActivities)
+      .innerJoin(leads, eq(leadActivities.leadId, leads.id))
+      .where(and(eq(leadActivities.id, id), eq(leads.tenantId, tenantId)));
+    return result[0]?.activity || undefined;
   }
 
-  async getLeadSourceByName(userId: number, name: string): Promise<LeadSource | undefined> {
-    const [source] = await db.select().from(leadSources).where(and(eq(leadSources.name, name), eq(leadSources.userId, userId)));
-    return source || undefined;
-  }
-
-  async createLeadSource(userId: number, source: InsertLeadSource): Promise<LeadSource> {
-    const membership = await this.ensureDefaultTenant(userId);
-    const sourceData = { ...source, userId, tenantId: membership.tenantId };
-    const [created] = await db.insert(leadSources).values(sourceData).returning();
-    return created;
-  }
-
-  async updateLeadSource(userId: number, id: number, source: Partial<InsertLeadSource>): Promise<LeadSource> {
-    const [updated] = await db.update(leadSources).set(source).where(and(eq(leadSources.id, id), eq(leadSources.userId, userId))).returning();
-    return updated;
-  }
-
-  async deleteLeadSource(userId: number, id: number): Promise<void> {
-    await db.delete(leadSources).where(and(eq(leadSources.id, id), eq(leadSources.userId, userId)));
-  }
-
-  async getAllLeadSources(userId: number): Promise<LeadSource[]> {
-    return await db.select().from(leadSources).where(eq(leadSources.userId, userId)).orderBy(asc(leadSources.name));
-  }
-
-  async getActiveLeadSources(userId: number): Promise<LeadSource[]> {
-    return await db.select().from(leadSources).where(and(eq(leadSources.isActive, true), eq(leadSources.userId, userId))).orderBy(asc(leadSources.name));
-  }
-
-  // Lead Statuses
-  async getLeadStatus(userId: number, id: number): Promise<LeadStatus | undefined> {
-    const [status] = await db.select().from(leadStatuses).where(and(eq(leadStatuses.id, id), eq(leadStatuses.userId, userId)));
-    return status || undefined;
-  }
-
-  async getLeadStatusByName(userId: number, name: string): Promise<LeadStatus | undefined> {
-    const [status] = await db.select().from(leadStatuses).where(and(eq(leadStatuses.name, name), eq(leadStatuses.userId, userId)));
-    return status || undefined;
-  }
-
-  async createLeadStatus(userId: number, status: InsertLeadStatus): Promise<LeadStatus> {
-    const membership = await this.ensureDefaultTenant(userId);
-    const statusData = { ...status, userId, tenantId: membership.tenantId };
-    const [created] = await db.insert(leadStatuses).values(statusData).returning();
-    return created;
-  }
-
-  async updateLeadStatus(userId: number, id: number, status: Partial<InsertLeadStatus>): Promise<LeadStatus> {
-    const [updated] = await db.update(leadStatuses).set(status).where(and(eq(leadStatuses.id, id), eq(leadStatuses.userId, userId))).returning();
-    return updated;
-  }
-
-  async deleteLeadStatus(userId: number, id: number): Promise<void> {
-    await db.delete(leadStatuses).where(and(eq(leadStatuses.id, id), eq(leadStatuses.userId, userId)));
-  }
-
-  async getAllLeadStatuses(userId: number): Promise<LeadStatus[]> {
-    return await db.select().from(leadStatuses).where(eq(leadStatuses.userId, userId)).orderBy(asc(leadStatuses.sortOrder));
-  }
-
-  async getActiveLeadStatuses(userId: number): Promise<LeadStatus[]> {
-    return await db.select().from(leadStatuses).where(and(eq(leadStatuses.isActive, true), eq(leadStatuses.userId, userId))).orderBy(asc(leadStatuses.sortOrder));
-  }
-
-  // Lead Campaigns
-  async getLeadCampaign(userId: number, id: number): Promise<LeadCampaign | undefined> {
-    const [campaign] = await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.userId, userId)));
-    return campaign || undefined;
-  }
-
-  async createLeadCampaign(userId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign> {
-    const membership = await this.ensureDefaultTenant(userId);
-    const campaignData = { ...campaign, userId, tenantId: membership.tenantId };
-    const [created] = await db.insert(leadCampaigns).values(campaignData).returning();
-    return created;
-  }
-
-  async updateLeadCampaign(userId: number, id: number, campaign: Partial<InsertLeadCampaign>): Promise<LeadCampaign> {
-    const [updated] = await db.update(leadCampaigns).set(campaign).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.userId, userId))).returning();
-    return updated;
-  }
-
-  async deleteLeadCampaign(userId: number, id: number): Promise<void> {
-    await db.delete(leadCampaigns).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.userId, userId)));
-  }
-
-  async getAllLeadCampaigns(userId: number): Promise<LeadCampaign[]> {
-    return await db.select().from(leadCampaigns).where(eq(leadCampaigns.userId, userId)).orderBy(desc(leadCampaigns.createdAt));
-  }
-
-  async getLeadCampaignsByStatus(userId: number, status: string): Promise<LeadCampaign[]> {
-    return await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.status, status), eq(leadCampaigns.userId, userId))).orderBy(desc(leadCampaigns.createdAt));
-  }
-
-  async getLeadCampaignsByType(userId: number, type: string): Promise<LeadCampaign[]> {
-    return await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.type, type), eq(leadCampaigns.userId, userId))).orderBy(desc(leadCampaigns.createdAt));
-  }
-
-  // Leads (tenant-scoped)
-  async getLead(tenantId: number, userId: number, id: number): Promise<Lead | undefined> {
-    const [lead] = await db.select().from(leads).where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)));
-    return lead || undefined;
-  }
-
-  async getLeadByEmail(tenantId: number, userId: number, email: string): Promise<Lead | undefined> {
-    const [lead] = await db.select().from(leads).where(and(eq(leads.email, email), eq(leads.tenantId, tenantId)));
-    return lead || undefined;
-  }
-
-  async getLeadByPhone(tenantId: number, userId: number, phone: string): Promise<Lead | undefined> {
-    const [lead] = await db.select().from(leads).where(and(eq(leads.phone, phone), eq(leads.tenantId, tenantId)));
-    return lead || undefined;
-  }
-
-  async createLead(tenantId: number, userId: number, lead: InsertLead): Promise<Lead> {
-    const leadData = {
-      ...lead,
-      userId: userId,
-      tenantId: tenantId,
-    };
-    const [created] = await db.insert(leads).values(leadData).returning();
-    return created;
-  }
-
-  async updateLead(tenantId: number, userId: number, id: number, lead: Partial<InsertLead>): Promise<Lead> {
-    const [updated] = await db.update(leads)
-      .set({ ...lead, updatedAt: new Date() })
-      .where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)))
-      .returning();
-    if (!updated) throw new Error("Lead not found");
-    return updated;
-  }
-
-  async deleteLead(tenantId: number, userId: number, id: number): Promise<void> {
-    await db.delete(leads).where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)));
-  }
-
-  async getAllLeads(tenantId: number, userId: number): Promise<Lead[]> {
-    return await db
-      .select({
-        id: leads.id,
-        tenantId: leads.tenantId,
-        userId: leads.userId,
-        firstName: leads.firstName,
-        lastName: leads.lastName,
-        email: leads.email,
-        phone: leads.phone,
-        company: leads.company,
-        priority: leads.priority,
-        temperature: leads.temperature,
-        leadScore: leads.leadScore,
-        isQualified: leads.isQualified,
-        isConverted: leads.isConverted,
-        createdAt: leads.createdAt,
-      })
-      .from(leads)
-      .where(eq(leads.tenantId, tenantId))
-      .orderBy(desc(leads.createdAt)) as Lead[];
-  }
-
-  async getLeadsByStatus(tenantId: number, userId: number, statusId: number): Promise<Lead[]> {
-    return await db.select().from(leads).where(and(eq(leads.leadStatusId, statusId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
-  }
-
-  async getLeadsBySource(tenantId: number, userId: number, sourceId: number): Promise<Lead[]> {
-    return await db.select().from(leads).where(and(eq(leads.leadSourceId, sourceId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
-  }
-
-  async getLeadsByAssignee(tenantId: number, userId: number, assigneeId: number): Promise<Lead[]> {
-    return await db.select().from(leads).where(and(eq(leads.assignedTo, assigneeId.toString()), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
-  }
-
-  async getLeadsByPriority(tenantId: number, userId: number, priority: string): Promise<Lead[]> {
-    return await db.select().from(leads).where(and(eq(leads.priority, priority), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
-  }
-
-  async getLeadsByTemperature(tenantId: number, userId: number, temperature: string): Promise<Lead[]> {
-    return await db.select().from(leads).where(and(eq(leads.temperature, temperature), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
-  }
-
-  async searchLeads(tenantId: number, userId: number, query: string): Promise<Lead[]> {
-    return await db.select().from(leads).where(
-      and(
-        eq(leads.tenantId, tenantId),
-        or(
-          ilike(leads.firstName, `%${query}%`),
-          ilike(leads.lastName, `%${query}%`),
-          ilike(leads.email, `%${query}%`),
-          ilike(leads.phone, `%${query}%`),
-          ilike(leads.company, `%${query}%`)
-        )
-      )
-    ).orderBy(desc(leads.createdAt));
-  }
-
-  async getLeadsWithFilters(tenantId: number, userId: number, filters: any): Promise<Lead[]> {
-    const conditions = [eq(leads.tenantId, tenantId)];
-    if (filters.status) conditions.push(eq(leads.leadStatusId, filters.status));
-    if (filters.source) conditions.push(eq(leads.leadSourceId, filters.source));
-    if (filters.priority) conditions.push(eq(leads.priority, filters.priority));
-    return await db.select().from(leads).where(and(...conditions)).orderBy(desc(leads.createdAt));
-  }
-
-  async getLeadStats(tenantId: number, userId: number): Promise<any> {
-    const allLeads = await this.getAllLeads(tenantId, userId);
-    return {
-      total: allLeads.length,
-      new: allLeads.filter(l => l.temperature === 'cold').length,
-      qualified: allLeads.filter(l => l.isQualified).length,
-      converted: allLeads.filter(l => l.isConverted).length,
-      totalValue: allLeads.reduce((sum, l) => sum + parseFloat(l.estimatedValue || '0'), 0),
-      avgScore: allLeads.length > 0 ? allLeads.reduce((sum, l) => sum + (l.leadScore || 0), 0) / allLeads.length : 0,
-      conversionRate: allLeads.length > 0 ? (allLeads.filter(l => l.isConverted).length / allLeads.length) * 100 : 0,
-      byStatus: {},
-      bySource: {},
-      byAssignee: {}
-    };
-  }
-
-  // Lead Activities
-  async getLeadActivity(userId: number, id: number): Promise<LeadActivity | undefined> {
-    const [activity] = await db.select().from(leadActivities).where(and(eq(leadActivities.id, id), eq(leadActivities.userId, userId)));
-    return activity || undefined;
-  }
-
-  async createLeadActivity(userId: number, activity: InsertLeadActivity): Promise<LeadActivity> {
+  async createLeadActivity(tenantId: number, userId: number, activity: InsertLeadActivity): Promise<LeadActivity> {
+    warnIfTenantScopedParamsInvalid('createLeadActivity', { tenantId, userId });
     const activityData = {
       ...activity,
       userId: userId
@@ -2242,54 +2265,104 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateLeadActivity(userId: number, id: number, activity: Partial<InsertLeadActivity>): Promise<LeadActivity> {
-    const [updated] = await db.update(leadActivities).set(activity).where(and(eq(leadActivities.id, id), eq(leadActivities.userId, userId))).returning();
+  async updateLeadActivity(tenantId: number, userId: number, id: number, activity: Partial<InsertLeadActivity>): Promise<LeadActivity> {
+    warnIfTenantScopedParamsInvalid('updateLeadActivity', { tenantId, userId, id });
+    const checkResult = await db
+      .select({ activity: leadActivities })
+      .from(leadActivities)
+      .innerJoin(leads, eq(leadActivities.leadId, leads.id))
+      .where(and(eq(leadActivities.id, id), eq(leads.tenantId, tenantId)));
+    
+    if (!checkResult[0]) {
+      throw new Error('Lead activity not found');
+    }
+
+    const [updated] = await db.update(leadActivities).set(activity).where(eq(leadActivities.id, id)).returning();
     return updated;
   }
 
-  async deleteLeadActivity(userId: number, id: number): Promise<void> {
-    await db.delete(leadActivities).where(and(eq(leadActivities.id, id), eq(leadActivities.userId, userId)));
+  async deleteLeadActivity(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteLeadActivity', { tenantId, userId, id });
+    const checkResult = await db
+      .select({ activity: leadActivities })
+      .from(leadActivities)
+      .innerJoin(leads, eq(leadActivities.leadId, leads.id))
+      .where(and(eq(leadActivities.id, id), eq(leads.tenantId, tenantId)));
+    
+    if (checkResult[0]) {
+      await db.delete(leadActivities).where(eq(leadActivities.id, id));
+    }
   }
 
-  async getLeadActivities(userId: number, leadId: number): Promise<LeadActivity[]> {
-    return await db.select().from(leadActivities).where(and(eq(leadActivities.leadId, leadId), eq(leadActivities.userId, userId))).orderBy(desc(leadActivities.createdAt));
+  async getLeadActivities(tenantId: number, userId: number, leadId: number): Promise<LeadActivity[]> {
+    warnIfTenantScopedParamsInvalid('getLeadActivities', { tenantId, userId, leadId });
+    const result = await db
+      .select({ activity: leadActivities })
+      .from(leadActivities)
+      .innerJoin(leads, eq(leadActivities.leadId, leads.id))
+      .where(and(eq(leadActivities.leadId, leadId), eq(leads.tenantId, tenantId)))
+      .orderBy(desc(leadActivities.createdAt));
+    return result.map(r => r.activity);
   }
 
-  async getLeadActivitiesByType(userId: number, leadId: number, type: string): Promise<LeadActivity[]> {
-    return await db.select().from(leadActivities).where(
-      and(eq(leadActivities.leadId, leadId), eq(leadActivities.type, type), eq(leadActivities.userId, userId))
-    ).orderBy(desc(leadActivities.createdAt));
+  async getLeadActivitiesByType(tenantId: number, userId: number, leadId: number, type: string): Promise<LeadActivity[]> {
+    warnIfTenantScopedParamsInvalid('getLeadActivitiesByType', { tenantId, userId, leadId });
+    const result = await db
+      .select({ activity: leadActivities })
+      .from(leadActivities)
+      .innerJoin(leads, eq(leadActivities.leadId, leads.id))
+      .where(and(eq(leadActivities.leadId, leadId), eq(leadActivities.type, type), eq(leads.tenantId, tenantId)))
+      .orderBy(desc(leadActivities.createdAt));
+    return result.map(r => r.activity);
   }
 
-  async getLeadActivitiesByUser(userId: number, targetUserId: number): Promise<LeadActivity[]> {
-    return await db.select().from(leadActivities).where(and(eq(leadActivities.userId, targetUserId), eq(leadActivities.userId, userId))).orderBy(desc(leadActivities.createdAt));
+  async getLeadActivitiesByUser(tenantId: number, userId: number, targetUserId: number): Promise<LeadActivity[]> {
+    warnIfTenantScopedParamsInvalid('getLeadActivitiesByUser', { tenantId, userId, targetUserId });
+    const result = await db
+      .select({ activity: leadActivities })
+      .from(leadActivities)
+      .innerJoin(leads, eq(leadActivities.leadId, leads.id))
+      .where(and(eq(leadActivities.userId, targetUserId), eq(leads.tenantId, tenantId)))
+      .orderBy(desc(leadActivities.createdAt));
+    return result.map(r => r.activity);
   }
 
-  async getRecentLeadActivities(userId: number, limit: number = 50): Promise<LeadActivity[]> {
-    return await db.select().from(leadActivities).where(eq(leadActivities.userId, userId)).orderBy(desc(leadActivities.createdAt)).limit(limit);
+  async getRecentLeadActivities(tenantId: number, userId: number, limit: number = 50): Promise<LeadActivity[]> {
+    warnIfTenantScopedParamsInvalid('getRecentLeadActivities', { tenantId, userId });
+    const result = await db
+      .select({ activity: leadActivities })
+      .from(leadActivities)
+      .innerJoin(leads, eq(leadActivities.leadId, leads.id))
+      .where(eq(leads.tenantId, tenantId))
+      .orderBy(desc(leadActivities.createdAt))
+      .limit(limit);
+    return result.map(r => r.activity);
   }
 
-  // Lead Tasks
-  async getLeadTask(userId: number, id: number): Promise<LeadTask | undefined> {
+  // Lead Tasks (tenant-scoped)
+  async getLeadTask(tenantId: number, userId: number, id: number): Promise<LeadTask | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadTask', { tenantId, userId, id });
     const result = await db
       .select({ task: leadTasks })
       .from(leadTasks)
       .innerJoin(leads, eq(leadTasks.leadId, leads.id))
-      .where(and(eq(leadTasks.id, id), eq(leads.userId, userId)));
+      .where(and(eq(leadTasks.id, id), eq(leads.tenantId, tenantId)));
     return result[0]?.task || undefined;
   }
 
-  async createLeadTask(userId: number, task: InsertLeadTask): Promise<LeadTask> {
+  async createLeadTask(tenantId: number, userId: number, task: InsertLeadTask): Promise<LeadTask> {
+    warnIfTenantScopedParamsInvalid('createLeadTask', { tenantId, userId });
     const [created] = await db.insert(leadTasks).values(task).returning();
     return created;
   }
 
-  async updateLeadTask(userId: number, id: number, task: Partial<InsertLeadTask>): Promise<LeadTask> {
+  async updateLeadTask(tenantId: number, userId: number, id: number, task: Partial<InsertLeadTask>): Promise<LeadTask> {
+    warnIfTenantScopedParamsInvalid('updateLeadTask', { tenantId, userId, id });
     const result = await db
       .select({ task: leadTasks })
       .from(leadTasks)
       .innerJoin(leads, eq(leadTasks.leadId, leads.id))
-      .where(and(eq(leadTasks.id, id), eq(leads.userId, userId)));
+      .where(and(eq(leadTasks.id, id), eq(leads.tenantId, tenantId)));
     
     if (!result[0]) {
       throw new Error('Task not found');
@@ -2299,49 +2372,54 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async deleteLeadTask(userId: number, id: number): Promise<void> {
+  async deleteLeadTask(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteLeadTask', { tenantId, userId, id });
     const result = await db
       .select({ task: leadTasks })
       .from(leadTasks)
       .innerJoin(leads, eq(leadTasks.leadId, leads.id))
-      .where(and(eq(leadTasks.id, id), eq(leads.userId, userId)));
+      .where(and(eq(leadTasks.id, id), eq(leads.tenantId, tenantId)));
     
     if (result[0]) {
       await db.delete(leadTasks).where(eq(leadTasks.id, id));
     }
   }
 
-  async getLeadTasks(userId: number, leadId: number): Promise<LeadTask[]> {
+  async getLeadTasks(tenantId: number, userId: number, leadId: number): Promise<LeadTask[]> {
+    warnIfTenantScopedParamsInvalid('getLeadTasks', { tenantId, userId, leadId });
     const result = await db
       .select({ task: leadTasks })
       .from(leadTasks)
       .innerJoin(leads, eq(leadTasks.leadId, leads.id))
-      .where(and(eq(leadTasks.leadId, leadId), eq(leads.userId, userId)))
+      .where(and(eq(leadTasks.leadId, leadId), eq(leads.tenantId, tenantId)))
       .orderBy(desc(leadTasks.createdAt));
     return result.map(r => r.task);
   }
 
-  async getLeadTasksByAssignee(userId: number, assigneeId: number): Promise<LeadTask[]> {
+  async getLeadTasksByAssignee(tenantId: number, userId: number, assigneeId: number): Promise<LeadTask[]> {
+    warnIfTenantScopedParamsInvalid('getLeadTasksByAssignee', { tenantId, userId, assigneeId });
     const result = await db
       .select({ task: leadTasks })
       .from(leadTasks)
       .innerJoin(leads, eq(leadTasks.leadId, leads.id))
-      .where(and(eq(leadTasks.assignedTo, assigneeId), eq(leads.userId, userId)))
+      .where(and(eq(leadTasks.assignedTo, assigneeId), eq(leads.tenantId, tenantId)))
       .orderBy(desc(leadTasks.createdAt));
     return result.map(r => r.task);
   }
 
-  async getLeadTasksByStatus(userId: number, status: string): Promise<LeadTask[]> {
+  async getLeadTasksByStatus(tenantId: number, userId: number, status: string): Promise<LeadTask[]> {
+    warnIfTenantScopedParamsInvalid('getLeadTasksByStatus', { tenantId, userId });
     const result = await db
       .select({ task: leadTasks })
       .from(leadTasks)
       .innerJoin(leads, eq(leadTasks.leadId, leads.id))
-      .where(and(eq(leadTasks.status, status), eq(leads.userId, userId)))
+      .where(and(eq(leadTasks.status, status), eq(leads.tenantId, tenantId)))
       .orderBy(desc(leadTasks.createdAt));
     return result.map(r => r.task);
   }
 
-  async getOverdueTasks(userId: number): Promise<LeadTask[]> {
+  async getOverdueTasks(tenantId: number, userId: number): Promise<LeadTask[]> {
+    warnIfTenantScopedParamsInvalid('getOverdueTasks', { tenantId, userId });
     const result = await db
       .select({ task: leadTasks })
       .from(leadTasks)
@@ -2350,14 +2428,15 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(leadTasks.status, 'pending'),
           lt(leadTasks.dueDate, new Date()),
-          eq(leads.userId, userId)
+          eq(leads.tenantId, tenantId)
         )
       )
       .orderBy(asc(leadTasks.dueDate));
     return result.map(r => r.task);
   }
 
-  async getUpcomingTasks(userId: number, days: number = 7): Promise<LeadTask[]> {
+  async getUpcomingTasks(tenantId: number, userId: number, days: number = 7): Promise<LeadTask[]> {
+    warnIfTenantScopedParamsInvalid('getUpcomingTasks', { tenantId, userId });
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + days);
     
@@ -2370,24 +2449,37 @@ export class DatabaseStorage implements IStorage {
           eq(leadTasks.status, 'pending'),
           gte(leadTasks.dueDate, new Date()),
           lte(leadTasks.dueDate, futureDate),
-          eq(leads.userId, userId)
+          eq(leads.tenantId, tenantId)
         )
       )
       .orderBy(asc(leadTasks.dueDate));
     return result.map(r => r.task);
   }
 
-  // Lead Scoring
-  async getLeadScoring(userId: number, id: number): Promise<LeadScoring | undefined> {
-    const [scoring] = await db.select().from(leadScoring).where(and(eq(leadScoring.id, id), eq(leadScoring.userId, userId)));
-    return scoring || undefined;
+  // Lead Scoring (tenant-scoped)
+  async getLeadScoring(tenantId: number, userId: number, id: number): Promise<LeadScoring | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadScoring', { tenantId, userId, id });
+    const result = await db
+      .select({ scoring: leadScoring })
+      .from(leadScoring)
+      .innerJoin(leads, eq(leadScoring.leadId, leads.id))
+      .where(and(eq(leadScoring.id, id), eq(leads.tenantId, tenantId)));
+    return result[0]?.scoring || undefined;
   }
 
-  async getLeadScoringByLead(userId: number, leadId: number): Promise<LeadScoring[]> {
-    return await db.select().from(leadScoring).where(and(eq(leadScoring.leadId, leadId), eq(leadScoring.userId, userId))).orderBy(desc(leadScoring.createdAt));
+  async getLeadScoringByLead(tenantId: number, userId: number, leadId: number): Promise<LeadScoring[]> {
+    warnIfTenantScopedParamsInvalid('getLeadScoringByLead', { tenantId, userId, leadId });
+    const result = await db
+      .select({ scoring: leadScoring })
+      .from(leadScoring)
+      .innerJoin(leads, eq(leadScoring.leadId, leads.id))
+      .where(and(eq(leadScoring.leadId, leadId), eq(leads.tenantId, tenantId)))
+      .orderBy(desc(leadScoring.createdAt));
+    return result.map(r => r.scoring);
   }
 
-  async createLeadScoring(userId: number, scoring: InsertLeadScoring): Promise<LeadScoring> {
+  async createLeadScoring(tenantId: number, userId: number, scoring: InsertLeadScoring): Promise<LeadScoring> {
+    warnIfTenantScopedParamsInvalid('createLeadScoring', { tenantId, userId });
     const scoringData = {
       ...scoring,
       userId: userId
@@ -2396,30 +2488,70 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateLeadScoring(userId: number, id: number, scoring: Partial<InsertLeadScoring>): Promise<LeadScoring> {
-    const [updated] = await db.update(leadScoring).set(scoring).where(and(eq(leadScoring.id, id), eq(leadScoring.userId, userId))).returning();
+  async updateLeadScoring(tenantId: number, userId: number, id: number, scoring: Partial<InsertLeadScoring>): Promise<LeadScoring> {
+    warnIfTenantScopedParamsInvalid('updateLeadScoring', { tenantId, userId, id });
+    const checkResult = await db
+      .select({ scoring: leadScoring })
+      .from(leadScoring)
+      .innerJoin(leads, eq(leadScoring.leadId, leads.id))
+      .where(and(eq(leadScoring.id, id), eq(leads.tenantId, tenantId)));
+    
+    if (!checkResult[0]) {
+      throw new Error('Lead scoring record not found');
+    }
+
+    const [updated] = await db.update(leadScoring).set(scoring).where(eq(leadScoring.id, id)).returning();
     return updated;
   }
 
-  async deleteLeadScoring(userId: number, id: number): Promise<void> {
-    await db.delete(leadScoring).where(and(eq(leadScoring.id, id), eq(leadScoring.userId, userId)));
+  async deleteLeadScoring(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteLeadScoring', { tenantId, userId, id });
+    const checkResult = await db
+      .select({ scoring: leadScoring })
+      .from(leadScoring)
+      .innerJoin(leads, eq(leadScoring.leadId, leads.id))
+      .where(and(eq(leadScoring.id, id), eq(leads.tenantId, tenantId)));
+    
+    if (checkResult[0]) {
+      await db.delete(leadScoring).where(eq(leadScoring.id, id));
+    }
   }
 
-  async getLeadScoringHistory(userId: number, leadId: number): Promise<LeadScoring[]> {
-    return await db.select().from(leadScoring).where(and(eq(leadScoring.leadId, leadId), eq(leadScoring.userId, userId))).orderBy(desc(leadScoring.createdAt));
+  async getLeadScoringHistory(tenantId: number, userId: number, leadId: number): Promise<LeadScoring[]> {
+    warnIfTenantScopedParamsInvalid('getLeadScoringHistory', { tenantId, userId, leadId });
+    const result = await db
+      .select({ scoring: leadScoring })
+      .from(leadScoring)
+      .innerJoin(leads, eq(leadScoring.leadId, leads.id))
+      .where(and(eq(leadScoring.leadId, leadId), eq(leads.tenantId, tenantId)))
+      .orderBy(desc(leadScoring.createdAt));
+    return result.map(r => r.scoring);
   }
 
-  // Lead Nurturing
-  async getLeadNurturing(userId: number, id: number): Promise<LeadNurturing | undefined> {
-    const [nurturing] = await db.select().from(leadNurturing).where(and(eq(leadNurturing.id, id), eq(leadNurturing.userId, userId)));
-    return nurturing || undefined;
+  // Lead Nurturing (tenant-scoped)
+  async getLeadNurturing(tenantId: number, userId: number, id: number): Promise<LeadNurturing | undefined> {
+    warnIfTenantScopedParamsInvalid('getLeadNurturing', { tenantId, userId, id });
+    const result = await db
+      .select({ nurturing: leadNurturing })
+      .from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.id, id), eq(leads.tenantId, tenantId)));
+    return result[0]?.nurturing || undefined;
   }
 
-  async getLeadNurturingByLead(userId: number, leadId: number): Promise<LeadNurturing[]> {
-    return await db.select().from(leadNurturing).where(and(eq(leadNurturing.leadId, leadId), eq(leadNurturing.userId, userId))).orderBy(desc(leadNurturing.createdAt));
+  async getLeadNurturingByLead(tenantId: number, userId: number, leadId: number): Promise<LeadNurturing[]> {
+    warnIfTenantScopedParamsInvalid('getLeadNurturingByLead', { tenantId, userId, leadId });
+    const result = await db
+      .select({ nurturing: leadNurturing })
+      .from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.leadId, leadId), eq(leads.tenantId, tenantId)))
+      .orderBy(desc(leadNurturing.createdAt));
+    return result.map(r => r.nurturing);
   }
 
-  async createLeadNurturing(userId: number, nurturing: InsertLeadNurturing): Promise<LeadNurturing> {
+  async createLeadNurturing(tenantId: number, userId: number, nurturing: InsertLeadNurturing): Promise<LeadNurturing> {
+    warnIfTenantScopedParamsInvalid('createLeadNurturing', { tenantId, userId });
     const nurturingData = {
       ...nurturing,
       userId: userId
@@ -2428,72 +2560,116 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateLeadNurturing(userId: number, id: number, nurturing: Partial<InsertLeadNurturing>): Promise<LeadNurturing> {
-    const [updated] = await db.update(leadNurturing).set(nurturing).where(and(eq(leadNurturing.id, id), eq(leadNurturing.userId, userId))).returning();
+  async updateLeadNurturing(tenantId: number, userId: number, id: number, nurturing: Partial<InsertLeadNurturing>): Promise<LeadNurturing> {
+    warnIfTenantScopedParamsInvalid('updateLeadNurturing', { tenantId, userId, id });
+    const checkResult = await db
+      .select({ nurturing: leadNurturing })
+      .from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.id, id), eq(leads.tenantId, tenantId)));
+    
+    if (!checkResult[0]) {
+      throw new Error('Lead nurturing record not found');
+    }
+
+    const [updated] = await db.update(leadNurturing).set(nurturing).where(eq(leadNurturing.id, id)).returning();
     return updated;
   }
 
-  async deleteLeadNurturing(userId: number, id: number): Promise<void> {
-    await db.delete(leadNurturing).where(and(eq(leadNurturing.id, id), eq(leadNurturing.userId, userId)));
+  async deleteLeadNurturing(tenantId: number, userId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteLeadNurturing', { tenantId, userId, id });
+    const checkResult = await db
+      .select({ nurturing: leadNurturing })
+      .from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.id, id), eq(leads.tenantId, tenantId)));
+    
+    if (checkResult[0]) {
+      await db.delete(leadNurturing).where(eq(leadNurturing.id, id));
+    }
   }
 
-  async getActiveNurturingSequences(userId: number): Promise<LeadNurturing[]> {
-    return await db.select().from(leadNurturing).where(and(eq(leadNurturing.status, 'active'), eq(leadNurturing.userId, userId))).orderBy(desc(leadNurturing.createdAt));
+  async getActiveNurturingSequences(tenantId: number, userId: number): Promise<LeadNurturing[]> {
+    warnIfTenantScopedParamsInvalid('getActiveNurturingSequences', { tenantId, userId });
+    const result = await db
+      .select({ nurturing: leadNurturing })
+      .from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.status, 'active'), eq(leads.tenantId, tenantId)))
+      .orderBy(desc(leadNurturing.createdAt));
+    return result.map(r => r.nurturing);
   }
 
-  async getNurturingSequencesByStatus(userId: number, status: string): Promise<LeadNurturing[]> {
-    return await db.select().from(leadNurturing).where(and(eq(leadNurturing.status, status), eq(leadNurturing.userId, userId))).orderBy(desc(leadNurturing.createdAt));
+  async getNurturingSequencesByStatus(tenantId: number, userId: number, status: string): Promise<LeadNurturing[]> {
+    warnIfTenantScopedParamsInvalid('getNurturingSequencesByStatus', { tenantId, userId });
+    const result = await db
+      .select({ nurturing: leadNurturing })
+      .from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.status, status), eq(leads.tenantId, tenantId)))
+      .orderBy(desc(leadNurturing.createdAt));
+    return result.map(r => r.nurturing);
   }
 
   // Contact Lists
-  async getContactList(userId: number, id: number): Promise<ContactList | undefined> {
-    const [list] = await db.select().from(contactLists).where(and(eq(contactLists.id, id), eq(contactLists.userId, userId)));
+  async getContactList(tenantId: number, id: number): Promise<ContactList | undefined> {
+    warnIfTenantScopedParamsInvalid('getContactList', { tenantId, id });
+    const [list] = await db.select().from(contactLists).where(and(eq(contactLists.id, id), eq(contactLists.tenantId, tenantId)));
     return list || undefined;
   }
 
-  async getContactListByName(userId: number, name: string): Promise<ContactList | undefined> {
-    const [list] = await db.select().from(contactLists).where(and(eq(contactLists.name, name), eq(contactLists.userId, userId)));
+  async getContactListByName(tenantId: number, name: string): Promise<ContactList | undefined> {
+    warnIfTenantScopedParamsInvalid('getContactListByName', { tenantId });
+    const [list] = await db.select().from(contactLists).where(and(eq(contactLists.name, name), eq(contactLists.tenantId, tenantId)));
     return list || undefined;
   }
 
-  async createContactList(userId: number, list: InsertContactList): Promise<ContactList> {
-    const listData = { ...list, userId };
+  async createContactList(tenantId: number, list: InsertContactList): Promise<ContactList> {
+    warnIfTenantScopedParamsInvalid('createContactList', { tenantId });
+    const listData = { ...list, tenantId };
     const [created] = await db.insert(contactLists).values(listData).returning();
     return created;
   }
 
-  async updateContactList(userId: number, id: number, list: Partial<InsertContactList>): Promise<ContactList> {
-    const [updated] = await db.update(contactLists).set(list).where(and(eq(contactLists.id, id), eq(contactLists.userId, userId))).returning();
+  async updateContactList(tenantId: number, id: number, list: Partial<InsertContactList>): Promise<ContactList> {
+    warnIfTenantScopedParamsInvalid('updateContactList', { tenantId, id });
+    const [updated] = await db.update(contactLists).set(list).where(and(eq(contactLists.id, id), eq(contactLists.tenantId, tenantId))).returning();
     return updated;
   }
 
-  async deleteContactList(userId: number, id: number): Promise<void> {
+  async deleteContactList(tenantId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteContactList', { tenantId, id });
     // First, remove all memberships
-    await db.delete(contactListMemberships).where(and(eq(contactListMemberships.listId, id), eq(contactListMemberships.userId, userId)));
+    await db.delete(contactListMemberships).where(and(eq(contactListMemberships.listId, id), eq(contactListMemberships.tenantId, tenantId)));
     // Then delete the list
-    await db.delete(contactLists).where(and(eq(contactLists.id, id), eq(contactLists.userId, userId)));
+    await db.delete(contactLists).where(and(eq(contactLists.id, id), eq(contactLists.tenantId, tenantId)));
   }
 
-  async getAllContactLists(userId: number): Promise<ContactList[]> {
-    return await db.select().from(contactLists).where(eq(contactLists.userId, userId)).orderBy(asc(contactLists.name));
+  async getAllContactLists(tenantId: number): Promise<ContactList[]> {
+    warnIfTenantScopedParamsInvalid('getAllContactLists', { tenantId });
+    return await db.select().from(contactLists).where(eq(contactLists.tenantId, tenantId)).orderBy(asc(contactLists.name));
   }
 
-  async getContactListsByCategory(userId: number, category: string): Promise<ContactList[]> {
-    return await db.select().from(contactLists).where(and(eq(contactLists.category, category), eq(contactLists.userId, userId))).orderBy(asc(contactLists.name));
+  async getContactListsByCategory(tenantId: number, category: string): Promise<ContactList[]> {
+    warnIfTenantScopedParamsInvalid('getContactListsByCategory', { tenantId });
+    return await db.select().from(contactLists).where(and(eq(contactLists.category, category), eq(contactLists.tenantId, tenantId))).orderBy(asc(contactLists.name));
   }
 
-  async getContactListsByType(userId: number, type: string): Promise<ContactList[]> {
-    return await db.select().from(contactLists).where(and(eq(contactLists.type, type), eq(contactLists.userId, userId))).orderBy(asc(contactLists.name));
+  async getContactListsByType(tenantId: number, type: string): Promise<ContactList[]> {
+    warnIfTenantScopedParamsInvalid('getContactListsByType', { tenantId });
+    return await db.select().from(contactLists).where(and(eq(contactLists.type, type), eq(contactLists.tenantId, tenantId))).orderBy(asc(contactLists.name));
   }
 
   // Contact List Memberships
-  async getContactListMembership(userId: number, id: number): Promise<ContactListMembership | undefined> {
-    const [membership] = await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.userId, userId)));
+  async getContactListMembership(tenantId: number, id: number): Promise<ContactListMembership | undefined> {
+    warnIfTenantScopedParamsInvalid('getContactListMembership', { tenantId, id });
+    const [membership] = await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.tenantId, tenantId)));
     return membership || undefined;
   }
 
-  async createContactListMembership(userId: number, membership: InsertContactListMembership): Promise<ContactListMembership> {
-    const membershipData = { ...membership, userId };
+  async createContactListMembership(tenantId: number, membership: InsertContactListMembership): Promise<ContactListMembership> {
+    warnIfTenantScopedParamsInvalid('createContactListMembership', { tenantId });
+    const membershipData = { ...membership, tenantId };
     const [created] = await db.insert(contactListMemberships).values(membershipData).returning();
     
     // Update contact count in the list
@@ -2502,7 +2678,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(contactListMemberships.listId, membership.listId),
         eq(contactListMemberships.status, 'active'),
-        eq(contactListMemberships.userId, userId)
+        eq(contactListMemberships.tenantId, tenantId)
       ));
     
     await db.update(contactLists)
@@ -2510,20 +2686,22 @@ export class DatabaseStorage implements IStorage {
         contactCount: contactCount[0].count,
         lastContactAdded: new Date()
       })
-      .where(and(eq(contactLists.id, membership.listId), eq(contactLists.userId, userId)));
+      .where(and(eq(contactLists.id, membership.listId), eq(contactLists.tenantId, tenantId)));
 
     return created;
   }
 
-  async updateContactListMembership(userId: number, id: number, membership: Partial<InsertContactListMembership>): Promise<ContactListMembership> {
-    const [updated] = await db.update(contactListMemberships).set(membership).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.userId, userId))).returning();
+  async updateContactListMembership(tenantId: number, id: number, membership: Partial<InsertContactListMembership>): Promise<ContactListMembership> {
+    warnIfTenantScopedParamsInvalid('updateContactListMembership', { tenantId, id });
+    const [updated] = await db.update(contactListMemberships).set(membership).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.tenantId, tenantId))).returning();
     return updated;
   }
 
-  async deleteContactListMembership(userId: number, id: number): Promise<void> {
-    const membership = await this.getContactListMembership(userId, id);
+  async deleteContactListMembership(tenantId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteContactListMembership', { tenantId, id });
+    const membership = await this.getContactListMembership(tenantId, id);
     if (membership) {
-      await db.delete(contactListMemberships).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.userId, userId)));
+      await db.delete(contactListMemberships).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.tenantId, tenantId)));
       
       // Update contact count in the list
       const contactCount = await db.select({ count: count() })
@@ -2531,44 +2709,46 @@ export class DatabaseStorage implements IStorage {
         .where(and(
           eq(contactListMemberships.listId, membership.listId),
           eq(contactListMemberships.status, 'active'),
-          eq(contactListMemberships.userId, userId)
+          eq(contactListMemberships.tenantId, tenantId)
         ));
       
       await db.update(contactLists)
         .set({ contactCount: contactCount[0].count })
-        .where(and(eq(contactLists.id, membership.listId), eq(contactLists.userId, userId)));
+        .where(and(eq(contactLists.id, membership.listId), eq(contactLists.tenantId, tenantId)));
     }
   }
 
-  async getContactListMemberships(userId: number, listId: number): Promise<ContactListMembership[]> {
-    return await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.listId, listId), eq(contactListMemberships.userId, userId))).orderBy(desc(contactListMemberships.addedAt));
+  async getContactListMemberships(tenantId: number, listId: number): Promise<ContactListMembership[]> {
+    warnIfTenantScopedParamsInvalid('getContactListMemberships', { tenantId, listId });
+    return await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.listId, listId), eq(contactListMemberships.tenantId, tenantId))).orderBy(desc(contactListMemberships.addedAt));
   }
 
-  async getContactMemberships(userId: number, contactId: number): Promise<ContactListMembership[]> {
-    return await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.contactId, contactId), eq(contactListMemberships.userId, userId))).orderBy(desc(contactListMemberships.addedAt));
+  async getContactMemberships(tenantId: number, contactId: number): Promise<ContactListMembership[]> {
+    warnIfTenantScopedParamsInvalid('getContactMemberships', { tenantId, contactId });
+    return await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.contactId, contactId), eq(contactListMemberships.tenantId, tenantId))).orderBy(desc(contactListMemberships.addedAt));
   }
 
-  async addContactToList(userId: number, contactId: number, listId: number, addedBy?: number): Promise<ContactListMembership> {
+  async addContactToList(tenantId: number, contactId: number, listId: number, addedBy?: number): Promise<ContactListMembership> {
+    warnIfTenantScopedParamsInvalid('addContactToList', { tenantId, contactId, listId });
     // Check if already exists
     const existing = await db.select().from(contactListMemberships)
       .where(and(
         eq(contactListMemberships.contactId, contactId),
         eq(contactListMemberships.listId, listId),
-        eq(contactListMemberships.userId, userId)
+        eq(contactListMemberships.tenantId, tenantId)
       ));
 
     if (existing.length > 0) {
       // Update status to active if it exists
       const [updated] = await db.update(contactListMemberships)
         .set({ status: 'active' })
-        .where(and(eq(contactListMemberships.id, existing[0].id), eq(contactListMemberships.userId, userId)))
+        .where(and(eq(contactListMemberships.id, existing[0].id), eq(contactListMemberships.tenantId, tenantId)))
         .returning();
       return updated;
     }
 
     // Create new membership
-    return await this.createContactListMembership(userId, {
-      userId,
+    return await this.createContactListMembership(tenantId, {
       contactId,
       listId,
       addedBy,
@@ -2576,12 +2756,13 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async removeContactFromList(userId: number, contactId: number, listId: number): Promise<void> {
+  async removeContactFromList(tenantId: number, contactId: number, listId: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('removeContactFromList', { tenantId, contactId, listId });
     await db.delete(contactListMemberships)
       .where(and(
         eq(contactListMemberships.contactId, contactId),
         eq(contactListMemberships.listId, listId),
-        eq(contactListMemberships.userId, userId)
+        eq(contactListMemberships.tenantId, tenantId)
       ));
     
     // Update contact count in the list
@@ -2590,35 +2771,37 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(contactListMemberships.listId, listId),
         eq(contactListMemberships.status, 'active'),
-        eq(contactListMemberships.userId, userId)
+        eq(contactListMemberships.tenantId, tenantId)
       ));
     
     await db.update(contactLists)
       .set({ contactCount: contactCount[0].count })
-      .where(and(eq(contactLists.id, listId), eq(contactLists.userId, userId)));
+      .where(and(eq(contactLists.id, listId), eq(contactLists.tenantId, tenantId)));
   }
 
-  async getContactsInList(userId: number, listId: number): Promise<Contact[]> {
+  async getContactsInList(tenantId: number, listId: number): Promise<Contact[]> {
+    warnIfTenantScopedParamsInvalid('getContactsInList', { tenantId, listId });
     const result = await db
-      .select()
+      .select({ contact: contacts })
       .from(contacts)
       .innerJoin(contactListMemberships, eq(contacts.id, contactListMemberships.contactId))
       .where(and(
         eq(contactListMemberships.listId, listId),
         eq(contactListMemberships.status, 'active'),
-        eq(contacts.userId, userId)
+        eq(contactListMemberships.tenantId, tenantId)
       ))
       .orderBy(asc(contacts.name));
 
-    return result.map(r => r.contacts);
+    return result.map(r => r.contact);
   }
 
   // AI Lead Scoring
-  async getAiLeadScore(userId: number, contactId: number): Promise<AiLeadScore | undefined> {
+  async getAiLeadScore(tenantId: number, contactId: number): Promise<AiLeadScore | undefined> {
+    warnIfTenantScopedParamsInvalid('getAiLeadScore', { tenantId, contactId });
     const [score] = await db.select()
       .from(aiLeadScores)
       .where(and(
-        eq(aiLeadScores.userId, userId),
+        eq(aiLeadScores.tenantId, tenantId),
         eq(aiLeadScores.contactId, contactId)
       ))
       .orderBy(desc(aiLeadScores.lastCalculated))
@@ -2626,9 +2809,10 @@ export class DatabaseStorage implements IStorage {
     return score || undefined;
   }
 
-  async upsertAiLeadScore(userId: number, score: Omit<InsertAiLeadScore, 'userId'>): Promise<AiLeadScore> {
+  async upsertAiLeadScore(tenantId: number, score: Omit<InsertAiLeadScore, 'tenantId'>): Promise<AiLeadScore> {
+    warnIfTenantScopedParamsInvalid('upsertAiLeadScore', { tenantId });
     // Check if score exists for this contact
-    const existing = await this.getAiLeadScore(userId, score.contactId);
+    const existing = await this.getAiLeadScore(tenantId, score.contactId);
 
     if (existing) {
       // Update existing score
@@ -2639,7 +2823,7 @@ export class DatabaseStorage implements IStorage {
           lastCalculated: new Date(),
         })
         .where(and(
-          eq(aiLeadScores.userId, userId),
+          eq(aiLeadScores.tenantId, tenantId),
           eq(aiLeadScores.contactId, score.contactId)
         ))
         .returning();
@@ -2649,53 +2833,57 @@ export class DatabaseStorage implements IStorage {
       const [newScore] = await db.insert(aiLeadScores)
         .values({
           ...score,
-          userId,
+          tenantId
         })
         .returning();
       return newScore;
     }
   }
 
-  async getTopScoredContacts(userId: number, limit: number): Promise<Array<Contact & { aiScore: AiLeadScore }>> {
+  async getTopScoredContacts(tenantId: number, limit: number): Promise<Array<Contact & { aiScore: AiLeadScore }>> {
+    warnIfTenantScopedParamsInvalid('getTopScoredContacts', { tenantId });
     const result = await db
-      .select()
+      .select({ contact: contacts, aiScore: aiLeadScores })
       .from(contacts)
       .innerJoin(aiLeadScores, and(
         eq(contacts.id, aiLeadScores.contactId),
-        eq(aiLeadScores.userId, userId)
+        eq(aiLeadScores.tenantId, tenantId)
       ))
-      .where(eq(contacts.userId, userId))
+      .where(eq(contacts.tenantId, tenantId))
       .orderBy(desc(aiLeadScores.overallScore))
       .limit(limit);
 
     return result.map(r => ({
-      ...r.contacts,
-      aiScore: r.ai_lead_scores
+      ...r.contact,
+      aiScore: r.aiScore
     }));
   }
 
   // Call Intelligence
-  async getCallIntelligence(userId: number, callId: number): Promise<CallIntelligence | undefined> {
+  async getCallIntelligence(tenantId: number, callId: number): Promise<CallIntelligence | undefined> {
+    warnIfTenantScopedParamsInvalid('getCallIntelligence', { tenantId, callId });
     const [intelligence] = await db.select()
       .from(callIntelligence)
       .where(and(
-        eq(callIntelligence.userId, userId),
+        eq(callIntelligence.tenantId, tenantId),
         eq(callIntelligence.callId, callId)
       ));
     return intelligence || undefined;
   }
 
-  async createCallIntelligence(userId: number, intelligence: Omit<InsertCallIntelligence, 'userId'>): Promise<CallIntelligence> {
+  async createCallIntelligence(tenantId: number, intelligence: Omit<InsertCallIntelligence, 'tenantId'>): Promise<CallIntelligence> {
+    warnIfTenantScopedParamsInvalid('createCallIntelligence', { tenantId });
     const [newIntelligence] = await db.insert(callIntelligence)
       .values({
         ...intelligence,
-        userId,
+        tenantId
       })
       .returning();
     return newIntelligence;
   }
 
-  async updateCallIntelligence(userId: number, id: number, intelligence: Partial<InsertCallIntelligence>): Promise<CallIntelligence> {
+  async updateCallIntelligence(tenantId: number, id: number, intelligence: Partial<InsertCallIntelligence>): Promise<CallIntelligence> {
+    warnIfTenantScopedParamsInvalid('updateCallIntelligence', { tenantId, id });
     const [updated] = await db.update(callIntelligence)
       .set({
         ...intelligence,
@@ -2703,25 +2891,27 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(
         eq(callIntelligence.id, id),
-        eq(callIntelligence.userId, userId)
+        eq(callIntelligence.tenantId, tenantId)
       ))
       .returning();
     return updated;
   }
 
-  // AI Insights
-  async getAiInsight(userId: number, id: number): Promise<AiInsight | undefined> {
+  // AI Insights (tenant-scoped)
+  async getAiInsight(tenantId: number, id: number): Promise<AiInsight | undefined> {
+    warnIfTenantScopedParamsInvalid('getAiInsight', { tenantId, id });
     const [insight] = await db.select()
       .from(aiInsights)
       .where(and(
         eq(aiInsights.id, id),
-        eq(aiInsights.userId, userId)
+        eq(aiInsights.tenantId, tenantId)
       ));
     return insight || undefined;
   }
 
-  async getAiInsights(userId: number, filters: { status?: string; type?: string }): Promise<AiInsight[]> {
-    const conditions = [eq(aiInsights.userId, userId)];
+  async getAiInsights(tenantId: number, filters: { status?: string; type?: string }): Promise<AiInsight[]> {
+    warnIfTenantScopedParamsInvalid('getAiInsights', { tenantId });
+    const conditions = [eq(aiInsights.tenantId, tenantId)];
     
     if (filters.status) {
       conditions.push(eq(aiInsights.status, filters.status));
@@ -2738,17 +2928,19 @@ export class DatabaseStorage implements IStorage {
     return insights;
   }
 
-  async createAiInsight(userId: number, insight: Omit<InsertAiInsight, 'userId'>): Promise<AiInsight> {
+  async createAiInsight(tenantId: number, insight: Omit<InsertAiInsight, 'tenantId'>): Promise<AiInsight> {
+    warnIfTenantScopedParamsInvalid('createAiInsight', { tenantId });
     const [newInsight] = await db.insert(aiInsights)
       .values({
         ...insight,
-        userId,
+        tenantId
       })
       .returning();
     return newInsight;
   }
 
-  async updateAiInsight(userId: number, id: number, insight: Partial<InsertAiInsight>): Promise<AiInsight> {
+  async updateAiInsight(tenantId: number, id: number, insight: Partial<InsertAiInsight>): Promise<AiInsight> {
+    warnIfTenantScopedParamsInvalid('updateAiInsight', { tenantId, id });
     const [updated] = await db.update(aiInsights)
       .set({
         ...insight,
@@ -2756,17 +2948,18 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(
         eq(aiInsights.id, id),
-        eq(aiInsights.userId, userId)
+        eq(aiInsights.tenantId, tenantId)
       ))
       .returning();
     return updated;
   }
 
-  async deleteAiInsight(userId: number, id: number): Promise<void> {
+  async deleteAiInsight(tenantId: number, id: number): Promise<void> {
+    warnIfTenantScopedParamsInvalid('deleteAiInsight', { tenantId, id });
     await db.delete(aiInsights)
       .where(and(
         eq(aiInsights.id, id),
-        eq(aiInsights.userId, userId)
+        eq(aiInsights.tenantId, tenantId)
       ));
   }
 
@@ -2897,6 +3090,45 @@ export class DatabaseStorage implements IStorage {
     });
     
     return membership;
+  }
+
+  async createUserWithTenant(insertUser: InsertUser): Promise<User> {
+    // Generate a unique slug for the tenant's organization
+    const orgName = `${insertUser.username}'s Organization`;
+    const baseSlug = (insertUser.username || 'user').toLowerCase().replace(/[^a-z0-9]/g, '-');
+    let slug = baseSlug;
+    let tenant = await this.getTenantBySlug(slug);
+    let i = 1;
+    while (tenant) {
+      slug = `${baseSlug}-${i}`;
+      tenant = await this.getTenantBySlug(slug);
+      i++;
+    }
+  
+    // Create a new tenant for the user
+    const newTenant = await this.createTenant({
+      name: orgName,
+      slug: slug,
+      status: 'active',
+      plan: 'free',
+    });
+  
+    // Create the new user
+    const newUser = await this.createUser({
+      ...insertUser,
+      tenantId: newTenant.id,
+    });
+  
+    // Create the tenant membership for the user
+    await this.createTenantMembership({
+      tenantId: newTenant.id,
+      userId: newUser.id,
+      role: 'admin', // The user is the admin of their own tenant
+      status: 'active',
+      isDefault: true,
+    });
+  
+    return newUser;
   }
 }
 

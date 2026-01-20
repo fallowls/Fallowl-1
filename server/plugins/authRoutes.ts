@@ -177,7 +177,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
           });
         } else {
           // Create new user
-          user = await storage.createUser({
+          user = await storage.createUserWithTenant({
             auth0Id: auth0UserId,
             email,
             username,
