@@ -1,5 +1,5 @@
 import { useStore } from "@/store/useStore";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -9,25 +9,27 @@ import Header from "./Header";
 import CallNotificationBar from "./CallNotificationBar";
 import IncomingCallScreen from "../dialer/IncomingCallScreen";
 import OnCallScreen from "../dialer/OnCallScreen";
-import DashboardPage from "@/pages/DashboardPage";
-import DialerPage from "@/pages/DialerPage";
-import CallLogPage from "@/pages/CallLogPage";
-import SmsPage from "@/pages/SmsPage";
-import ContactsPage from "@/pages/ContactsPage";
-import VoicemailPage from "@/pages/VoicemailPage";
-import UsersPage from "@/pages/UsersPage";
-import SmtpPage from "@/pages/SmtpPage";
-import PaymentsPage from "@/pages/PaymentsPage";
-import CdnPage from "@/pages/CdnPage";
-import CallSettingsPage from "@/pages/CallSettingsPage";
-import SettingsPage from "@/pages/SettingsPage";
-import SupportPage from "@/pages/SupportPage";
-import ProfilePage from "@/pages/ProfilePage";
-import LeadsPage from "@/pages/LeadsPage";
-import CalendarPage from "@/pages/CalendarPage";
-import ParallelDialerPage from "@/pages/ParallelDialerPage";
-import ParallelDialerVerificationPage from "@/pages/ParallelDialerVerificationPage";
-import MyWorkPage from "@/pages/MyWorkPage";
+
+// Lazy load page components for better initial bundle size
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const DialerPage = lazy(() => import("@/pages/DialerPage"));
+const CallLogPage = lazy(() => import("@/pages/CallLogPage"));
+const SmsPage = lazy(() => import("@/pages/SmsPage"));
+const ContactsPage = lazy(() => import("@/pages/ContactsPage"));
+const VoicemailPage = lazy(() => import("@/pages/VoicemailPage"));
+const UsersPage = lazy(() => import("@/pages/UsersPage"));
+const SmtpPage = lazy(() => import("@/pages/SmtpPage"));
+const PaymentsPage = lazy(() => import("@/pages/PaymentsPage"));
+const CdnPage = lazy(() => import("@/pages/CdnPage"));
+const CallSettingsPage = lazy(() => import("@/pages/CallSettingsPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const SupportPage = lazy(() => import("@/pages/SupportPage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const LeadsPage = lazy(() => import("@/pages/LeadsPage"));
+const CalendarPage = lazy(() => import("@/pages/CalendarPage"));
+const ParallelDialerPage = lazy(() => import("@/pages/ParallelDialerPage"));
+const ParallelDialerVerificationPage = lazy(() => import("@/pages/ParallelDialerVerificationPage"));
+const MyWorkPage = lazy(() => import("@/pages/MyWorkPage"));
 
 const pageComponents = {
   dashboard: DashboardPage,
@@ -88,13 +90,19 @@ export default function Layout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-auto bg-transparent scrollbar-thin">
-          {showIncomingCallScreen ? (
-            <IncomingCallScreen />
-          ) : showOnCallScreen ? (
-            <OnCallScreen />
-          ) : (
-            <CurrentPage />
-          )}
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }>
+            {showIncomingCallScreen ? (
+              <IncomingCallScreen />
+            ) : showOnCallScreen ? (
+              <OnCallScreen />
+            ) : (
+              <CurrentPage />
+            )}
+          </Suspense>
         </main>
       </div>
       {showCallBar && <CallNotificationBar />}

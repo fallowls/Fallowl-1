@@ -916,12 +916,42 @@ export class DatabaseStorage implements IStorage {
 
   async getAllContacts(tenantId: number, userId: number): Promise<Contact[]> {
     warnIfTenantScopedParamsInvalid('getAllContacts', { tenantId, userId });
-    return await db.select().from(contacts).where(eq(contacts.tenantId, tenantId)).orderBy(asc(contacts.name));
+    return await db
+      .select({
+        id: contacts.id,
+        tenantId: contacts.tenantId,
+        userId: contacts.userId,
+        name: contacts.name,
+        email: contacts.email,
+        phone: contacts.phone,
+        company: contacts.company,
+        jobTitle: contacts.jobTitle,
+        leadStatus: contacts.leadStatus,
+        priority: contacts.priority,
+        lastContactedAt: contacts.lastContactedAt,
+        createdAt: contacts.createdAt,
+      })
+      .from(contacts)
+      .where(eq(contacts.tenantId, tenantId))
+      .orderBy(asc(contacts.name)) as Contact[];
   }
 
   async searchContacts(tenantId: number, userId: number, query: string): Promise<Contact[]> {
     return await db
-      .select()
+      .select({
+        id: contacts.id,
+        tenantId: contacts.tenantId,
+        userId: contacts.userId,
+        name: contacts.name,
+        email: contacts.email,
+        phone: contacts.phone,
+        company: contacts.company,
+        jobTitle: contacts.jobTitle,
+        leadStatus: contacts.leadStatus,
+        priority: contacts.priority,
+        lastContactedAt: contacts.lastContactedAt,
+        createdAt: contacts.createdAt,
+      })
       .from(contacts)
       .where(
         and(
@@ -933,7 +963,7 @@ export class DatabaseStorage implements IStorage {
           )
         )
       )
-      .orderBy(asc(contacts.name));
+      .orderBy(asc(contacts.name)) as Contact[];
   }
 
   // Calls (tenant-scoped)
@@ -1010,7 +1040,20 @@ export class DatabaseStorage implements IStorage {
     const total = Number(totalResult?.count || 0);
 
     const results = await db
-      .select()
+      .select({
+        id: calls.id,
+        tenantId: calls.tenantId,
+        userId: calls.userId,
+        contactId: calls.contactId,
+        phone: calls.phone,
+        type: calls.type,
+        status: calls.status,
+        duration: calls.duration,
+        createdAt: calls.createdAt,
+        cost: calls.cost,
+        disposition: calls.disposition,
+        isParallelDialer: calls.isParallelDialer,
+      })
       .from(calls)
       .where(and(eq(calls.tenantId, tenantId), eq(calls.userId, userId)))
       .orderBy(desc(calls.createdAt))
@@ -1031,11 +1074,21 @@ export class DatabaseStorage implements IStorage {
   async getRecentCalls(tenantId: number, userId: number, limit: number = 10): Promise<Call[]> {
     warnIfTenantScopedParamsInvalid('getRecentCalls', { tenantId, userId });
     return await db
-      .select()
+      .select({
+        id: calls.id,
+        tenantId: calls.tenantId,
+        userId: calls.userId,
+        contactId: calls.contactId,
+        phone: calls.phone,
+        type: calls.type,
+        status: calls.status,
+        duration: calls.duration,
+        createdAt: calls.createdAt,
+      })
       .from(calls)
       .where(eq(calls.tenantId, tenantId))
       .orderBy(desc(calls.createdAt))
-      .limit(limit);
+      .limit(limit) as Call[];
   }
 
   async getCallsByStatus(tenantId: number, userId: number, statuses: string[]): Promise<Call[]> {
@@ -1101,7 +1154,17 @@ export class DatabaseStorage implements IStorage {
     averageCallQuality: number;
   }> {
     warnIfTenantScopedParamsInvalid('getCallStats', { tenantId, userId });
-    const allCalls = await db.select().from(calls).where(eq(calls.tenantId, tenantId));
+    const allCalls = await db
+      .select({
+        status: calls.status,
+        type: calls.type,
+        duration: calls.duration,
+        cost: calls.cost,
+        callQuality: calls.callQuality,
+      })
+      .from(calls)
+      .where(eq(calls.tenantId, tenantId));
+    
     const totalCalls = allCalls.length;
     
     const completedCalls = allCalls.filter(call => call.status === 'completed').length;
@@ -1178,7 +1241,22 @@ export class DatabaseStorage implements IStorage {
 
   async getAllMessages(tenantId: number, userId: number): Promise<Message[]> {
     warnIfTenantScopedParamsInvalid('getAllMessages', { tenantId, userId });
-    return await db.select().from(messages).where(eq(messages.tenantId, tenantId)).orderBy(desc(messages.createdAt));
+    return await db
+      .select({
+        id: messages.id,
+        tenantId: messages.tenantId,
+        userId: messages.userId,
+        contactId: messages.contactId,
+        phone: messages.phone,
+        type: messages.type,
+        content: messages.content,
+        status: messages.status,
+        isRead: messages.isRead,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(eq(messages.tenantId, tenantId))
+      .orderBy(desc(messages.createdAt)) as Message[];
   }
 
   async getMessagesByContact(tenantId: number, userId: number, contactId: number): Promise<Message[]> {
@@ -2068,7 +2146,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllLeads(tenantId: number, userId: number): Promise<Lead[]> {
-    return await db.select().from(leads).where(eq(leads.tenantId, tenantId)).orderBy(desc(leads.createdAt));
+    return await db
+      .select({
+        id: leads.id,
+        tenantId: leads.tenantId,
+        userId: leads.userId,
+        firstName: leads.firstName,
+        lastName: leads.lastName,
+        email: leads.email,
+        phone: leads.phone,
+        company: leads.company,
+        priority: leads.priority,
+        temperature: leads.temperature,
+        leadScore: leads.leadScore,
+        isQualified: leads.isQualified,
+        isConverted: leads.isConverted,
+        createdAt: leads.createdAt,
+      })
+      .from(leads)
+      .where(eq(leads.tenantId, tenantId))
+      .orderBy(desc(leads.createdAt)) as Lead[];
   }
 
   async getLeadsByStatus(tenantId: number, userId: number, statusId: number): Promise<Lead[]> {

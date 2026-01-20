@@ -207,6 +207,7 @@ import cors from '@fastify/cors';
 import formbody from '@fastify/formbody';
 import cookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
+import compress from '@fastify/compress';
 import connectPgSimple from 'connect-pg-simple';
 
 const log = (message: string) => {
@@ -327,6 +328,15 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   await fastify.register(formbody);
   
   log('✅ Body parsing configured (JSON built-in, formbody registered)');
+
+  // 2.5 Compression
+  await fastify.register(compress, {
+    global: true,
+    threshold: 1024, // only compress responses larger than 1KB
+    encodings: ['gzip', 'deflate']
+  });
+
+  log('✅ Response compression configured');
 
   // 3. PostgreSQL Session Management
   // Must register cookie plugin BEFORE session plugin

@@ -131,8 +131,13 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5000, // 5 seconds stale time for general data
+      gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
+      retry: (failureCount, error: any) => {
+        // Retry on network errors or 5xx server errors, but not 4xx
+        if (error?.status >= 400 && error?.status < 500) return false;
+        return failureCount < 2;
+      },
     },
     mutations: {
       retry: false,

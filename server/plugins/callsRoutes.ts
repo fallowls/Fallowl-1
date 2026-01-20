@@ -117,45 +117,39 @@ export default async function callsRoutes(fastify: FastifyInstance) {
       const result = await storage.getAllCalls(tenantId, userId);
       const allCalls = result.calls;
       
-      const enrichedCalls = await Promise.all(allCalls.map(async (call: any) => {
-        let contactName = null;
-        let agentName = null;
-        
-        if (call.contactId) {
-          const contact = await storage.getContact(tenantId, userId, call.contactId);
-          if (contact) {
-            contactName = contact.name;
-          }
-        }
-        
-        const user = await storage.getUser(call.userId);
-        if (user) {
-          agentName = user.username || user.firstName || user.email;
-        }
-        
-        return {
-          ...call,
-          contactName,
-          agentName
-        };
-      }));
-      
-      const grouped = {
-        queued: enrichedCalls.filter((call: any) => call.status === 'queued'),
-        initiated: enrichedCalls.filter((call: any) => call.status === 'initiated'),
-        ringing: enrichedCalls.filter((call: any) => call.status === 'ringing'),
-        inProgress: enrichedCalls.filter((call: any) => call.status === 'in-progress'),
-        completed: enrichedCalls.filter((call: any) => call.status === 'completed'),
-        busy: enrichedCalls.filter((call: any) => call.status === 'busy'),
-        failed: enrichedCalls.filter((call: any) => call.status === 'failed'),
-        noAnswer: enrichedCalls.filter((call: any) => call.status === 'no-answer'),
-        voicemail: enrichedCalls.filter((call: any) => call.outcome === 'voicemail' || call.status === 'voicemail'),
-        dropped: enrichedCalls.filter((call: any) => call.status === 'call-dropped'),
-        canceled: enrichedCalls.filter((call: any) => call.status === 'canceled')
+      const grouped: Record<string, any[]> = {
+        queued: [],
+        initiated: [],
+        ringing: [],
+        inProgress: [],
+        completed: [],
+        busy: [],
+        failed: [],
+        noAnswer: [],
+        voicemail: [],
+        dropped: [],
+        canceled: []
       };
       
+      for (const call of allCalls) {
+        if (call.status === 'queued') grouped.queued.push(call);
+        else if (call.status === 'initiated') grouped.initiated.push(call);
+        else if (call.status === 'ringing') grouped.ringing.push(call);
+        else if (call.status === 'in-progress') grouped.inProgress.push(call);
+        else if (call.status === 'completed') grouped.completed.push(call);
+        else if (call.status === 'busy') grouped.busy.push(call);
+        else if (call.status === 'failed') grouped.failed.push(call);
+        else if (call.status === 'no-answer') grouped.noAnswer.push(call);
+        else if (call.status === 'call-dropped') grouped.dropped.push(call);
+        else if (call.status === 'canceled') grouped.canceled.push(call);
+        
+        if (call.status === 'voicemail' || (call as any).outcome === 'voicemail') {
+          grouped.voicemail.push(call);
+        }
+      }
+      
       const summary = {
-        totalCalls: enrichedCalls.length,
+        totalCalls: allCalls.length,
         active: grouped.queued.length + grouped.initiated.length + grouped.ringing.length + grouped.inProgress.length,
         connected: grouped.inProgress.length,
         completed: grouped.completed.length,
@@ -179,6 +173,10 @@ export default async function callsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = getUserIdFromRequest(request);
+      const tenantId = (request as any).tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ message: "Tenant context missing" });
+      }
       const testCalls = [
         {
           userId,

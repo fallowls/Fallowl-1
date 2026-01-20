@@ -266,6 +266,7 @@ export default function LandingPage() {
                 src={ClosoLogo} 
                 alt="Closo" 
                 className="h-8 w-auto brightness-0 dark:invert transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
               />
             </div>
             <div className="hidden md:flex items-center space-x-8">
