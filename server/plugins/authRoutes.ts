@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { storage } from '../storage';
 import { clearTwilioCacheOnLogout } from '../userTwilioService';
 import { rateLimitConfigs } from './rateLimiters';
+import bcrypt from "bcryptjs";
 
 /**
  * Authentication Routes Plugin for Fastify
@@ -71,24 +72,18 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { username, password } = request.body as any;
+      const { email, username, password } = request.body as any;
+      const loginIdentifier = email || username;
       
-      if (!username || !password) {
-        return reply.code(400).send({ message: "Username and password are required" });
+      if (!loginIdentifier || !password) {
+        return reply.code(400).send({ message: "Email/Username and password are required" });
       }
 
-      // Try to authenticate by username first, then email
-      let user = await storage.authenticateUser(username, password);
+      // Try to authenticate by email first, then username
+      let user = await storage.authenticateUser(loginIdentifier, password);
       
       if (!user) {
-        // Fallback for email-based login if username looks like an email
-        if (username.includes('@')) {
-          user = await storage.authenticateUser(username, password);
-        }
-      }
-      
-      if (!user) {
-        return reply.code(401).send({ message: "Invalid username or password" });
+        return reply.code(401).send({ message: "Invalid credentials" });
       }
 
       // Create session
@@ -111,6 +106,69 @@ export default async function authRoutes(fastify: FastifyInstance) {
     } catch (error: any) {
       console.error('Login error:', error);
       return reply.code(500).send({ message: error.message || "An unexpected error occurred during login" });
+    }
+  });
+
+  // POST /auth/check-email - Check if email exists
+  fastify.post('/auth/check-email', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { email } = request.body as any;
+      if (!email) {
+        return reply.code(400).send({ message: "Email is required" });
+      }
+      const user = await storage.getUserByEmail(email);
+      return reply.send({ exists: !!user });
+    } catch (error: any) {
+      console.error('Check email error:', error);
+      return reply.code(500).send({ message: error.message });
+    }
+  });
+
+  // POST /auth/signup - User registration
+  fastify.post('/auth/signup', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { email, password, fullName } = request.body as any;
+      
+      if (!email || !password || !fullName) {
+        return reply.code(400).send({ message: "Email, password, and full name are required" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return reply.code(400).send({ message: "User already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create new user
+      const user = await storage.createUser({
+        email,
+        password: hashedPassword,
+        username: email.split('@')[0],
+        firstName: fullName.split(' ')[0],
+        lastName: fullName.split(' ').slice(1).join(' ') || '',
+        role: 'user',
+        status: 'active'
+      });
+
+      // Create session
+      (request as any).session.userId = user.id;
+      (request as any).session.user = user;
+
+      return reply.code(201).send({ 
+        message: "User created successfully",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        }
+      });
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      return reply.code(500).send({ message: error.message });
     }
   });
 
