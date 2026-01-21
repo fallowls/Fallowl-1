@@ -52,9 +52,9 @@
 - [x] Verify that all user-facing resources are correctly filtered by `tenantId`.
 
 ### Phase 2: Security & Isolation Policies
-- [ ] Implement Row Level Security (RLS) style checks in the storage layer.
-- [ ] Add automated testing for cross-tenant data leakage.
-- [ ] Audit Twilio TwiML App configurations for tenant isolation.
+- [x] Implement Row Level Security (RLS) style checks in the storage layer.
+- [x] Add automated testing for cross-tenant data leakage.
+- [x] Audit Twilio TwiML App configurations for tenant isolation.
 
 ### Phase 3: Cleanup & Monitoring
 - [ ] Remove any remaining legacy Auth0-specific tenant logic.

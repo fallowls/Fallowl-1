@@ -263,18 +263,18 @@ export interface IStorage {
 
   // Lead Sources (tenant-scoped)
   getLeadSource(tenantId: number, userId: number, id: number): Promise<LeadSource | undefined>;
-  getLeadSourceByName(tenantId: number, userId: number, name: string): Promise<LeadSource | undefined>;
-  createLeadSource(tenantId: number, userId: number, source: InsertLeadSource): Promise<LeadSource>;
-  updateLeadSource(tenantId: number, userId: number, id: number, source: Partial<InsertLeadSource>): Promise<LeadSource>;
+  getLeadSourceByName(tenantId: number, name: string): Promise<LeadSource | undefined>;
+  createLeadSource(tenantId: number, source: InsertLeadSource): Promise<LeadSource>;
+  updateLeadSource(tenantId: number, id: number, source: Partial<InsertLeadSource>): Promise<LeadSource>;
   deleteLeadSource(tenantId: number, userId: number, id: number): Promise<void>;
   getAllLeadSources(tenantId: number, userId: number): Promise<LeadSource[]>;
   getActiveLeadSources(tenantId: number, userId: number): Promise<LeadSource[]>;
 
   // Lead Statuses (tenant-scoped)
   getLeadStatus(tenantId: number, userId: number, id: number): Promise<LeadStatus | undefined>;
-  getLeadStatusByName(tenantId: number, userId: number, name: string): Promise<LeadStatus | undefined>;
-  createLeadStatus(tenantId: number, userId: number, status: InsertLeadStatus): Promise<LeadStatus>;
-  updateLeadStatus(tenantId: number, userId: number, id: number, status: Partial<InsertLeadStatus>): Promise<LeadStatus>;
+  getLeadStatusByName(tenantId: number, name: string): Promise<LeadStatus | undefined>;
+  createLeadStatus(tenantId: number, status: InsertLeadStatus): Promise<LeadStatus>;
+  updateLeadStatus(tenantId: number, id: number, status: Partial<InsertLeadStatus>): Promise<LeadStatus>;
   deleteLeadStatus(tenantId: number, userId: number, id: number): Promise<void>;
   getAllLeadStatuses(tenantId: number, userId: number): Promise<LeadStatus[]>;
   getActiveLeadStatuses(tenantId: number, userId: number): Promise<LeadStatus[]>;
@@ -282,26 +282,26 @@ export interface IStorage {
   // Lead Campaigns (tenant-scoped)
   getLeadCampaign(tenantId: number, userId: number, id: number): Promise<LeadCampaign | undefined>;
   createLeadCampaign(tenantId: number, userId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign>;
-  updateLeadCampaign(tenantId: number, userId: number, id: number, campaign: Partial<InsertLeadCampaign>): Promise<LeadCampaign>;
+  updateLeadCampaign(tenantId: number, id: number, campaign: Partial<InsertLeadCampaign>): Promise<LeadCampaign>;
   deleteLeadCampaign(tenantId: number, userId: number, id: number): Promise<void>;
   getAllLeadCampaigns(tenantId: number, userId: number): Promise<LeadCampaign[]>;
-  getLeadCampaignsByStatus(tenantId: number, userId: number, status: string): Promise<LeadCampaign[]>;
-  getLeadCampaignsByType(tenantId: number, userId: number, type: string): Promise<LeadCampaign[]>;
+  getLeadCampaignsByStatus(tenantId: number, status: string): Promise<LeadCampaign[]>;
+  getLeadCampaignsByType(tenantId: number, type: string): Promise<LeadCampaign[]>;
 
   // Leads (tenant-scoped)
   getLead(tenantId: number, userId: number, id: number): Promise<Lead | undefined>;
-  getLeadByEmail(tenantId: number, userId: number, email: string): Promise<Lead | undefined>;
-  getLeadByPhone(tenantId: number, userId: number, phone: string): Promise<Lead | undefined>;
+  getLeadByEmail(tenantId: number, email: string): Promise<Lead | undefined>;
+  getLeadByPhone(tenantId: number, phone: string): Promise<Lead | undefined>;
   createLead(tenantId: number, userId: number, lead: InsertLead): Promise<Lead>;
-  updateLead(tenantId: number, userId: number, id: number, lead: Partial<InsertLead>): Promise<Lead>;
+  updateLead(tenantId: number, id: number, lead: Partial<InsertLead>): Promise<Lead>;
   deleteLead(tenantId: number, userId: number, id: number): Promise<void>;
   getAllLeads(tenantId: number, userId: number): Promise<Lead[]>;
   getLeadsByStatus(tenantId: number, userId: number, statusId: number): Promise<Lead[]>;
   getLeadsBySource(tenantId: number, userId: number, sourceId: number): Promise<Lead[]>;
   getLeadsByAssignee(tenantId: number, userId: number, assigneeId: number): Promise<Lead[]>;
-  getLeadsByPriority(tenantId: number, userId: number, priority: string): Promise<Lead[]>;
-  getLeadsByTemperature(tenantId: number, userId: number, temperature: string): Promise<Lead[]>;
-  searchLeads(tenantId: number, userId: number, query: string): Promise<Lead[]>;
+  getLeadsByPriority(tenantId: number, priority: string): Promise<Lead[]>;
+  getLeadsByTemperature(tenantId: number, temperature: string): Promise<Lead[]>;
+  searchLeads(tenantId: number, query: string): Promise<Lead[]>;
   getLeadsWithFilters(tenantId: number, userId: number, filters: {
     status?: number;
     source?: number;
@@ -2724,6 +2724,7 @@ export class DatabaseStorage implements IStorage {
 
     // Create new membership
     return await this.createContactListMembership(tenantId, {
+      tenantId, // Add tenantId here
       userId: addedBy || 0, // Fallback to 0 if not provided, assuming it's required by schema now
       contactId,
       listId,
