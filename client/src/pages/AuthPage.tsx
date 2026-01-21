@@ -2,184 +2,236 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertUserSchema, type InsertUser } from "@shared/schema";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import ClosoLogo from "@assets/closo_logo_png_1768808340025.png";
-import { Loader2, Shield } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { motion, AnimatePresence } from "framer-motion";
+
+const emailSchema = z.object({
+  email: z.string().email("Please enter a valid work email"),
+});
+
+const loginSchema = z.object({
+  password: z.string().min(1, "Password is required"),
+});
+
+const signupSchema = z.object({
+  fullName: z.string().min(1, "Full name is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [step, setStep] = useState<"email" | "login" | "signup">("email");
+  const [email, setEmail] = useState("");
   const { login, register, isLoading } = useAuth();
   const { toast } = useToast();
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
-  const form = useForm<InsertUser>({
-    resolver: zodResolver(insertUserSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
+  const emailForm = useForm({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: "" },
   });
 
-  const onSubmit = async (data: any) => {
-    console.log("Form submission triggered", data);
+  const loginForm = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { password: "" },
+  });
+
+  const signupForm = useForm({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { fullName: "", password: "" },
+  });
+
+  const onEmailSubmit = async (data: { email: string }) => {
+    setIsCheckingEmail(true);
     try {
-      if (isLogin) {
-        console.log("Calling login mutate");
-        await login.mutateAsync(data);
-      } else {
-        console.log("Calling register mutate");
-        // Ensure email is set if it's missing but username looks like one
-        const registrationData = {
-          ...data,
-          email: data.email || (data.username.includes('@') ? data.username : `${data.username}@example.com`)
-        };
-        await register.mutateAsync(registrationData);
-      }
+      const res = await apiRequest("POST", "/api/auth/check-email", data);
+      const { exists } = await res.json();
+      setEmail(data.email);
+      setStep(exists ? "login" : "signup");
     } catch (error: any) {
-      console.error("Auth submit error:", error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
+  const onLoginSubmit = async (data: any) => {
+    try {
+      await login.mutateAsync({ username: email, password: data.password });
+    } catch (error) {
+      // Error handled in hook
+    }
+  };
+
+  const onSignupSubmit = async (data: any) => {
+    try {
+      await register.mutateAsync({ email, ...data });
+    } catch (error) {
+      // Error handled in hook
     }
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 flex flex-col md:flex-row">
-      {/* Left side: Visual/Marketing */}
-      <div className="hidden md:flex md:w-1/2 bg-neutral-50 dark:bg-neutral-900 items-center justify-center p-12 border-r border-neutral-200 dark:border-neutral-800">
-        <div className="max-w-md space-y-6">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 text-blue-600 dark:text-blue-400 text-sm font-medium">
-            <Shield className="w-4 h-4" />
-            <span>Secure Enterprise Communication</span>
-          </div>
-          <h2 className="text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
-            Elevate your business <span className="text-blue-600">communication</span>
-          </h2>
-          <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed">
-            The all-in-one platform for calls, SMS, and CRM. Streamline your workflow with our advanced dialer and customer management tools.
-          </p>
-          <div className="pt-8 grid grid-cols-2 gap-6">
-            <div className="space-y-2 group cursor-default">
-              <h4 className="font-semibold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 transition-colors">Advanced Dialer</h4>
-              <p className="text-sm text-neutral-500">Built-in keypad and real-time status.</p>
-            </div>
-            <div className="space-y-2 group cursor-default">
-              <h4 className="font-semibold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 transition-colors">Smart CRM</h4>
-              <p className="text-sm text-neutral-500">Intelligent contact management.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right side: Auth Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-white dark:bg-neutral-950">
-        <div className="w-full max-w-[400px] space-y-8">
-          <div className="space-y-6">
-            <div className="flex justify-start">
-              <img 
-                src={ClosoLogo} 
-                alt="Closo" 
-                className="h-10 w-auto brightness-0 dark:invert opacity-90"
-              />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">
-                {isLogin ? "Welcome back" : "Create an account"}
-              </h1>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {isLogin 
-                  ? "Enter your credentials to access your workspace" 
-                  : "Join Closo to start managing your communications"}
-              </p>
-            </div>
+    <div className="min-h-screen bg-[#F9F9FB] flex items-center justify-center p-4">
+      <div className="w-full max-w-[440px]">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EEEEEE] p-10 space-y-8"
+        >
+          <div className="text-center space-y-2">
+            <h1 className="text-[32px] font-bold tracking-tight text-black">consio.</h1>
+            <p className="text-[#666666] text-sm">
+              Launch your campaign in ten minutes.<br />
+              No credit card required.
+            </p>
           </div>
 
-          <Tabs 
-            value={isLogin ? "login" : "register"} 
-            className="space-y-6" 
-            onValueChange={(v) => {
-              setIsLogin(v === "login");
-              form.reset({
-                username: "",
-                password: "",
-              });
-            }}
-          >
-            <TabsList className="grid w-full grid-cols-2 h-11 p-1 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-              <TabsTrigger 
-                value="login" 
-                className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-neutral-950 dark:data-[state=active]:text-neutral-50 data-[state=active]:shadow-sm transition-all text-neutral-500 dark:text-neutral-400"
+          <AnimatePresence mode="wait">
+            {step === "email" && (
+              <motion.form
+                key="email"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                onSubmit={emailForm.handleSubmit(onEmailSubmit)}
+                className="space-y-4"
               >
-                Login
-              </TabsTrigger>
-              <TabsTrigger 
-                value="register" 
-                className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-neutral-950 dark:data-[state=active]:text-neutral-50 data-[state=active]:shadow-sm transition-all text-neutral-500 dark:text-neutral-400"
-              >
-                Sign up
-              </TabsTrigger>
-            </TabsList>
-            
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Username</Label>
-                  <Input 
-                    id="username" 
-                    {...form.register("username")} 
-                    placeholder="Username or email"
-                    className="h-11 bg-transparent border-neutral-200 dark:border-neutral-800 focus:ring-1 focus:ring-blue-500 transition-all"
+                  <Input
+                    {...emailForm.register("email")}
+                    placeholder="Work email"
+                    className="h-12 bg-white border-[#E5E5E5] rounded-lg focus:ring-0 focus:border-black transition-all"
                   />
-                  {form.formState.errors.username && (
-                    <p className="text-xs font-medium text-red-500">{form.formState.errors.username.message}</p>
+                  {emailForm.formState.errors.email && (
+                    <p className="text-xs text-red-500">{emailForm.formState.errors.email.message}</p>
                   )}
                 </div>
-                
+                <Button
+                  type="submit"
+                  disabled={isCheckingEmail}
+                  className="w-full h-12 bg-black hover:bg-[#1a1a1a] text-white rounded-lg font-medium transition-all"
+                >
+                  {isCheckingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with email"}
+                </Button>
+              </motion.form>
+            )}
+
+            {step === "login" && (
+              <motion.form
+                key="login"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                onSubmit={loginForm.handleSubmit(onLoginSubmit)}
+                className="space-y-4"
+              >
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Password</Label>
-                    {isLogin && (
-                      <Button type="button" variant="link" className="p-0 h-auto text-xs text-blue-600 font-medium">
-                        Forgot password?
-                      </Button>
+                  <p className="text-sm text-[#666666]">Welcome back, <span className="text-black font-medium">{email}</span></p>
+                  <Input
+                    type="password"
+                    {...loginForm.register("password")}
+                    placeholder="Password"
+                    autoFocus
+                    className="h-12 bg-white border-[#E5E5E5] rounded-lg focus:ring-0 focus:border-black transition-all"
+                  />
+                  {loginForm.formState.errors.password && (
+                    <p className="text-xs text-red-500">{loginForm.formState.errors.password.message}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    type="submit"
+                    disabled={login.isPending}
+                    className="w-full h-12 bg-black hover:bg-[#1a1a1a] text-white rounded-lg font-medium transition-all"
+                  >
+                    {login.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    onClick={() => setStep("email")}
+                    className="text-sm text-[#666666] hover:text-black"
+                  >
+                    Back to email
+                  </Button>
+                </div>
+              </motion.form>
+            )}
+
+            {step === "signup" && (
+              <motion.form
+                key="signup"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                onSubmit={signupForm.handleSubmit(onSignupSubmit)}
+                className="space-y-4"
+              >
+                <div className="space-y-4">
+                  <p className="text-sm text-[#666666]">Create account for <span className="text-black font-medium">{email}</span></p>
+                  <div className="space-y-2">
+                    <Input
+                      {...signupForm.register("fullName")}
+                      placeholder="Full Name"
+                      autoFocus
+                      className="h-12 bg-white border-[#E5E5E5] rounded-lg focus:ring-0 focus:border-black transition-all"
+                    />
+                    {signupForm.formState.errors.fullName && (
+                      <p className="text-xs text-red-500">{signupForm.formState.errors.fullName.message}</p>
                     )}
                   </div>
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    {...form.register("password")} 
-                    placeholder="••••••••"
-                    className="h-11 bg-transparent border-neutral-200 dark:border-neutral-800 focus:ring-1 focus:ring-blue-500 transition-all"
-                  />
-                  {form.formState.errors.password && (
-                    <p className="text-xs font-medium text-red-500">{form.formState.errors.password.message}</p>
-                  )}
+                  <div className="space-y-2">
+                    <Input
+                      type="password"
+                      {...signupForm.register("password")}
+                      placeholder="Password (min 8 chars)"
+                      className="h-12 bg-white border-[#E5E5E5] rounded-lg focus:ring-0 focus:border-black transition-all"
+                    />
+                    {signupForm.formState.errors.password && (
+                      <p className="text-xs text-red-500">{signupForm.formState.errors.password.message}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    type="submit"
+                    disabled={register.isPending}
+                    className="w-full h-12 bg-black hover:bg-[#1a1a1a] text-white rounded-lg font-medium transition-all"
+                  >
+                    {register.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create account"}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    onClick={() => setStep("email")}
+                    className="text-sm text-[#666666] hover:text-black"
+                  >
+                    Back to email
+                  </Button>
+                </div>
+              </motion.form>
+            )}
+          </AnimatePresence>
 
-              <Button
-                type="submit"
-                disabled={isLoading || login.isPending || register.isPending}
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all"
-              >
-                {(isLoading || login.isPending || register.isPending) ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>{isLogin ? "Sign In" : "Get Started"}</>
-                )}
-              </Button>
-
-              <p className="text-center text-xs text-neutral-500 dark:text-neutral-500 px-8 leading-relaxed">
-                By clicking continue, you agree to our{" "}
-                <Button variant="link" className="p-0 h-auto text-xs text-neutral-500 underline underline-offset-4">Terms of Service</Button>{" "}
-                and{" "}
-                <Button variant="link" className="p-0 h-auto text-xs text-neutral-500 underline underline-offset-4">Privacy Policy</Button>.
-              </p>
-            </form>
-          </Tabs>
-        </div>
+          <div className="text-center">
+            <p className="text-[#999999] text-[13px]">
+              By signing up, you agree to the<br />
+              <a href="#" className="text-[#333333] hover:underline font-medium">Terms of Use</a> and <a href="#" className="text-[#333333] hover:underline font-medium">Privacy Policy</a>.
+            </p>
+          </div>
+        </motion.div>
+        <p className="mt-8 text-center text-[#666666] text-sm">
+          We'll sign you in or create an account if you don't already have one.
+        </p>
       </div>
     </div>
   );

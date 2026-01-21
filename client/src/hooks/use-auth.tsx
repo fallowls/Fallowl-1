@@ -55,9 +55,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const register = useMutation({
-    mutationFn: async (credentials: InsertUser) => {
-      console.log("Attempting registration with:", credentials.username);
-      const res = await apiRequest("POST", "/api/auth/register", credentials);
+    mutationFn: async (credentials: any) => {
+      console.log("Attempting registration with:", credentials.email);
+      const res = await apiRequest("POST", "/api/auth/signup", {
+        email: credentials.email,
+        password: credentials.password,
+        fullName: credentials.fullName || credentials.username || credentials.email.split('@')[0]
+      });
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
