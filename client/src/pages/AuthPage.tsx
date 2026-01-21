@@ -93,16 +93,16 @@ export default function AuthPage() {
           </div>
 
           <Tabs defaultValue="login" className="space-y-6" onValueChange={(v) => setIsLogin(v === "login")}>
-            <TabsList className="grid w-full grid-cols-2 h-11 p-1 bg-neutral-100 dark:bg-neutral-900 border-none rounded-lg">
+            <TabsList className="grid w-full grid-cols-2 h-11 p-1 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg">
               <TabsTrigger 
                 value="login" 
-                className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:shadow-sm transition-all"
+                className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-neutral-950 dark:data-[state=active]:text-neutral-50 data-[state=active]:shadow-sm transition-all text-neutral-500 dark:text-neutral-400"
               >
                 Login
               </TabsTrigger>
               <TabsTrigger 
                 value="register" 
-                className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:shadow-sm transition-all"
+                className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-neutral-950 dark:data-[state=active]:text-neutral-50 data-[state=active]:shadow-sm transition-all text-neutral-500 dark:text-neutral-400"
               >
                 Sign up
               </TabsTrigger>
@@ -148,7 +148,7 @@ export default function AuthPage() {
               <Button
                 type="submit"
                 disabled={isLoading || login.isPending || register.isPending}
-                className="w-full h-11 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-50 dark:hover:bg-neutral-200 dark:text-neutral-900 font-medium transition-all"
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all"
               >
                 {(isLoading || login.isPending || register.isPending) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
