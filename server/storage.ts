@@ -1937,56 +1937,47 @@ export class DatabaseStorage implements IStorage {
     return source || undefined;
   }
 
-  async getLeadSourceByName(tenantId: number, userId: number, name: string): Promise<LeadSource | undefined> {
-    warnIfTenantScopedParamsInvalid('getLeadSourceByName', { tenantId, userId });
+  async getLeadSourceByName(tenantId: number, name: string): Promise<LeadSource | undefined> {
     const [source] = await db.select().from(leadSources).where(and(eq(leadSources.name, name), eq(leadSources.tenantId, tenantId)));
     return source || undefined;
   }
 
-  async createLeadSource(tenantId: number, userId: number, source: InsertLeadSource): Promise<LeadSource> {
-    warnIfTenantScopedParamsInvalid('createLeadSource', { tenantId, userId });
-    const sourceData = { ...source, userId, tenantId };
+  async createLeadSource(tenantId: number, source: InsertLeadSource): Promise<LeadSource> {
+    const sourceData = { ...source, tenantId };
     const [created] = await db.insert(leadSources).values(sourceData).returning();
     return created;
   }
 
-  async updateLeadSource(tenantId: number, userId: number, id: number, source: Partial<InsertLeadSource>): Promise<LeadSource> {
-    warnIfTenantScopedParamsInvalid('updateLeadSource', { tenantId, userId, id });
+  async updateLeadSource(tenantId: number, id: number, source: Partial<InsertLeadSource>): Promise<LeadSource> {
     const [updated] = await db.update(leadSources).set(source).where(and(eq(leadSources.id, id), eq(leadSources.tenantId, tenantId))).returning();
     return updated;
   }
 
-  async deleteLeadSource(tenantId: number, userId: number, id: number): Promise<void> {
-    warnIfTenantScopedParamsInvalid('deleteLeadSource', { tenantId, userId, id });
+  async deleteLeadSource(tenantId: number, id: number): Promise<void> {
     await db.delete(leadSources).where(and(eq(leadSources.id, id), eq(leadSources.tenantId, tenantId)));
   }
 
-  async getAllLeadSources(tenantId: number, userId: number): Promise<LeadSource[]> {
-    warnIfTenantScopedParamsInvalid('getAllLeadSources', { tenantId, userId });
+  async getAllLeadSources(tenantId: number): Promise<LeadSource[]> {
     return await db.select().from(leadSources).where(eq(leadSources.tenantId, tenantId)).orderBy(asc(leadSources.name));
   }
 
-  async getActiveLeadSources(tenantId: number, userId: number): Promise<LeadSource[]> {
-    warnIfTenantScopedParamsInvalid('getActiveLeadSources', { tenantId, userId });
+  async getActiveLeadSources(tenantId: number): Promise<LeadSource[]> {
     return await db.select().from(leadSources).where(and(eq(leadSources.isActive, true), eq(leadSources.tenantId, tenantId))).orderBy(asc(leadSources.name));
   }
 
   // Lead Statuses (tenant-scoped)
-  async getLeadStatus(tenantId: number, userId: number, id: number): Promise<LeadStatus | undefined> {
-    warnIfTenantScopedParamsInvalid('getLeadStatus', { tenantId, userId, id });
+  async getLeadStatus(tenantId: number, id: number): Promise<LeadStatus | undefined> {
     const [status] = await db.select().from(leadStatuses).where(and(eq(leadStatuses.id, id), eq(leadStatuses.tenantId, tenantId)));
     return status || undefined;
   }
 
-  async getLeadStatusByName(tenantId: number, userId: number, name: string): Promise<LeadStatus | undefined> {
-    warnIfTenantScopedParamsInvalid('getLeadStatusByName', { tenantId, userId });
+  async getLeadStatusByName(tenantId: number, name: string): Promise<LeadStatus | undefined> {
     const [status] = await db.select().from(leadStatuses).where(and(eq(leadStatuses.name, name), eq(leadStatuses.tenantId, tenantId)));
     return status || undefined;
   }
 
-  async createLeadStatus(tenantId: number, userId: number, status: InsertLeadStatus): Promise<LeadStatus> {
-    warnIfTenantScopedParamsInvalid('createLeadStatus', { tenantId, userId });
-    const statusData = { ...status, userId, tenantId };
+  async createLeadStatus(tenantId: number, status: InsertLeadStatus): Promise<LeadStatus> {
+    const statusData = { ...status, tenantId };
     const [created] = await db.insert(leadStatuses).values(statusData).returning();
     return created;
   }
