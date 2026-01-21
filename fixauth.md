@@ -15,7 +15,7 @@
 ### Phase 1: Security & Session Core
 - [x] Install dependencies: `fastify-session`, `fastify-cookie`, `bcryptjs`.
 - [x] Implement secure credential hashing and verification in `server/auth.ts`.
-- [ ] Configure session storage and middleware in `server/fastify.ts`.
+- [x] Configure session storage and middleware in `server/fastify.ts`.
 
 ### Phase 2: Backend Auth API
 - [ ] Implement `POST /api/register` with validation.
