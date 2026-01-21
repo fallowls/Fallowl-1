@@ -25,7 +25,7 @@ export default function AuthPage() {
     },
   });
 
-  const onSubmit = async (data: InsertUser) => {
+  const onSubmit = async (data: any) => {
     console.log("Form submission triggered", data);
     try {
       if (isLogin) {
@@ -33,7 +33,12 @@ export default function AuthPage() {
         await login.mutateAsync(data);
       } else {
         console.log("Calling register mutate");
-        await register.mutateAsync(data);
+        // Ensure email is set if it's missing but username looks like one
+        const registrationData = {
+          ...data,
+          email: data.email || (data.username.includes('@') ? data.username : `${data.username}@example.com`)
+        };
+        await register.mutateAsync(registrationData);
       }
     } catch (error: any) {
       console.error("Auth submit error:", error);
@@ -158,10 +163,6 @@ export default function AuthPage() {
                 type="submit"
                 disabled={isLoading || login.isPending || register.isPending}
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all"
-                onClick={() => {
-                  console.log("Form submit button clicked");
-                  console.log("Form errors:", form.formState.errors);
-                }}
               >
                 {(isLoading || login.isPending || register.isPending) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
