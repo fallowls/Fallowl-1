@@ -66,16 +66,32 @@ export default function AuthPage() {
   const onLoginSubmit = async (data: any) => {
     try {
       await login.mutateAsync({ username: email, password: data.password });
-    } catch (error) {
-      // Error handled in hook
+      toast({
+        title: "Welcome back",
+        description: "Successfully signed in.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Please check your password and try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const onSignupSubmit = async (data: any) => {
     try {
       await register.mutateAsync({ email, ...data });
-    } catch (error) {
-      // Error handled in hook
+      toast({
+        title: "Account created",
+        description: "Welcome to Closo!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Signup failed",
+        description: error.message || "There was an error creating your account.",
+        variant: "destructive",
+      });
     }
   };
 
