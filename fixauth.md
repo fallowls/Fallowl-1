@@ -39,9 +39,9 @@
 - [x] Verify Phase 5 configurations and dependencies.
 
 ### Phase 6: Hardening & Cleanup
-- [ ] Remove all Auth0 related code and environment variables.
-- [ ] Implement rate limiting on auth endpoints.
-- [ ] Final security audit of session management and cookie security.
+- [x] Remove all Auth0 related code and environment variables.
+- [x] Implement rate limiting on auth endpoints.
+- [x] Final security audit of session management and cookie security.
 
 ## 4. Multi-tenant Infrastructure Hardening (NEXT PHASE)
 - [x] Implement middleware to automatically inject `tenantId`.

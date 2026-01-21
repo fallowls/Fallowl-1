@@ -445,24 +445,6 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // PHASE 3: AUTHENTICATION
   // ============================================================================
 
-  // Register Auth0 JWT verification plugin
-  const auth0Domain = process.env.VITE_AUTH0_DOMAIN || process.env.AUTH0_DOMAIN;
-  const auth0Audience = process.env.VITE_AUTH0_AUDIENCE || process.env.AUTH0_AUDIENCE;
-  
-  if (auth0Domain) {
-    log(`🛡️ Configuring Auth0 with domain: ${auth0Domain}${auth0Audience ? `, audience: ${auth0Audience}` : ''}`);
-
-    await fastify.register(import('fastify-auth0-verify'), {
-      domain: auth0Domain,
-      audience: auth0Audience || undefined,
-      secret: undefined, // Use JWKS for verification
-    });
-
-    log('✅ Auth0 JWT verification configured');
-  } else {
-    log('⚠️ AUTH0_DOMAIN not set. Skipping Auth0 configuration.');
-  }
-
   // Add requireAuth decorator for route protection
   fastify.decorate('requireAuth', async function requireAuthFastify(request: FastifyRequest, reply: FastifyReply) {
     try {
