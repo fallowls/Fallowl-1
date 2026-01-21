@@ -1,32 +1,32 @@
-# Authentication Fix & Custom Implementation Plan
+# Authentication Fix & Multi-tenant Foundation Implementation Plan
 
-## 1. Database Schema & Multi-tenant Foundation
-- [ ] Fix `shared/schema.ts` constraints to allow unique settings per tenant.
-- [ ] Ensure `users` table has necessary fields for custom authentication (username/password/salt).
-- [ ] Validate `tenants` and `tenant_memberships` structures for proper isolation.
+## 1. Database Schema & Multi-tenant Foundation (COMPLETED)
+- [x] Fixed `shared/schema.ts` to include unique constraints for settings (per-tenant keys).
+- [x] Ensured user indexes are correctly set for authentication lookups.
+- [x] Verified table relationships for multi-tenant isolation.
 
-## 2. Storage Layer Refactoring
-- [ ] Clean up `server/storage.ts` to remove redundant `userId` parameters in tenant-scoped methods.
-- [ ] Fix `getLeadStats` and other reporting methods to correctly scope by `tenantId`.
-- [ ] Implement robust error handling for database operations.
+## 2. Storage Layer Refactoring (NEXT PHASE)
+- [ ] Remove redundant `userId` parameters from tenant-scoped storage methods in `server/storage.ts`.
+- [ ] Clean up `warnIfTenantScopedParamsInvalid` calls to strictly enforce tenant isolation.
+- [ ] Optimize reporting queries (like `getLeadStats`) for better multi-tenant performance.
 
-## 3. Custom Authentication Implementation
-- [ ] Create `server/auth.ts` for session-based authentication logic.
-- [ ] Replace Auth0 dependency in `server/fastify.ts` with local session strategy.
-- [ ] Implement login, logout, and register endpoints.
-- [ ] Create a custom `requireAuth` decorator for Fastify routes.
+## 3. Custom Authentication System (NEXT PHASE)
+- [ ] **Auth Strategy**: Implement local session-based authentication using `fastify-session`.
+- [ ] **Backend Implementation**:
+    - [ ] Create `server/auth.ts` for credential hashing (scrypt) and session management.
+    - [ ] Replace Auth0 decorators in `server/fastify.ts` with local `requireAuth`.
+    - [ ] Implement endpoints: `POST /api/register`, `POST /api/login`, `POST /api/logout`, `GET /api/user`.
+- [ ] **Frontend Implementation**:
+    - [ ] Create `client/src/pages/auth-page.tsx` using Tailwind/Shadcn UI.
+    - [ ] Update `client/src/lib/auth.tsx` (if exists) or `App.tsx` to handle local auth state.
+    - [ ] Implement "Login with Tenant" flow to associate users with their organization on first sign-in.
 
-## 4. Frontend Custom Login Page
-- [ ] Create `client/src/pages/auth-page.tsx` with a professional login/register UI.
-- [ ] Update `client/src/App.tsx` routes to protect authenticated paths.
-- [ ] Connect frontend forms to the new backend auth endpoints.
+## 4. Multi-tenant Infrastructure Hardening (NEXT PHASE)
+- [ ] Implement middleware to automatically inject `tenantId` from the authenticated user into all request objects.
+- [ ] Add audit logging for cross-tenant access attempts.
+- [ ] Update seeding logic to create a separate default tenant for the admin user.
 
-## 5. Seeding & Data Initialization
-- [ ] Fix `server/seedData.ts` to handle ON CONFLICT scenarios correctly.
-- [ ] Ensure admin user creation uses the custom password strategy.
-- [ ] Verify multi-tenant data seeding works without cross-tenant leakage.
-
-## 6. Testing & Validation
-- [ ] Verify application starts without Auth0 errors.
-- [ ] Test login/logout flow manually.
-- [ ] Verify tenant data isolation.
+## 5. Deployment & Configuration (FINAL PHASE)
+- [ ] Remove all Auth0 environment variable requirements.
+- [ ] Set up `SESSION_SECRET` as a mandatory secret.
+- [ ] Conduct a final security audit of the session management implementation.

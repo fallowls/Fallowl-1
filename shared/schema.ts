@@ -65,6 +65,17 @@ export const users = pgTable("users", {
   emailIdx: index("users_email_idx").on(table.email),
 }));
 
+export const settings = pgTable("settings", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  key: text("key").notNull(),
+  value: jsonb("value").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  tenantKeyIdx: uniqueIndex("settings_tenant_key_idx").on(table.tenantId, table.key),
+}));
+
 // Tenants table for multi-tenant organization
 export const tenants = pgTable("tenants", {
   id: serial("id").primaryKey(),
