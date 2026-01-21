@@ -608,6 +608,10 @@ export class DatabaseStorage implements IStorage {
           console.log("✅ Twilio credentials updated for existing admin from environment variables");
         }
     }
+
+    // Force clear Twilio cache to ensure fresh credentials are used
+    const { clearAllTwilioCache } = await import('./userTwilioService');
+    clearAllTwilioCache();
   }
 
   async createUserWithTenant(insertUser: InsertUser): Promise<User> {
