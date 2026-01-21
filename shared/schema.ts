@@ -59,7 +59,11 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  auth0IdIdx: uniqueIndex("users_auth0_id_idx").on(table.auth0Id),
+  usernameIdx: uniqueIndex("users_username_idx").on(table.username),
+  emailIdx: index("users_email_idx").on(table.email),
+}));
 
 // Tenants table for multi-tenant organization
 export const tenants = pgTable("tenants", {
