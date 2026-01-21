@@ -1982,88 +1982,73 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateLeadStatus(tenantId: number, userId: number, id: number, status: Partial<InsertLeadStatus>): Promise<LeadStatus> {
-    warnIfTenantScopedParamsInvalid('updateLeadStatus', { tenantId, userId, id });
+  async updateLeadStatus(tenantId: number, id: number, status: Partial<InsertLeadStatus>): Promise<LeadStatus> {
     const [updated] = await db.update(leadStatuses).set(status).where(and(eq(leadStatuses.id, id), eq(leadStatuses.tenantId, tenantId))).returning();
     return updated;
   }
 
-  async deleteLeadStatus(tenantId: number, userId: number, id: number): Promise<void> {
-    warnIfTenantScopedParamsInvalid('deleteLeadStatus', { tenantId, userId, id });
+  async deleteLeadStatus(tenantId: number, id: number): Promise<void> {
     await db.delete(leadStatuses).where(and(eq(leadStatuses.id, id), eq(leadStatuses.tenantId, tenantId)));
   }
 
-  async getAllLeadStatuses(tenantId: number, userId: number): Promise<LeadStatus[]> {
-    warnIfTenantScopedParamsInvalid('getAllLeadStatuses', { tenantId, userId });
+  async getAllLeadStatuses(tenantId: number): Promise<LeadStatus[]> {
     return await db.select().from(leadStatuses).where(eq(leadStatuses.tenantId, tenantId)).orderBy(asc(leadStatuses.sortOrder));
   }
 
-  async getActiveLeadStatuses(tenantId: number, userId: number): Promise<LeadStatus[]> {
-    warnIfTenantScopedParamsInvalid('getActiveLeadStatuses', { tenantId, userId });
+  async getActiveLeadStatuses(tenantId: number): Promise<LeadStatus[]> {
     return await db.select().from(leadStatuses).where(and(eq(leadStatuses.isActive, true), eq(leadStatuses.tenantId, tenantId))).orderBy(asc(leadStatuses.sortOrder));
   }
 
   // Lead Campaigns (tenant-scoped)
-  async getLeadCampaign(tenantId: number, userId: number, id: number): Promise<LeadCampaign | undefined> {
-    warnIfTenantScopedParamsInvalid('getLeadCampaign', { tenantId, userId, id });
+  async getLeadCampaign(tenantId: number, id: number): Promise<LeadCampaign | undefined> {
     const [campaign] = await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.tenantId, tenantId)));
     return campaign || undefined;
   }
 
-  async createLeadCampaign(tenantId: number, userId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign> {
-    warnIfTenantScopedParamsInvalid('createLeadCampaign', { tenantId, userId });
-    const campaignData = { ...campaign, userId, tenantId };
+  async createLeadCampaign(tenantId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign> {
+    const campaignData = { ...campaign, tenantId };
     const [created] = await db.insert(leadCampaigns).values(campaignData).returning();
     return created;
   }
 
-  async updateLeadCampaign(tenantId: number, userId: number, id: number, campaign: Partial<InsertLeadCampaign>): Promise<LeadCampaign> {
-    warnIfTenantScopedParamsInvalid('updateLeadCampaign', { tenantId, userId, id });
+  async updateLeadCampaign(tenantId: number, id: number, campaign: Partial<InsertLeadCampaign>): Promise<LeadCampaign> {
     const [updated] = await db.update(leadCampaigns).set(campaign).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.tenantId, tenantId))).returning();
     return updated;
   }
 
-  async deleteLeadCampaign(tenantId: number, userId: number, id: number): Promise<void> {
-    warnIfTenantScopedParamsInvalid('deleteLeadCampaign', { tenantId, userId, id });
+  async deleteLeadCampaign(tenantId: number, id: number): Promise<void> {
     await db.delete(leadCampaigns).where(and(eq(leadCampaigns.id, id), eq(leadCampaigns.tenantId, tenantId)));
   }
 
-  async getAllLeadCampaigns(tenantId: number, userId: number): Promise<LeadCampaign[]> {
-    warnIfTenantScopedParamsInvalid('getAllLeadCampaigns', { tenantId, userId });
+  async getAllLeadCampaigns(tenantId: number): Promise<LeadCampaign[]> {
     return await db.select().from(leadCampaigns).where(eq(leadCampaigns.tenantId, tenantId)).orderBy(desc(leadCampaigns.createdAt));
   }
 
-  async getLeadCampaignsByStatus(tenantId: number, userId: number, status: string): Promise<LeadCampaign[]> {
-    warnIfTenantScopedParamsInvalid('getLeadCampaignsByStatus', { tenantId, userId });
+  async getLeadCampaignsByStatus(tenantId: number, status: string): Promise<LeadCampaign[]> {
     return await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.status, status), eq(leadCampaigns.tenantId, tenantId))).orderBy(desc(leadCampaigns.createdAt));
   }
 
-  async getLeadCampaignsByType(tenantId: number, userId: number, type: string): Promise<LeadCampaign[]> {
-    warnIfTenantScopedParamsInvalid('getLeadCampaignsByType', { tenantId, userId });
+  async getLeadCampaignsByType(tenantId: number, type: string): Promise<LeadCampaign[]> {
     return await db.select().from(leadCampaigns).where(and(eq(leadCampaigns.type, type), eq(leadCampaigns.tenantId, tenantId))).orderBy(desc(leadCampaigns.createdAt));
   }
 
   // Leads (tenant-scoped)
-  async getLead(tenantId: number, userId: number, id: number): Promise<Lead | undefined> {
-    warnIfTenantScopedParamsInvalid('getLead', { tenantId, userId, id });
+  async getLead(tenantId: number, id: number): Promise<Lead | undefined> {
     const [lead] = await db.select().from(leads).where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)));
     return lead || undefined;
   }
 
-  async getLeadByEmail(tenantId: number, userId: number, email: string): Promise<Lead | undefined> {
-    warnIfTenantScopedParamsInvalid('getLeadByEmail', { tenantId, userId });
+  async getLeadByEmail(tenantId: number, email: string): Promise<Lead | undefined> {
     const [lead] = await db.select().from(leads).where(and(eq(leads.email, email), eq(leads.tenantId, tenantId)));
     return lead || undefined;
   }
 
-  async getLeadByPhone(tenantId: number, userId: number, phone: string): Promise<Lead | undefined> {
-    warnIfTenantScopedParamsInvalid('getLeadByPhone', { tenantId, userId });
+  async getLeadByPhone(tenantId: number, phone: string): Promise<Lead | undefined> {
     const [lead] = await db.select().from(leads).where(and(eq(leads.phone, phone), eq(leads.tenantId, tenantId)));
     return lead || undefined;
   }
 
   async createLead(tenantId: number, userId: number, lead: InsertLead): Promise<Lead> {
-    warnIfTenantScopedParamsInvalid('createLead', { tenantId, userId });
     const leadData = {
       ...lead,
       userId: userId,
@@ -2073,8 +2058,7 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateLead(tenantId: number, userId: number, id: number, lead: Partial<InsertLead>): Promise<Lead> {
-    warnIfTenantScopedParamsInvalid('updateLead', { tenantId, userId, id });
+  async updateLead(tenantId: number, id: number, lead: Partial<InsertLead>): Promise<Lead> {
     const [updated] = await db.update(leads)
       .set({ ...lead, updatedAt: new Date() })
       .where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)))
@@ -2083,13 +2067,11 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async deleteLead(tenantId: number, userId: number, id: number): Promise<void> {
-    warnIfTenantScopedParamsInvalid('deleteLead', { tenantId, userId, id });
+  async deleteLead(tenantId: number, id: number): Promise<void> {
     await db.delete(leads).where(and(eq(leads.id, id), eq(leads.tenantId, tenantId)));
   }
 
-  async getAllLeads(tenantId: number, userId: number): Promise<Lead[]> {
-    warnIfTenantScopedParamsInvalid('getAllLeads', { tenantId, userId });
+  async getAllLeads(tenantId: number): Promise<Lead[]> {
     return await db
       .select()
       .from(leads)
@@ -2097,33 +2079,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(leads.createdAt));
   }
 
-  async getLeadsByStatus(tenantId: number, userId: number, statusId: number): Promise<Lead[]> {
-    warnIfTenantScopedParamsInvalid('getLeadsByStatus', { tenantId, userId, statusId });
+  async getLeadsByStatus(tenantId: number, statusId: number): Promise<Lead[]> {
     return await db.select().from(leads).where(and(eq(leads.leadStatusId, statusId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
   }
 
-  async getLeadsBySource(tenantId: number, userId: number, sourceId: number): Promise<Lead[]> {
-    warnIfTenantScopedParamsInvalid('getLeadsBySource', { tenantId, userId, sourceId });
+  async getLeadsBySource(tenantId: number, sourceId: number): Promise<Lead[]> {
     return await db.select().from(leads).where(and(eq(leads.leadSourceId, sourceId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
   }
 
-  async getLeadsByAssignee(tenantId: number, userId: number, assigneeId: number): Promise<Lead[]> {
-    warnIfTenantScopedParamsInvalid('getLeadsByAssignee', { tenantId, userId, assigneeId });
+  async getLeadsByAssignee(tenantId: number, assigneeId: number): Promise<Lead[]> {
     return await db.select().from(leads).where(and(eq(leads.assignedTo, assigneeId), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
   }
 
-  async getLeadsByPriority(tenantId: number, userId: number, priority: string): Promise<Lead[]> {
-    warnIfTenantScopedParamsInvalid('getLeadsByPriority', { tenantId, userId });
+  async getLeadsByPriority(tenantId: number, priority: string): Promise<Lead[]> {
     return await db.select().from(leads).where(and(eq(leads.priority, priority), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
   }
 
-  async getLeadsByTemperature(tenantId: number, userId: number, temperature: string): Promise<Lead[]> {
-    warnIfTenantScopedParamsInvalid('getLeadsByTemperature', { tenantId, userId });
+  async getLeadsByTemperature(tenantId: number, temperature: string): Promise<Lead[]> {
     return await db.select().from(leads).where(and(eq(leads.temperature, temperature), eq(leads.tenantId, tenantId))).orderBy(desc(leads.createdAt));
   }
 
-  async searchLeads(tenantId: number, userId: number, query: string): Promise<Lead[]> {
-    warnIfTenantScopedParamsInvalid('searchLeads', { tenantId, userId });
+  async searchLeads(tenantId: number, query: string): Promise<Lead[]> {
     return await db.select().from(leads).where(
       and(
         eq(leads.tenantId, tenantId),
@@ -2138,8 +2114,7 @@ export class DatabaseStorage implements IStorage {
     ).orderBy(desc(leads.createdAt));
   }
 
-  async getLeadsWithFilters(tenantId: number, userId: number, filters: any): Promise<Lead[]> {
-    warnIfTenantScopedParamsInvalid('getLeadsWithFilters', { tenantId, userId });
+  async getLeadsWithFilters(tenantId: number, filters: any): Promise<Lead[]> {
     const conditions = [eq(leads.tenantId, tenantId)];
     if (filters.status) conditions.push(eq(leads.leadStatusId, filters.status));
     if (filters.source) conditions.push(eq(leads.leadSourceId, filters.source));
@@ -2148,9 +2123,8 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(leads).where(and(...conditions)).orderBy(desc(leads.createdAt));
   }
 
-  async getLeadStats(tenantId: number, userId: number): Promise<any> {
-    warnIfTenantScopedParamsInvalid('getLeadStats', { tenantId, userId });
-    const allLeads = await this.getAllLeads(tenantId, userId);
+  async getLeadStats(tenantId: number): Promise<any> {
+    const allLeads = await this.getAllLeads(tenantId);
     return {
       total: allLeads.length,
       new: allLeads.filter(l => l.temperature === 'cold').length,
