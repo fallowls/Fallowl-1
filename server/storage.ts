@@ -1838,9 +1838,26 @@ export class DatabaseStorage implements IStorage {
 
   async setSetting(tenantId: number, key: string, value: any): Promise<Setting> {
     warnIfTenantScopedParamsInvalid('setSetting', { tenantId });
+    
+    // Log sensitive setting changes
+    if (key.includes('sid') || key.includes('token') || key.includes('secret') || key.includes('key')) {
+      logSecurityEvent({
+        tenantId,
+        eventType: SecurityEventType.CONFIG_CHANGE,
+        severity: SecurityEventSeverity.INFO,
+        action: `Sensitive Setting Updated: ${key}`,
+        resource: "settings",
+        details: { key, timestamp: new Date() }
+      }).catch(err => console.error("Failed to log setting change:", err));
+    }
+
     const [setting] = await db
       .insert(settings)
       .values({ key, value, tenantId })
+      .onConflictDoUpdate({
+        target: [settings.tenantId, settings.key],
+        set: { value, updatedAt: new Date() }
+      })
       .returning();
     return setting;
   }
