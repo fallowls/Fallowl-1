@@ -18,7 +18,7 @@
 - [x] Configure session storage and middleware in `server/fastify.ts`.
 
 ### Phase 2: Backend Auth API
-- [ ] Implement `POST /api/register` with validation.
+- [x] Implement `POST /api/register` with validation.
 - [ ] Implement `POST /api/login` with session creation.
 - [ ] Implement `POST /api/logout` and `GET /api/user` (profile).
 

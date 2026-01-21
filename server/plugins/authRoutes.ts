@@ -9,6 +9,61 @@ import { rateLimitConfigs } from './rateLimiters';
  */
 
 export default async function authRoutes(fastify: FastifyInstance) {
+  // POST /auth/register - User registration
+  fastify.post('/auth/register', {
+    config: {
+      rateLimit: rateLimitConfigs.auth
+    }
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { email, password, username, firstName, lastName } = request.body as any;
+      
+      if (!email || !password || !username) {
+        return reply.code(400).send({ message: "Email, password, and username are required" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return reply.code(409).send({ message: "User with this email already exists" });
+      }
+
+      const existingUsername = await storage.getUserByUsername(username);
+      if (existingUsername) {
+        return reply.code(409).send({ message: "Username is already taken" });
+      }
+
+      // Create new user with tenant
+      const user = await storage.createUserWithTenant({
+        email,
+        password, // Storage layer handles hashing via authenticateUser/createUser
+        username,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        role: 'user',
+        status: 'active'
+      });
+
+      // Create session
+      (request as any).session.userId = user.id;
+      (request as any).session.user = user;
+
+      return reply.code(201).send({ 
+        message: "Registration successful",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        }
+      });
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      return reply.code(500).send({ message: error.message });
+    }
+  });
+
   // POST /auth/login - User login with session-based auth
   fastify.post('/auth/login', {
     config: {
