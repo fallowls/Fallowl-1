@@ -6,10 +6,10 @@ import "./index.css";
 // Auth0 configuration
 const domain = import.meta.env.VITE_AUTH0_DOMAIN || "auth.thecloso.com";
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "d3sqfAaafC9UJOYeBJGLEODLu9fr9FD0";
-// The error "Service not found: https://api.thecloso.com" indicates this audience is invalid or not set up in Auth0.
-// We will omit the audience if it matches the problematic one to allow basic authentication to proceed.
-const rawAudience = import.meta.env.VITE_AUTH0_AUDIENCE;
-const audience = rawAudience;
+
+// Handle audience carefully. If "Service not found" error occurs, it often means
+// the audience is not correctly registered in the Auth0 tenant or doesn't match.
+const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
 if (!domain) {
   console.error("❌ VITE_AUTH0_DOMAIN is not set. Authentication will fail.");
@@ -20,14 +20,6 @@ const auth0Domain = domain.startsWith('http') ? domain.replace(/^https?:\/\//, '
 
 // Redirect URI is critical for Auth0. We must ensure it's precisely what's configured in Auth0.
 const redirectUri = window.location.origin;
-console.log("Auth0 Config Details:", {
-  domain: auth0Domain,
-  clientId,
-  redirect_uri: redirectUri,
-  audience: audience || 'none',
-  window_location: window.location.href,
-  origin: window.location.origin
-});
 
 const onRedirectCallback = (appState: any) => {
   window.history.replaceState(
@@ -37,15 +29,22 @@ const onRedirectCallback = (appState: any) => {
   );
 };
 
+// Check if we should omit audience to bypass "Service not found" errors during local dev
+// if the user hasn't set up the API in Auth0 yet.
+const authParams: any = {
+  redirect_uri: window.location.origin,
+  scope: "openid profile email offline_access"
+};
+
+if (audience && audience !== "undefined" && audience !== "null") {
+  authParams.audience = audience;
+}
+
 createRoot(document.getElementById("root")!).render(
     <Auth0Provider
       domain={auth0Domain}
       clientId={clientId}
-      authorizationParams={{
-        redirect_uri: window.location.origin,
-        ...(audience ? { audience } : {}),
-        scope: "openid profile email offline_access"
-      }}
+      authorizationParams={authParams}
       onRedirectCallback={onRedirectCallback}
       cacheLocation="localstorage"
       useRefreshTokens={true}

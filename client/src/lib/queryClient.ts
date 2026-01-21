@@ -18,20 +18,24 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   if (getAccessToken) {
     try {
       const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
-      console.log('[Auth Debug] Requesting token with audience:', audience || 'none');
-      const token = await getAccessToken(audience ? {
-        authorizationParams: { audience }
-      } : {});
-      console.log('[Auth Debug] Token retrieved successfully:', token ? 'YES' : 'NO');
+      const token = await getAccessToken({
+        authorizationParams: (audience && audience !== "undefined" && audience !== "null") ? { audience } : {}
+      });
       return { "Authorization": `Bearer ${token}` };
-    } catch (error) {
+    } catch (error: any) {
       console.error("[Auth Error] Failed to get access token:", error);
-      console.error("[Auth Error] This will cause 401 errors on API requests");
-      console.error("[Auth Error] Check Auth0 configuration and allowed URLs");
+      // If audience is the issue, try getting a token without it as a fallback
+      if (error.message?.includes("Service not found") || error.error === "access_denied") {
+        try {
+          const token = await getAccessToken();
+          return { "Authorization": `Bearer ${token}` };
+        } catch (fallbackError) {
+          console.error("[Auth Error] Fallback also failed:", fallbackError);
+        }
+      }
       return {};
     }
   }
-  console.warn("[Auth Warning] No access token getter available");
   return {};
 }
 
