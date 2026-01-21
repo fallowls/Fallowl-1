@@ -361,7 +361,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
       tableName: 'session',
     }),
     secret: process.env.SESSION_SECRET,
-    saveUninitialized: false, // Changed to false for better security
+    saveUninitialized: true, // Changed back to true to ensure sessions are always created
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,

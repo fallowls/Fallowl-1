@@ -90,7 +90,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       (request as any).session.user = user;
 
       // Force session save to ensure it's written before response
-      await (request as any).session.save();
+      try {
+        await (request as any).session.save();
+      } catch (err) {
+        console.error('Session save error:', err);
+      }
 
       return reply.send({ 
         message: "Login successful",
@@ -154,7 +158,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       (request as any).session.user = user;
 
       // Force session save
-      await (request as any).session.save();
+      try {
+        await (request as any).session.save();
+      } catch (err) {
+        console.error('Session save error:', err);
+      }
 
       return reply.code(201).send({ 
         message: "User created successfully",
