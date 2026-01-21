@@ -1,14 +1,14 @@
 import Keypad from "@/components/dialer/Keypad";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function DialerPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">Loading...</div>;
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
         <div className="text-center">

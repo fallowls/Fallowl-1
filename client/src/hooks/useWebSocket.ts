@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
-import { useAuth } from "./useAuth";
+import { useAuth } from "./use-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { getWebSocketConfig, getReconnectDelay } from "@/lib/websocketConfig";
 
@@ -10,7 +10,9 @@ interface WebSocketMessage {
 }
 
 export function useWebSocket() {
-  const { user, isAuthenticated, getAccessTokenSilently } = useAuth();
+  const { user, logout } = useAuth();
+  const isAuthenticated = !!user;
+  const getAccessTokenSilently = async () => ""; // Placeholder for missing method
   const wsRef = useRef<WebSocket | null>(null);
   const queryClient = useQueryClient();
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();

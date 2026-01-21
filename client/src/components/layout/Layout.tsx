@@ -1,7 +1,7 @@
 import { useStore } from "@/store/useStore";
 import { useEffect, lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { canAccessView } from "@/lib/accessControl";
 import Sidebar from "./Sidebar";

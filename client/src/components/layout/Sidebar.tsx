@@ -1,7 +1,7 @@
 import { useStore } from "@/store/useStore";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { canAccessView } from "@/lib/accessControl";
 import TwilioDeviceStatus from "@/components/TwilioDeviceStatus";
 import { 
