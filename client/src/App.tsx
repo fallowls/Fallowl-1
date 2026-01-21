@@ -5,39 +5,25 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 
-import DashboardPage from "@/pages/DashboardPage";
-import AuthPage from "@/pages/AuthPage";
-import ContactsPage from "@/pages/ContactsPage";
-import DialerPage from "@/pages/DialerPage";
-import RecordingsPage from "@/pages/RecordingsPage";
-import SettingsPage from "@/pages/SettingsPage";
-import ProfilePage from "@/pages/ProfilePage";
-import SupportPage from "@/pages/SupportPage";
-import LeadsPage from "@/pages/LeadsPage";
-import SmsPage from "@/pages/SmsPage";
-import CallLogPage from "@/pages/CallLogPage";
-import VoicemailPage from "@/pages/VoicemailPage";
-import UsersPage from "@/pages/UsersPage";
-import SecurityDashboard from "@/pages/admin/SecurityDashboard";
-import notFound from "@/pages/not-found";
+import Layout from "@/components/layout/Layout";
 
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={DashboardPage} />
-      <ProtectedRoute path="/contacts" component={ContactsPage} />
-      <ProtectedRoute path="/dialer" component={DialerPage} />
-      <ProtectedRoute path="/recordings" component={RecordingsPage} />
-      <ProtectedRoute path="/settings" component={SettingsPage} />
-      <ProtectedRoute path="/profile" component={ProfilePage} />
-      <ProtectedRoute path="/support" component={SupportPage} />
-      <ProtectedRoute path="/leads" component={LeadsPage} />
-      <ProtectedRoute path="/sms" component={SmsPage} />
-      <ProtectedRoute path="/calls" component={CallLogPage} />
-      <ProtectedRoute path="/voicemail" component={VoicemailPage} />
-      <ProtectedRoute path="/users" component={UsersPage} />
-      <ProtectedRoute path="/admin/security" component={SecurityDashboard} />
       <Route path="/auth" component={AuthPage} />
+      <ProtectedRoute path="/" component={Layout} />
+      <ProtectedRoute path="/contacts" component={Layout} />
+      <ProtectedRoute path="/dialer" component={Layout} />
+      <ProtectedRoute path="/recordings" component={Layout} />
+      <ProtectedRoute path="/settings" component={Layout} />
+      <ProtectedRoute path="/profile" component={Layout} />
+      <ProtectedRoute path="/support" component={Layout} />
+      <ProtectedRoute path="/leads" component={Layout} />
+      <ProtectedRoute path="/sms" component={Layout} />
+      <ProtectedRoute path="/calls" component={Layout} />
+      <ProtectedRoute path="/voicemail" component={Layout} />
+      <ProtectedRoute path="/users" component={Layout} />
+      <ProtectedRoute path="/admin/security" component={Layout} />
       <Route component={notFound} />
     </Switch>
   );
