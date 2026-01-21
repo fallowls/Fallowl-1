@@ -114,17 +114,6 @@ export const tenants = pgTable("tenants", {
   statusIdx: index("tenants_status_idx").on(table.status),
 }));
 
-export const settings = pgTable("settings", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
-  key: text("key").notNull(),
-  value: jsonb("value").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  tenantKeyIdx: uniqueIndex("settings_tenant_key_idx").on(table.tenantId, table.key),
-}));
-
 // Tenant Memberships - Links users to tenants with roles
 export const tenantMemberships = pgTable("tenant_memberships", {
   id: serial("id").primaryKey(),
@@ -697,14 +686,6 @@ export const voicemails = pgTable("voicemails", {
   fileUrl: text("file_url").notNull(),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const settings = pgTable("settings", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").references(() => tenants.id),
-  key: text("key").notNull().unique(),
-  value: jsonb("value").notNull(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const callNotes = pgTable("call_notes", {

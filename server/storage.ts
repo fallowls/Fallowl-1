@@ -1823,7 +1823,7 @@ export class DatabaseStorage implements IStorage {
     warnIfTenantScopedParamsInvalid('setSetting', { tenantId });
     const [setting] = await db
       .insert(settings)
-      .values({ key, value, tenantId })
+      .values({ key, value, tenantId, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: [settings.tenantId, settings.key],
         set: { value, updatedAt: new Date() }

@@ -346,7 +346,7 @@ export async function seedLeadData() {
     ];
 
     for (const campaign of campaigns) {
-      await storage.createLeadCampaign(1, campaign);
+      await storage.createLeadCampaign(1, 1, campaign);
     }
 
     console.log("✅ Lead campaigns seeded successfully");
