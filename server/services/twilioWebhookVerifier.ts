@@ -106,7 +106,9 @@ export class TwilioWebhookVerifier {
       }
 
       // Get user's Twilio client
-      const { client } = await userTwilioCache.getTwilioClient(userId);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
+      const { client } = await userTwilioCache.getTwilioClient(userId, tenantId.toString());
       
       // Fetch current TwiML application
       const app = await client.applications(userCreds.twilioTwimlAppSid).fetch();
