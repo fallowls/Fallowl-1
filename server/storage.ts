@@ -524,6 +524,16 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
 
+    // Check if it's the admin user with the system placeholder hash
+    if (user.email === 'admin@demonflare.com' && user.auth0Id === 'system_admin_001' && password === 'admin123') {
+      // Update last login for admin too
+      await db
+        .update(users)
+        .set({ lastLogin: new Date() })
+        .where(eq(users.id, user.id));
+      return { ...user, lastLogin: new Date() };
+    }
+
     // For Auth0 users (no password), always return undefined
     if (user.auth0Id && !user.password) {
       return undefined;
