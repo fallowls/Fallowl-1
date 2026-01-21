@@ -73,7 +73,8 @@
 - [x] Track sensitive setting changes with tenant context.
 
 ### Phase 3: Reporting & Alerts
-- [ ] Create basic admin dashboard view for security events.
+- [x] Create basic admin dashboard view for security events.
+- [x] Implement API endpoint for audit logs.
 - [ ] Implement notification triggers for high-frequency failures.
 
 ## 6. Deployment & Configuration (FINAL PHASE)

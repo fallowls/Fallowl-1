@@ -129,7 +129,32 @@ export function verifyWebhookToken(token: string): number {
   return userId;
 }
 
+import { auditLogs } from "@shared/schema";
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Admin Audit Log Route
+  app.get("/api/admin/audit-logs", requireAuth, async (req, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin privileges required" });
+      }
+
+      const logs = await db
+        .select()
+        .from(auditLogs)
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(100);
+      
+      res.json(logs);
+    } catch (error: any) {
+      console.error('Error fetching audit logs:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Twilio webhook signature validation middleware
   const validateTwilioWebhook = async (req: any, res: any, next: any) => {
     try {
