@@ -9,24 +9,13 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
   // GET /leads - Get all leads
   fastify.get('/leads', {
     config: { rateLimit: rateLimitConfigs.api },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const auth = (request as any).user;
-    const user = await (fastify as any).storage.getUserByAuth0Id(auth.sub);
+    const userId = request.userId!;
+    const tenantId = request.tenantId!;
     
-    if (!user) {
-      return reply.code(404).send({ message: "User not found" });
-    }
-
-    const tenantId = (request as any).tenantId;
-    if (!tenantId) {
-      return reply.code(401).send({ message: "Tenant context missing" });
-    }
-
     try {
-      const leads = await (fastify as any).storage.getAllLeads(tenantId, user.id);
+      const leads = await (fastify as any).storage.getAllLeads(tenantId, userId);
       return reply.send(leads || []);
     } catch (error: any) {
       console.error('Error fetching leads:', error);
@@ -37,23 +26,12 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
   // GET /leads/stats - Get lead statistics
   fastify.get('/leads/stats', {
     config: { rateLimit: rateLimitConfigs.api },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const auth = (request as any).user;
-    const user = await (fastify as any).storage.getUserByAuth0Id(auth.sub);
+    const userId = request.userId!;
+    const tenantId = request.tenantId!;
     
-    if (!user) {
-      return reply.code(404).send({ message: "User not found" });
-    }
-
-    const tenantId = (request as any).tenantId;
-    if (!tenantId) {
-      return reply.code(401).send({ message: "Tenant context missing" });
-    }
-
-    const stats = await (fastify as any).storage.getLeadStats(tenantId, user.id);
+    const stats = await (fastify as any).storage.getLeadStats(tenantId, userId);
     return reply.send(stats);
   });
 

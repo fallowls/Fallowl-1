@@ -21,13 +21,11 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.call
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
-  }, async (request: AuthRequest, reply: FastifyReply) => {
+    preHandler: [fastify.requireAuth]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = request.tenantId!;
       const { contactId, phone, name, lineId, amdEnabled, amdTimeout = 30, amdSensitivity = 'standard' } = request.body as any;
 
       if (!phone) {
@@ -182,13 +180,11 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
-  }, async (request: AuthRequest, reply: FastifyReply) => {
+    preHandler: [fastify.requireAuth]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = request.tenantId!;
       const { callSid, lineId, phone } = request.body as any;
 
       if (!callSid || !lineId) {
@@ -244,10 +240,8 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
-  }, async (request: AuthRequest, reply: FastifyReply) => {
+    preHandler: [fastify.requireAuth]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
       const { callSid, lineId, phone, reason } = request.body as any;
@@ -282,10 +276,8 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
-  }, async (request: AuthRequest, reply: FastifyReply) => {
+    preHandler: [fastify.requireAuth]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
       
@@ -304,13 +296,11 @@ export default async function parallelDialerRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
-  }, async (request: AuthRequest, reply: FastifyReply) => {
+    preHandler: [fastify.requireAuth]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
-      const tenantId = (request as any).tenantId || userId;
+      const tenantId = request.tenantId!;
       const { callSid } = request.body as any;
 
       if (!callSid) {

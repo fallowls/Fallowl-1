@@ -69,12 +69,11 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: (fastify as any).requireAuth
+    preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = await getUserIdFromJWT(request);
-      const tenantId = (request as any).tenantId;
-      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      const userId = request.userId!;
+      const tenantId = request.tenantId!;
       
       const messages = await storage.getAllMessages(tenantId, userId);
       return reply.send(messages);
@@ -151,12 +150,11 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: (fastify as any).requireAuth
+    preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = await getUserIdFromJWT(request);
-      const tenantId = (request as any).tenantId;
-      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      const userId = request.userId!;
+      const tenantId = request.tenantId!;
       
       const count = await storage.getUnreadMessageCount(tenantId, userId);
       return reply.send({ count });
@@ -190,23 +188,17 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.sms
     },
-    preHandler: (fastify as any).requireAuth
+    preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
       }
 
-      const tenantId = (request as any).tenantId;
-      if (!tenantId) return reply.code(401).send({ message: "Tenant context missing" });
+      const tenantId = request.tenantId!;
 
       const { contactId, phone, content, type = "sent" } = request.body as any;
       

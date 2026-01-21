@@ -24,7 +24,7 @@
 
 ### Phase 3: Auth Infrastructure Integration
 - [x] Create `requireAuth` and `requireTenant` decorators.
-- [ ] Replace Auth0 decorators across all existing routes.
+- [x] Replace Auth0 decorators across all existing routes.
 - [ ] Implement tenant-context injection middleware.
 
 ### Phase 4: Frontend Authentication UI

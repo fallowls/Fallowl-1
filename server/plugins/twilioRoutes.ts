@@ -45,18 +45,11 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      await request.jwtVerify();
-    }
+    preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
@@ -158,22 +151,11 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.api
     },
-    preHandler: async (request, reply) => {
-      try {
-        await request.jwtVerify();
-      } catch (err) {
-        return reply.code(401).send({ message: "No Authorization was found in request.headers" });
-      }
-    }
+    preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });

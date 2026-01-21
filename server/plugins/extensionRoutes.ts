@@ -38,10 +38,10 @@ export default async function extensionRoutes(fastify: FastifyInstance) {
 
   fastify.get('/ext/contacts', {
     config: { rateLimit: rateLimitConfigs.extension },
-    preHandler: requireAuth
+    preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const user = await getUserFromAuth0((request as any).user);
+      const userId = request.userId!;
       const { page = '1', limit = '50', search } = request.query as { page?: string; limit?: string; search?: string };
       
       const pageNum = Math.max(1, parseInt(page) || 1);
@@ -49,9 +49,9 @@ export default async function extensionRoutes(fastify: FastifyInstance) {
       
       let contacts;
       if (search) {
-        contacts = await storage.searchContacts(user.id, search);
+        contacts = await storage.searchContacts(userId, search);
       } else {
-        contacts = await storage.getAllContacts(user.id);
+        contacts = await storage.getAllContacts(userId);
       }
       
       const startIdx = (pageNum - 1) * limitNum;
