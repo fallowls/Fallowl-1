@@ -34,7 +34,7 @@
 
 ### Phase 5: Auth Provider Transition
 - [x] Update frontend `auth.tsx` (use-auth.tsx) context to use local API.
-- [ ] Handle protected routing and redirection logic.
+- [x] Handle protected routing and redirection logic.
 - [ ] Implement session persistence and auto-login.
 
 ### Phase 6: Hardening & Cleanup
