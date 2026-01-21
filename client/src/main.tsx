@@ -36,7 +36,11 @@ const authParams: any = {
   scope: "openid profile email offline_access"
 };
 
-if (audience && audience !== "undefined" && audience !== "null") {
+const urlParams = new URLSearchParams(window.location.search);
+const hasAudienceError = urlParams.get('error') === 'access_denied' && 
+                        urlParams.get('error_description')?.includes('Service not found');
+
+if (audience && audience !== "undefined" && audience !== "null" && !hasAudienceError) {
   authParams.audience = audience;
 }
 
