@@ -76,25 +76,29 @@ export class TwilioService {
     return this.client;
   }
 
-  public async updateAutoRecording(enabled: boolean) {
+  public async updateAutoRecordingSetting(enabled: boolean, tenantId: number): Promise<{ success: boolean; message: string; autoRecordingEnabled: boolean }> {
     try {
-      if (!this.credentials?.twimlAppSid) {
-        throw new Error("TwiML App SID not configured");
+      if (!this.client || !this.credentials) {
+        throw new Error('Twilio client not configured');
       }
 
-      const client = this.getTwilioClient();
+      // Update TwiML App with recording settings if needed
+      const baseUrl = process.env.REPLIT_DOMAINS 
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : 'https://localhost:5000';
       
-      // Update TwiML Application to control recording behavior
-      await client.applications(this.credentials.twimlAppSid).update({
-        friendlyName: enabled ? "CRM Dialer App (Recording Enabled)" : "CRM Dialer App (Recording Disabled)",
-        voiceUrl: `${process.env.REPL_URL || 'https://your-app.replit.app'}/api/twilio/voice`,
-        statusCallback: `${process.env.REPL_URL || 'https://your-app.replit.app'}/api/twilio/status`,
+      await this.client.applications(this.credentials.twimlAppSid!).update({
+        voiceUrl: `${baseUrl}/api/twilio/voice`,
+        voiceMethod: 'POST',
+        statusCallback: `${baseUrl}/api/twilio/status`,
         statusCallbackMethod: 'POST'
       });
 
       // Store the recording preference using storage
       const { storage } = await import('./storage');
-      await storage.setSetting(Number(this.credentials?.accountSid), "auto_record_calls", enabled);
+      await storage.setSetting(tenantId, "auto_record_calls", enabled);
 
       return {
         success: true,
@@ -102,15 +106,15 @@ export class TwilioService {
         autoRecordingEnabled: enabled
       };
     } catch (error: any) {
-      console.error("Error updating auto-recording setting:", error);
+      console.error('Auto-recording update error:', error);
       throw new Error(`Failed to update auto-recording: ${error.message}`);
     }
   }
 
-  public async getAutoRecordingSetting(): Promise<boolean> {
+  public async getAutoRecordingSetting(tenantId: number): Promise<boolean> {
     try {
       const { storage } = await import('./storage');
-      const setting = await storage.getSetting(Number(this.credentials?.accountSid), "auto_record_calls");
+      const setting = await storage.getSetting(tenantId, "auto_record_calls");
       // Handle JSON-encoded values from database
       if (setting?.value === "true" || setting?.value === true) {
         return true;
