@@ -347,7 +347,10 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
 
   // 3. PostgreSQL Session Management
   // Must register cookie plugin BEFORE session plugin
-  await fastify.register(cookie);
+  await fastify.register(cookie, {
+    secret: process.env.SESSION_SECRET,
+    parseOptions: {}
+  });
   
   const PgSession = connectPgSimple(fastifySession as any);
   
@@ -358,10 +361,11 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
       tableName: 'session',
     }),
     secret: process.env.SESSION_SECRET,
-    saveUninitialized: true,
+    saveUninitialized: false, // Changed to false for better security
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   });
