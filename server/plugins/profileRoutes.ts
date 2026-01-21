@@ -16,11 +16,13 @@ export default async function profileRoutes(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.api
     },
     preHandler: async (request, reply) => {
-      await request.jwtVerify();
+      if (!(request as any).session?.userId) {
+        return reply.code(401).send({ message: "Not authenticated" });
+      }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const userId = getUserIdFromRequest(request);
+      const userId = (request as any).session.userId;
       const user = await storage.getUser(userId);
       
       if (!user) {

@@ -87,6 +87,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       (request as any).session.userId = user.id;
       (request as any).session.user = user;
 
+      // Update last login
+      await storage.updateUser(user.id, { lastLogin: new Date() });
+
       return reply.send({ 
         message: "Login successful",
         user: {

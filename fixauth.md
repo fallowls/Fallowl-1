@@ -19,8 +19,8 @@
 
 ### Phase 2: Backend Auth API
 - [x] Implement `POST /api/register` with validation.
-- [ ] Implement `POST /api/login` with session creation.
-- [ ] Implement `POST /api/logout` and `GET /api/user` (profile).
+- [x] Implement `POST /api/login` with session creation.
+- [x] Implement `POST /api/logout` and `GET /api/user` (profile).
 
 ### Phase 3: Auth Infrastructure Integration
 - [ ] Create `requireAuth` and `requireTenant` decorators.
