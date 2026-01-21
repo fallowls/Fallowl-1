@@ -75,60 +75,9 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   searchUsers(query: string): Promise<User[]>;
   bulkUpdateUsers(userIds: number[], updates: Partial<InsertUser>): Promise<User[]>;
-  async authenticateUser(email: string, password: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    if (!user) return undefined;
-    
-    // Support both hashed passwords and potentially plain text if seed data used them
-    // Though for security we should always use bcrypt
-    try {
-      const isValid = await bcrypt.compare(password, user.password);
-      if (isValid) return user;
-    } catch (e) {
-      // Fallback for plain text comparison ONLY if it's a known seed user and bcrypt fails
-      if (user.password === password) return user;
-    }
-    
-    return undefined;
-  }
-
-  async initializeDefaultData() {
-    // Check if admin user exists
-    const [adminUser] = await db.select().from(users).where(eq(users.username, "admin"));
-    if (!adminUser) {
-      const hashedPassword = await bcrypt.hash("admin123", 10);
-      
-      // Create default tenant
-      const [tenant] = await db.insert(tenants).values({
-        name: "Default Organization",
-        slug: "default-org",
-        status: "active",
-        plan: "pro"
-      }).returning();
-
-      // Create admin user
-      const [newAdmin] = await db.insert(users).values({
-        username: "admin",
-        email: "admin@example.com",
-        password: hashedPassword,
-        role: "admin",
-        status: "active",
-        firstName: "System",
-        lastName: "Administrator"
-      }).returning();
-
-      // Create membership
-      await db.insert(tenantMemberships).values({
-        tenantId: tenant.id,
-        userId: newAdmin.id,
-        role: "owner",
-        isDefault: true,
-        status: "active"
-      });
-
-      console.log("✅ Default admin user and tenant created");
-    }
-  }
+  authenticateUser(email: string, password: string): Promise<User | undefined>;
+  initializeDefaultData(): Promise<void>;
+  createUserWithTenant(user: InsertUser): Promise<User>;
   updateUserTwilioCredentials(userId: number, credentials: {
     twilioAccountSid?: string;
     twilioAuthToken?: string;
@@ -576,39 +525,67 @@ export class DatabaseStorage implements IStorage {
       .where(inArray(users.id, userIds));
   }
 
-  async authenticateUser(email: string, password: string): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email));
-    
-    if (!user || !user.password) {
-      return undefined;
+  async initializeDefaultData(): Promise<void> {
+    // Check if admin user exists
+    const [adminUser] = await db.select().from(users).where(eq(users.username, "admin"));
+    if (!adminUser) {
+      const hashedPassword = await bcrypt.hash("admin123", 10);
+      
+      // Create default tenant
+      const [tenant] = await db.insert(tenants).values({
+        name: "Default Organization",
+        slug: "default-org",
+        status: "active",
+        plan: "pro"
+      }).returning();
+
+      // Create admin user
+      const [newAdmin] = await db.insert(users).values({
+        username: "admin",
+        email: "admin@example.com",
+        password: hashedPassword,
+        role: "admin",
+        status: "active",
+        firstName: "System",
+        lastName: "Administrator"
+      }).returning();
+
+      // Create membership
+      await db.insert(tenantMemberships).values({
+        tenantId: tenant.id,
+        userId: newAdmin.id,
+        role: "owner",
+        isDefault: true,
+        status: "active"
+      });
+
+      console.log("✅ Default admin user and tenant created");
     }
+  }
 
-    // Check if it's the admin user with the system placeholder hash
-    if (user.email === 'admin@demonflare.com' && password === 'admin123') {
-      // Update last login for admin too
-      await db
-        .update(users)
-        .set({ lastLogin: new Date() })
-        .where(eq(users.id, user.id));
-      return { ...user, lastLogin: new Date() };
-    }
-
-    // Use bcrypt to compare passwords
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
-      return undefined;
-    }
-
-    // Update last login
-    await db
-      .update(users)
-      .set({ lastLogin: new Date() })
-      .where(eq(users.id, user.id));
-
-    return { ...user, lastLogin: new Date() };
+  async createUserWithTenant(insertUser: InsertUser): Promise<User> {
+    // Start a transaction
+    return await db.transaction(async (tx) => {
+      // 1. Create the user
+      const [user] = await tx.insert(users).values(insertUser).returning();
+      
+      // 2. Create a default tenant for the user
+      const [tenant] = await tx.insert(tenants).values({
+        name: `${user.username}'s Org`,
+        slug: `${user.username.toLowerCase()}-${Date.now()}`,
+        ownerId: user.id
+      }).returning();
+      
+      // 3. Create the membership
+      await tx.insert(tenantMemberships).values({
+        tenantId: tenant.id,
+        userId: user.id,
+        role: 'owner',
+        isDefault: true
+      });
+      
+      return user;
+    });
   }
 
   // Per-user Twilio credentials (with encryption)

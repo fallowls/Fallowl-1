@@ -6,6 +6,8 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 
 import Layout from "@/components/layout/Layout";
+import AuthPage from "@/pages/AuthPage";
+import notFound from "@/pages/not-found";
 
 function Router() {
   return (

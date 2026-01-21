@@ -347,17 +347,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create session
       (req as any).session.userId = user.id;
-      (req as any).session.user = user;
+      (req as any).session.user = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      };
 
       res.json({ 
         message: "Login successful",
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          status: user.status
-        }
+        user: (req as any).session.user
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -446,39 +446,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     env: process.env.NODE_ENV
   });
 
-  app.get("/api/auth/me", async (req, res) => {
+  app.get("/api/user", async (req, res) => {
     try {
       let userId = (req as any).session?.userId;
       
-      // Also check if we have a JWT from Auth0
-      if (!userId && (req as any).auth?.sub) {
-        const auth0UserId = (req as any).auth.sub;
-        const user = await storage.getUserByAuth0Id(auth0UserId);
-        if (user) {
-          userId = user.id;
-          (req as any).session.userId = user.id;
-        }
-      }
-
       if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
+        return res.status(401).json(null);
       }
 
       const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(401).json(null);
       }
-
-      const memberships = await storage.getUserTenantMemberships(user.id);
-      const tenantId = (memberships.find(m => m.isDefault) || memberships[0])?.tenantId;
 
       res.json({
         id: user.id,
         username: user.username,
         email: user.email,
         role: user.role,
-        status: user.status,
-        tenantId
+        status: user.status
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
