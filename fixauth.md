@@ -5,10 +5,11 @@
 - [x] Ensured user indexes are correctly set for authentication lookups.
 - [x] Verified table relationships for multi-tenant isolation.
 
-## 2. Storage Layer Refactoring (NEXT PHASE)
-- [ ] Remove redundant `userId` parameters from tenant-scoped storage methods in `server/storage.ts`.
-- [ ] Clean up `warnIfTenantScopedParamsInvalid` calls to strictly enforce tenant isolation.
-- [ ] Optimize reporting queries (like `getLeadStats`) for better multi-tenant performance.
+## 2. Storage Layer Refactoring (COMPLETED)
+- [x] Removed redundant `userId` parameters from tenant-scoped storage methods in `server/storage.ts`.
+- [x] Cleaned up `warnIfTenantScopedParamsInvalid` calls to strictly enforce tenant isolation.
+- [x] Verified and updated methods for Leads, Recordings, Settings, and Call Notes to use `tenantId` as the primary isolation key.
+- [x] Improved method signatures to be more idiomatic for multi-tenant architecture.
 
 ## 3. Custom Authentication System (NEXT PHASE)
 - [ ] **Auth Strategy**: Implement local session-based authentication using `fastify-session`.
