@@ -36,11 +36,14 @@ const authParams: any = {
   scope: "openid profile email offline_access"
 };
 
+// If audience is not configured correctly in the dashboard, it results in "Service not found" errors.
+// We force exclusion of the audience if it's causing login failure.
 const urlParams = new URLSearchParams(window.location.search);
 const hasAudienceError = urlParams.get('error') === 'access_denied' && 
                         urlParams.get('error_description')?.includes('Service not found');
 
-if (audience && audience !== "undefined" && audience !== "null" && !hasAudienceError) {
+// If audience is just placeholder or known to be failing, we skip it
+if (audience && audience !== "undefined" && audience !== "null" && audience !== "https://api.thecloso.com" && !hasAudienceError) {
   authParams.audience = audience;
 }
 
