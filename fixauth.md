@@ -13,8 +13,8 @@
 ## 3. Custom Authentication System Implementation
 
 ### Phase 1: Security & Session Core
-- [ ] Install dependencies: `fastify-session`, `fastify-cookie`, `bcryptjs`.
-- [ ] Implement secure credential hashing and verification in `server/auth.ts`.
+- [x] Install dependencies: `fastify-session`, `fastify-cookie`, `bcryptjs`.
+- [x] Implement secure credential hashing and verification in `server/auth.ts`.
 - [ ] Configure session storage and middleware in `server/fastify.ts`.
 
 ### Phase 2: Backend Auth API
