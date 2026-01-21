@@ -61,6 +61,21 @@
 - [x] Implement monitoring for unusual tenant access patterns.
 - [x] Conduct final security review of the hardened infrastructure.
 
-## 5. Deployment & Configuration (FINAL PHASE)
+## 5. Audit Logging for Cross-Tenant Access Attempts
+
+### Phase 1: Foundation & Security Alerts
+- [ ] Create `audit_logs` table in `shared/schema.ts` for security events.
+- [ ] Implement `logSecurityEvent` utility in `server/utils/logger.ts`.
+- [ ] Hook into `tenantIdentifier.ts` to record mismatch and unauthorized attempts.
+
+### Phase 2: Comprehensive Logging
+- [ ] Add logging for unauthorized resource access in storage layer.
+- [ ] Track sensitive setting changes with tenant context.
+
+### Phase 3: Reporting & Alerts
+- [ ] Create basic admin dashboard view for security events.
+- [ ] Implement notification triggers for high-frequency failures.
+
+## 6. Deployment & Configuration (FINAL PHASE)
 - [ ] Set up `SESSION_SECRET` as a mandatory secret.
 - [ ] Conduct final production environment verification.
