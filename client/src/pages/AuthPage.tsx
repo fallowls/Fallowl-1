@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
@@ -98,16 +98,6 @@ export default function AuthPage() {
                     <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
                   )}
                 </div>
-
-                {!isLogin && (
-                  <div className="space-y-2">
-                    <Label htmlFor="tenantName">Company Name</Label>
-                    <Input 
-                      id="tenantName" 
-                      placeholder="Your company name"
-                    />
-                  </div>
-                )}
 
                 <Button
                   type="submit"
