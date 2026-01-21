@@ -26,15 +26,17 @@ export default function AuthPage() {
   });
 
   const onSubmit = async (data: InsertUser) => {
+    console.log("Form submission triggered", data);
     try {
       if (isLogin) {
+        console.log("Calling login mutate");
         await login.mutateAsync(data);
       } else {
+        console.log("Calling register mutate");
         await register.mutateAsync(data);
       }
     } catch (error: any) {
-      // Errors are handled by useMutation onError callbacks which show toasts
-      console.error("Auth error:", error);
+      console.error("Auth submit error:", error);
     }
   };
 
@@ -89,7 +91,17 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <Tabs defaultValue="login" className="space-y-6" onValueChange={(v) => setIsLogin(v === "login")}>
+          <Tabs 
+            value={isLogin ? "login" : "register"} 
+            className="space-y-6" 
+            onValueChange={(v) => {
+              setIsLogin(v === "login");
+              form.reset({
+                username: "",
+                password: "",
+              });
+            }}
+          >
             <TabsList className="grid w-full grid-cols-2 h-11 p-1 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg">
               <TabsTrigger 
                 value="login" 
@@ -112,7 +124,7 @@ export default function AuthPage() {
                   <Input 
                     id="username" 
                     {...form.register("username")} 
-                    placeholder="name@example.com"
+                    placeholder="Username or email"
                     className="h-11 bg-transparent border-neutral-200 dark:border-neutral-800 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
                   {form.formState.errors.username && (
@@ -124,7 +136,7 @@ export default function AuthPage() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Password</Label>
                     {isLogin && (
-                      <Button variant="link" className="p-0 h-auto text-xs text-blue-600 font-medium">
+                      <Button type="button" variant="link" className="p-0 h-auto text-xs text-blue-600 font-medium">
                         Forgot password?
                       </Button>
                     )}
@@ -146,6 +158,10 @@ export default function AuthPage() {
                 type="submit"
                 disabled={isLoading || login.isPending || register.isPending}
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all"
+                onClick={() => {
+                  console.log("Form submit button clicked");
+                  console.log("Form errors:", form.formState.errors);
+                }}
               >
                 {(isLoading || login.isPending || register.isPending) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
