@@ -69,8 +69,8 @@
 - [x] Hook into `tenantIdentifier.ts` to record mismatch and unauthorized attempts.
 
 ### Phase 2: Comprehensive Logging
-- [ ] Add logging for unauthorized resource access in storage layer.
-- [ ] Track sensitive setting changes with tenant context.
+- [x] Add logging for unauthorized resource access in storage layer.
+- [x] Track sensitive setting changes with tenant context.
 
 ### Phase 3: Reporting & Alerts
 - [ ] Create basic admin dashboard view for security events.

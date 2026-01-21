@@ -27,6 +27,8 @@ import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { encryptCredential, decryptCredential } from "./encryption";
 
+import { logSecurityEvent, SecurityEventType, SecurityEventSeverity } from "./utils/logger";
+
 function warnIfTenantScopedParamsInvalid(
   method: string,
   params: Record<string, unknown>
@@ -44,13 +46,21 @@ function warnIfTenantScopedParamsInvalid(
   const errorMsg = `[MULTITENANT][SECURITY] Strict validation failed for storage.${method}: bad=${badKeys.join(',')} params=${JSON.stringify(params)}`;
   console.error(errorMsg);
   
+  // Log security event for audit trail
+  logSecurityEvent({
+    tenantId: typeof params.tenantId === 'number' ? params.tenantId : undefined,
+    userId: typeof params.userId === 'number' ? params.userId : undefined,
+    eventType: SecurityEventType.ACCESS_DENIED,
+    severity: SecurityEventSeverity.CRITICAL,
+    action: `Storage Validation Failed: ${method}`,
+    resource: "storage",
+    details: { method, badKeys, params }
+  }).catch(err => console.error("Critical: Failed to log storage security event:", err));
+
   const stack = new Error().stack;
   if (stack) {
     console.error(`[MULTITENANT][SECURITY] stack (top):\n${stack.split('\n').slice(0, 6).join('\n')}`);
   }
-
-  // In hardening phase, we might want to throw error to prevent data leakage, 
-  // but for now we'll start with loud errors to identify all legacy call sites.
 }
 
 export interface IStorage {
