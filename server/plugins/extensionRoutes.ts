@@ -2,9 +2,13 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { storage } from '../storage';
 import { insertContactSchema } from '@shared/schema';
 import { rateLimitConfigs } from './rateLimiters';
-import { getUserIdFromRequest } from '../authHelper';
 import { userTwilioCache } from '../userTwilioService';
 import { wsService } from '../websocketService';
+
+// Helper to get userId from request
+function getUserIdFromRequest(request: FastifyRequest): number {
+  return (request as any).userId;
+}
 
 async function getUserFromAuth0(user: any) {
   if (!user || !user.sub) {

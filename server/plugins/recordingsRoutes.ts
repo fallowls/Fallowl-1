@@ -5,8 +5,11 @@ import { userTwilioCache } from '../userTwilioService';
 import { insertRecordingSchema } from '@shared/schema';
 import { rateLimitConfigs } from './rateLimiters';
 import fs from 'fs';
-import { getUserIdFromRequest } from '../authHelper';
-import type { HasUserId } from '../authHelper';
+
+// Helper to get userId from request
+function getUserIdFromRequest(request: FastifyRequest): number {
+  return (request as any).userId;
+}
 
 /**
  * Recordings Management Routes Plugin for Fastify

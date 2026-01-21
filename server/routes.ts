@@ -7,7 +7,6 @@ import { storage } from "./storage";
 import { recordingService } from "./services/recordingService";
 import { twilioConfigService } from "./services/twilioConfigService";
 import { userTwilioCache, clearTwilioCacheOnLogout } from "./userTwilioService";
-import { requireAuth, getUserIdFromRequest, type AuthenticatedRequest } from "./authHelper";
 import { expressjwt } from "express-jwt";
 import { expressJwtSecret } from "jwks-rsa";
 import twilio from "twilio";
@@ -35,6 +34,23 @@ import {
   insertLeadScoringSchema, insertLeadNurturingSchema,
   insertAiLeadScoreSchema, insertCallIntelligenceSchema, insertAiInsightSchema
 } from "@shared/schema";
+
+// Custom type for requests that have gone through session auth
+interface AuthenticatedRequest extends Express.Request {
+  session: any;
+}
+
+// Authentication middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+};
+
+const getUserIdFromRequest = (req: any): number => {
+  return req.session.userId;
+};
 import { openaiService } from "./services/openaiService";
 
 // Auth0 JWT validation middleware

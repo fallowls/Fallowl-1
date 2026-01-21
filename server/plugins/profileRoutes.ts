@@ -3,7 +3,11 @@ import { storage } from '../storage';
 import { rateLimitConfigs } from './rateLimiters';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { getUserIdFromRequest } from '../authHelper';
+
+// Helper to get userId from request
+function getUserIdFromRequest(request: FastifyRequest): number {
+  return (request as any).userId;
+}
 
 /**
  * Profile Management Routes Plugin for Fastify

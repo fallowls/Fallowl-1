@@ -6,8 +6,11 @@ import { storage } from '../storage';
 import { userTwilioCache, clearTwilioCacheOnLogout } from '../userTwilioService';
 import { wsService } from '../websocketService';
 import { rateLimitConfigs } from './rateLimiters';
-import { validateTwilioWebhook, generateWebhookToken, verifyWebhookToken } from './twilioWebhookValidator';
-import { getUserIdFromRequest } from '../authHelper';
+
+// Helper to get userId from request
+function getUserIdFromRequest(request: FastifyRequest): number {
+  return (request as any).userId;
+}
 import type { Twilio } from 'twilio';
 
 interface HasUserId {

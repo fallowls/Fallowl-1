@@ -2,7 +2,11 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { storage } from '../storage';
 import { insertContactSchema, insertContactListSchema, insertContactListMembershipSchema } from '@shared/schema';
 import { rateLimitConfigs } from './rateLimiters';
-import { getUserIdFromRequest } from '../authHelper';
+
+// Helper to get userId from request
+function getUserIdFromRequest(request: FastifyRequest): number {
+  return (request as any).userId;
+}
 
 /**
  * Contacts Management Routes Plugin for Fastify

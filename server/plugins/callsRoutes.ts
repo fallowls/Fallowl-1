@@ -2,8 +2,12 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { storage } from '../storage';
 import { insertCallSchema, insertCallNoteSchema } from '@shared/schema';
 import { rateLimitConfigs } from './rateLimiters';
-import { getUserIdFromRequest } from '../authHelper';
 import { wsService } from '../websocketService';
+
+// Helper to get userId from request (compatibility with old code)
+function getUserIdFromRequest(request: FastifyRequest): number {
+  return (request as any).userId;
+}
 
 /**
  * Calls Management Routes Plugin for Fastify
