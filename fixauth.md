@@ -28,9 +28,9 @@
 - [x] Implement tenant-context injection middleware.
 
 ### Phase 4: Frontend Authentication UI
-- [ ] Build the `AuthPage` component (Login/Register).
-- [ ] Implement authentication forms with Zod validation.
-- [ ] Create multi-tenant onboarding UI for first-time login.
+- [x] Build the `AuthPage` component (Login/Register).
+- [x] Implement authentication forms with Zod validation.
+- [x] Create multi-tenant onboarding UI for first-time login.
 
 ### Phase 5: Auth Provider Transition
 - [ ] Update frontend `auth.tsx` context to use local API.
