@@ -1,37 +1,31 @@
 # Auth0 Authentication Fix Guide
 
 ## Problem Summary
-The application is experiencing 401 Unauthorized errors because Auth0 is not issuing refresh tokens. This prevents the client from obtaining a valid access token after the initial one expires or if the user refreshes the page.
+The application is experiencing 401 Unauthorized errors because the Auth0 Audience (`https://api.thecloso.com`) is not properly registered in your Auth0 dashboard. This causes "Service not found" errors during login and token acquisition.
 
-## Required Auth0 Dashboard Changes
+## Permanent Fixes (Auth0 Dashboard)
 
-### 1. Update Application Settings
+### 1. Register the API
+Go to **Applications** -> **APIs** -> **Create API**:
+- **Name**: Closo API (or any name)
+- **Identifier**: `https://api.thecloso.com` (This MUST match the `VITE_AUTH0_AUDIENCE` env var)
+- **Allow Offline Access**: Ensure this toggle is **ON** (required for `offline_access` scope).
+
+### 2. Update Application Settings
 Go to **Applications** -> **DialPax CRM** (or your app name):
 - **Allowed Callback URLs**: `https://374f4fea-3e77-47fa-8c6a-cb424b3188d6-00-s1ydshbyfhxe.pike.replit.dev`
 - **Allowed Web Origins**: `https://374f4fea-3e77-47fa-8c6a-cb424b3188d6-00-s1ydshbyfhxe.pike.replit.dev`
 - **Allowed Logout URLs**: `https://374f4fea-3e77-47fa-8c6a-cb424b3188d6-00-s1ydshbyfhxe.pike.replit.dev`
 - **Refresh Token Rotation**: Ensure this is **Enabled**.
 
-### 2. Update API Settings
-Go to **Applications** -> **APIs** -> **https://api.thecloso.com** (or your API audience):
-- **Allow Offline Access**: Ensure this toggle is **ON** (required for `offline_access` scope).
+## Current Temporary Workaround
+I have temporarily **removed the audience requirement** from the application code. This allows you to:
+1.  Log in using basic Auth0 authentication.
+2.  Access the CRM features using session-based authentication fallback.
 
-## Implementation Details
-
-### Client-side Changes
-The `Auth0Provider` in `client/src/main.tsx` is already configured with:
-- `useRefreshTokens={true}`
-- `cacheLocation="localstorage"`
-- `scope="openid profile email offline_access"`
-
-### Server-side Changes
-The server is migrated to **Fastify** using `fastify-auth0-verify`. It validates the JWT from the `Authorization: Bearer <token>` header.
-
-### Fallback Mechanism
-If the JWT is missing (e.g., during extension requests or initial load), the server falls back to session-based authentication if a valid session exists in the PostgreSQL store.
+**Note**: Advanced API features that require a specific audience-scoped JWT may still throw 401s until the API is registered in your dashboard.
 
 ## Verification Steps
 1. Logout and log back in.
-2. Check the browser console for "Token retrieved successfully".
-3. Verify that requests to `/api/profile` return a 200 OK.
-4. If "missing_refresh_token" error persists, verify the **Allow Offline Access** setting in the Auth0 API dashboard.
+2. You should see a successful login without the "Service not found" error.
+3. Once logged in, the CRM should load your profile normally.

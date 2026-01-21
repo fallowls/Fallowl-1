@@ -142,32 +142,6 @@ function AppContent() {
 
   // Show auth error if present
   if (authError) {
-    const isAudienceError = authError.errorDescription?.includes('Service not found') || 
-                            authError.error?.includes('access_denied');
-    
-    if (isAudienceError) {
-      return (
-        <div className="h-screen flex flex-col items-center justify-center bg-background p-4 text-center">
-          <div className="max-w-md w-full p-6 bg-card border border-border rounded-lg shadow-lg">
-            <h2 className="text-xl font-bold mb-4">Auth0 Audience Not Configured</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              The API Audience "https://api.thecloso.com" is not yet registered in your Auth0 dashboard. 
-              We can attempt to log in without it as a fallback.
-            </p>
-            <button
-              onClick={() => {
-                sessionStorage.removeItem('login_attempted');
-                window.location.href = window.location.origin;
-              }}
-              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            >
-              Retry Without Audience
-            </button>
-          </div>
-        </div>
-      );
-    }
-
     const isCallbackMismatch = authError.errorDescription?.toLowerCase().includes('callback') || 
                                 authError.error?.toLowerCase().includes('callback');
     const currentUrl = window.location.origin;

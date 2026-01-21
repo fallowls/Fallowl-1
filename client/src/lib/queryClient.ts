@@ -17,23 +17,11 @@ async function throwIfResNotOk(res: Response) {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (getAccessToken) {
     try {
-      const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
-      // Skip the audience that is known to be failing
-      const validAudience = (audience && audience !== "undefined" && audience !== "null" && audience !== "https://api.thecloso.com");
-      
-      const token = await getAccessToken({
-        authorizationParams: validAudience ? { audience } : {}
-      });
+      // Restore basic token retrieval without problematic audience
+      const token = await getAccessToken();
       return { "Authorization": `Bearer ${token}` };
     } catch (error: any) {
       console.error("[Auth Error] Failed to get access token:", error);
-      // Fallback: try getting a token without any audience
-      try {
-        const token = await getAccessToken();
-        return { "Authorization": `Bearer ${token}` };
-      } catch (fallbackError) {
-        console.error("[Auth Error] Fallback also failed:", fallbackError);
-      }
       return {};
     }
   }
