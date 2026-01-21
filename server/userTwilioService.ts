@@ -63,7 +63,7 @@ class UserTwilioClientCache {
     if (tenantId) {
       const membership = await storage.getTenantMembership(userId, Number(tenantId));
       if (!membership) {
-        throw new Error(`User ${userId} does not belong to tenant ${tenantId}`);
+        throw new Error(`Security Alert: User ${userId} attempted to access Twilio credentials for tenant ${tenantId} without membership.`);
       }
     }
 
