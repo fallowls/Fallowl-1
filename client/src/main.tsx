@@ -6,6 +6,7 @@ import "./index.css";
 // Auth0 configuration
 const domain = import.meta.env.VITE_AUTH0_DOMAIN || "auth.thecloso.com";
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "d3sqfAaafC9UJOYeBJGLEODLu9fr9FD0";
+const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
 if (!domain) {
   console.error("❌ VITE_AUTH0_DOMAIN is not set. Authentication will fail.");
@@ -22,11 +23,15 @@ const onRedirectCallback = (appState: any) => {
   );
 };
 
-// Simplified Auth0 params - removed problematic audience to restore basic login
+// Simplified Auth0 params - conditionally include audience if it's set and valid
 const authParams: any = {
   redirect_uri: window.location.origin,
   scope: "openid profile email offline_access"
 };
+
+if (audience && audience !== "undefined" && audience !== "null") {
+  authParams.audience = audience;
+}
 
 createRoot(document.getElementById("root")!).render(
     <Auth0Provider

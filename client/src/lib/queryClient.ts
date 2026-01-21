@@ -17,11 +17,23 @@ async function throwIfResNotOk(res: Response) {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (getAccessToken) {
     try {
-      // Restore basic token retrieval without problematic audience
-      const token = await getAccessToken();
+      const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
+      // Conditionally include audience for token request
+      const authParams = (audience && audience !== "undefined" && audience !== "null") 
+        ? { authorizationParams: { audience } } 
+        : {};
+        
+      const token = await getAccessToken(authParams);
       return { "Authorization": `Bearer ${token}` };
     } catch (error: any) {
       console.error("[Auth Error] Failed to get access token:", error);
+      // Fallback: try getting a basic ID token if audience-scoped access token fails
+      try {
+        const token = await getAccessToken();
+        return { "Authorization": `Bearer ${token}` };
+      } catch (fallbackError) {
+        console.error("[Auth Error] Fallback token retrieval failed:", fallbackError);
+      }
       return {};
     }
   }
