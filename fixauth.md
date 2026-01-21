@@ -33,7 +33,7 @@
 - [x] Create multi-tenant onboarding UI for first-time login.
 
 ### Phase 5: Auth Provider Transition
-- [ ] Update frontend `auth.tsx` context to use local API.
+- [x] Update frontend `auth.tsx` (use-auth.tsx) context to use local API.
 - [ ] Handle protected routing and redirection logic.
 - [ ] Implement session persistence and auto-login.
 
