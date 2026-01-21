@@ -25,7 +25,7 @@
 ### Phase 3: Auth Infrastructure Integration
 - [x] Create `requireAuth` and `requireTenant` decorators.
 - [x] Replace Auth0 decorators across all existing routes.
-- [ ] Implement tenant-context injection middleware.
+- [x] Implement tenant-context injection middleware.
 
 ### Phase 4: Frontend Authentication UI
 - [ ] Build the `AuthPage` component (Login/Register).
@@ -43,7 +43,7 @@
 - [ ] Final security audit of session management and cookie security.
 
 ## 4. Multi-tenant Infrastructure Hardening (NEXT PHASE)
-- [ ] Implement middleware to automatically inject `tenantId`.
+- [x] Implement middleware to automatically inject `tenantId`.
 - [ ] Add audit logging for cross-tenant access attempts.
 
 ## 5. Deployment & Configuration (FINAL PHASE)

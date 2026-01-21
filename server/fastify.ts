@@ -509,7 +509,32 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
     }
   });
 
-  log('✅ Authentication decorators configured');
+  // Add injectTenantContext hook for automatic tenant identification
+  fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+    // Skip if user is not logged in (session middleware should have run)
+    const userId = (request as any).session?.userId;
+    if (!userId) return;
+
+    try {
+      // If requireAuth hasn't already populated these, do it now
+      if (!request.userId || !request.tenantId) {
+        const { storage } = await import('./storage');
+        const user = await storage.getUser(userId);
+        
+        if (user) {
+          request.userId = user.id;
+          const membership = await storage.ensureDefaultTenant(user.id);
+          request.tenantId = membership.tenantId;
+          request.tenantRole = membership.role;
+        }
+      }
+    } catch (error) {
+      // Silent fail for context injection, decorators will handle enforcement
+      console.error('Tenant context injection error:', error);
+    }
+  });
+
+  log('✅ Authentication decorators and tenant context injection configured');
 
   // ============================================================================
   // PHASE 4: RATE LIMITING
