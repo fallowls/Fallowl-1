@@ -43,9 +43,23 @@
 - [x] Implement rate limiting on auth endpoints.
 - [x] Final security audit of session management and cookie security.
 
-## 4. Multi-tenant Infrastructure Hardening (NEXT PHASE)
+## 4. Multi-tenant Infrastructure Hardening
 - [x] Implement middleware to automatically inject `tenantId`.
-- [ ] Add audit logging for cross-tenant access attempts.
+
+### Phase 1: Enhanced Tenant Context & Validation
+- [x] Add audit logging for cross-tenant access attempts in `server/middleware/tenantIdentifier.ts`.
+- [ ] Implement strict `tenantId` validation in all storage operations.
+- [ ] Verify that all user-facing resources are correctly filtered by `tenantId`.
+
+### Phase 2: Security & Isolation Policies
+- [ ] Implement Row Level Security (RLS) style checks in the storage layer.
+- [ ] Add automated testing for cross-tenant data leakage.
+- [ ] Audit Twilio TwiML App configurations for tenant isolation.
+
+### Phase 3: Cleanup & Monitoring
+- [ ] Remove any remaining legacy Auth0-specific tenant logic.
+- [ ] Implement monitoring for unusual tenant access patterns.
+- [ ] Conduct final security review of the hardened infrastructure.
 
 ## 5. Deployment & Configuration (FINAL PHASE)
 - [ ] Set up `SESSION_SECRET` as a mandatory secret.

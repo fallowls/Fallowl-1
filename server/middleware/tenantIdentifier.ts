@@ -39,13 +39,20 @@ export async function tenantIdentifier(
 
     // If both methods are used, they must resolve to the same tenant
     if (tenant && tenantFromApiKey && tenant.id !== tenantFromApiKey.id) {
+        console.error(`[Security Alert] Tenant mismatch: Domain(${tenant.id}) vs API Key(${tenantFromApiKey.id})`);
         return reply.status(403).send({ error: 'Forbidden: Domain and API Key mismatch.' });
     }
     
     tenant = tenantFromApiKey || tenant;
 
-    if (!tenant || tenant.status !== 'active') {
-      return reply.status(403).send({ error: 'Forbidden' });
+    if (!tenant) {
+      console.warn(`[Security Alert] Unidentified tenant access attempt from host: ${hostname}`);
+      return reply.status(403).send({ error: 'Forbidden: Unidentified tenant' });
+    }
+
+    if (tenant.status !== 'active') {
+      console.warn(`[Security Alert] Inactive tenant access attempt: ${tenant.id}`);
+      return reply.status(403).send({ error: 'Forbidden: Inactive tenant' });
     }
 
     // Attach tenant to request for logging and context
