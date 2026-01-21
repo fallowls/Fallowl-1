@@ -1,4 +1,3 @@
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Card, 
@@ -26,14 +25,14 @@ const SeverityBadge = ({ severity }: { severity: string }) => {
     case 'error':
       return <Badge variant="destructive" className="uppercase"><ShieldAlert className="w-3 h-3 mr-1" /> Error</Badge>;
     case 'warn':
-      return <Badge variant="warning" className="uppercase bg-yellow-500 text-white hover:bg-yellow-600"><AlertTriangle className="w-3 h-3 mr-1" /> Warning</Badge>;
+      return <Badge variant="default" className="uppercase bg-yellow-500 text-white hover:bg-yellow-600 border-none"><AlertTriangle className="w-3 h-3 mr-1" /> Warning</Badge>;
     default:
       return <Badge variant="secondary" className="uppercase"><Info className="w-3 h-3 mr-1" /> Info</Badge>;
   }
 };
 
 export default function SecurityDashboard() {
-  const { data: logs, isLoading } = useQuery({
+  const { data: logs, isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/audit-logs'],
   });
 
@@ -62,7 +61,6 @@ export default function SecurityDashboard() {
             <p className="text-xs text-muted-foreground">Immediate attention required</p>
           </CardContent>
         </Card>
-        {/* Add more stat cards as needed */}
       </div>
 
       <Card>

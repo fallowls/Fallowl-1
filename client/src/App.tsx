@@ -18,6 +18,7 @@ import SmsPage from "@/pages/SmsPage";
 import CallLogPage from "@/pages/CallLogPage";
 import VoicemailPage from "@/pages/VoicemailPage";
 import UsersPage from "@/pages/UsersPage";
+import SecurityDashboard from "@/pages/admin/SecurityDashboard";
 import notFound from "@/pages/not-found";
 
 function Router() {
@@ -35,6 +36,7 @@ function Router() {
       <ProtectedRoute path="/calls" component={CallLogPage} />
       <ProtectedRoute path="/voicemail" component={VoicemailPage} />
       <ProtectedRoute path="/users" component={UsersPage} />
+      <ProtectedRoute path="/admin/security" component={SecurityDashboard} />
       <Route path="/auth" component={AuthPage} />
       <Route component={notFound} />
     </Switch>
