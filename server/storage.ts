@@ -584,7 +584,29 @@ export class DatabaseStorage implements IStorage {
         status: "active"
       });
 
+      // Initialize admin with env credentials if available
+      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+        await db.update(users).set({
+          twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+          twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+          twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+          twilioConfigured: true
+        }).where(eq(users.id, newAdmin.id));
+        console.log("✅ Twilio credentials initialized for admin from environment variables");
+      }
+
       console.log("✅ Default admin user and tenant created");
+    } else if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+        // Update existing admin if creds are in env but not in DB
+        if (!adminUser.twilioConfigured) {
+          await db.update(users).set({
+            twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+            twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+            twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+            twilioConfigured: true
+          }).where(eq(users.id, adminUser.id));
+          console.log("✅ Twilio credentials updated for existing admin from environment variables");
+        }
     }
   }
 
