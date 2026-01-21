@@ -9,25 +9,43 @@
 - [x] Removed redundant `userId` parameters from tenant-scoped storage methods in `server/storage.ts`.
 - [x] Cleaned up `warnIfTenantScopedParamsInvalid` calls to strictly enforce tenant isolation.
 - [x] Verified and updated methods for Leads, Recordings, Settings, and Call Notes to use `tenantId` as the primary isolation key.
-- [x] Improved method signatures to be more idiomatic for multi-tenant architecture.
 
-## 3. Custom Authentication System (NEXT PHASE)
-- [ ] **Auth Strategy**: Implement local session-based authentication using `fastify-session`.
-- [ ] **Backend Implementation**:
-    - [ ] Create `server/auth.ts` for credential hashing (scrypt) and session management.
-    - [ ] Replace Auth0 decorators in `server/fastify.ts` with local `requireAuth`.
-    - [ ] Implement endpoints: `POST /api/register`, `POST /api/login`, `POST /api/logout`, `GET /api/user`.
-- [ ] **Frontend Implementation**:
-    - [ ] Create `client/src/pages/auth-page.tsx` using Tailwind/Shadcn UI.
-    - [ ] Update `client/src/lib/auth.tsx` (if exists) or `App.tsx` to handle local auth state.
-    - [ ] Implement "Login with Tenant" flow to associate users with their organization on first sign-in.
+## 3. Custom Authentication System Implementation
+
+### Phase 1: Security & Session Core
+- [ ] Install dependencies: `fastify-session`, `fastify-cookie`, `bcryptjs`.
+- [ ] Implement secure credential hashing and verification in `server/auth.ts`.
+- [ ] Configure session storage and middleware in `server/fastify.ts`.
+
+### Phase 2: Backend Auth API
+- [ ] Implement `POST /api/register` with validation.
+- [ ] Implement `POST /api/login` with session creation.
+- [ ] Implement `POST /api/logout` and `GET /api/user` (profile).
+
+### Phase 3: Auth Infrastructure Integration
+- [ ] Create `requireAuth` and `requireTenant` decorators.
+- [ ] Replace Auth0 decorators across all existing routes.
+- [ ] Implement tenant-context injection middleware.
+
+### Phase 4: Frontend Authentication UI
+- [ ] Build the `AuthPage` component (Login/Register).
+- [ ] Implement authentication forms with Zod validation.
+- [ ] Create multi-tenant onboarding UI for first-time login.
+
+### Phase 5: Auth Provider Transition
+- [ ] Update frontend `auth.tsx` context to use local API.
+- [ ] Handle protected routing and redirection logic.
+- [ ] Implement session persistence and auto-login.
+
+### Phase 6: Hardening & Cleanup
+- [ ] Remove all Auth0 related code and environment variables.
+- [ ] Implement rate limiting on auth endpoints.
+- [ ] Final security audit of session management and cookie security.
 
 ## 4. Multi-tenant Infrastructure Hardening (NEXT PHASE)
-- [ ] Implement middleware to automatically inject `tenantId` from the authenticated user into all request objects.
+- [ ] Implement middleware to automatically inject `tenantId`.
 - [ ] Add audit logging for cross-tenant access attempts.
-- [ ] Update seeding logic to create a separate default tenant for the admin user.
 
 ## 5. Deployment & Configuration (FINAL PHASE)
-- [ ] Remove all Auth0 environment variable requirements.
 - [ ] Set up `SESSION_SECRET` as a mandatory secret.
-- [ ] Conduct a final security audit of the session management implementation.
+- [ ] Conduct final production environment verification.
