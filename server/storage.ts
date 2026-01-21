@@ -525,6 +525,31 @@ export class DatabaseStorage implements IStorage {
       .where(inArray(users.id, userIds));
   }
 
+  async authenticateUser(email: string, password: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+    
+    if (!user || !user.password) {
+      return undefined;
+    }
+
+    // Use bcrypt to compare passwords
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return undefined;
+    }
+
+    // Update last login
+    await db
+      .update(users)
+      .set({ lastLogin: new Date() })
+      .where(eq(users.id, user.id));
+
+    return { ...user, lastLogin: new Date() };
+  }
+
   async initializeDefaultData(): Promise<void> {
     // Check if admin user exists
     const [adminUser] = await db.select().from(users).where(eq(users.username, "admin"));
