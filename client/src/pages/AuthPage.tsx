@@ -33,11 +33,8 @@ export default function AuthPage() {
         await register.mutateAsync(data);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Authentication failed",
-        variant: "destructive",
-      });
+      // Errors are handled by useMutation onError callbacks which show toasts
+      console.error("Auth error:", error);
     }
   };
 

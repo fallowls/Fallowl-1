@@ -71,16 +71,24 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { email, password } = request.body as any;
+      const { username, password } = request.body as any;
       
-      if (!email || !password) {
-        return reply.code(400).send({ message: "Email and password are required" });
+      if (!username || !password) {
+        return reply.code(400).send({ message: "Username and password are required" });
       }
 
-      const user = await storage.authenticateUser(email, password);
+      // Try to authenticate by username first, then email
+      let user = await storage.authenticateUser(username, password);
       
       if (!user) {
-        return reply.code(401).send({ message: "Invalid credentials" });
+        // Fallback for email-based login if username looks like an email
+        if (username.includes('@')) {
+          user = await storage.authenticateUser(username, password);
+        }
+      }
+      
+      if (!user) {
+        return reply.code(401).send({ message: "Invalid username or password" });
       }
 
       // Create session
@@ -101,7 +109,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
         }
       });
     } catch (error: any) {
-      return reply.code(500).send({ message: error.message });
+      console.error('Login error:', error);
+      return reply.code(500).send({ message: error.message || "An unexpected error occurred during login" });
     }
   });
 
