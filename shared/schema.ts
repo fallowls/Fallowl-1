@@ -269,6 +269,9 @@ export const contacts = pgTable("contacts", {
   leadStatusIdx: index("contacts_lead_status_idx").on(table.leadStatus),
   dispositionIdx: index("contacts_disposition_idx").on(table.disposition),
   userPhoneIdx: index("contacts_user_phone_idx").on(table.userId, table.phone),
+  tenantIdIdx: index("contacts_tenant_id_idx").on(table.tenantId),
+  tenantPhoneIdx: index("contacts_tenant_phone_idx").on(table.tenantId, table.phone),
+  tenantEmailIdx: index("contacts_tenant_email_idx").on(table.tenantId, table.email),
 }));
 
 export const calls = pgTable("calls", {
@@ -346,6 +349,10 @@ export const calls = pgTable("calls", {
   sipCallIdIdx: index("calls_sip_call_id_idx").on(table.sipCallId),
   userStatusIdx: index("calls_user_status_idx").on(table.userId, table.status),
   userCreatedAtIdx: index("calls_user_created_at_idx").on(table.userId, table.createdAt),
+  tenantIdIdx: index("calls_tenant_id_idx").on(table.tenantId),
+  tenantUserIdx: index("calls_tenant_user_idx").on(table.tenantId, table.userId),
+  tenantContactIdx: index("calls_tenant_contact_idx").on(table.tenantId, table.contactId),
+  tenantStatusIdx: index("calls_tenant_status_idx").on(table.tenantId, table.status),
 }));
 
 // Calendar Events - Full calendar functionality

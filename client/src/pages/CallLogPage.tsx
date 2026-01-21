@@ -177,6 +177,14 @@ export default function CallLogPage() {
     initialPageParam: 1,
   });
 
+  const { data: stats, isLoading: statsLoading } = useQuery<CallLogStats>({
+    queryKey: ['/api/calls/stats'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/calls/stats`);
+      return res.json();
+    },
+  });
+
   const calls = useMemo(() => {
     return paginatedData?.pages.flatMap(page => page.calls) || [];
   }, [paginatedData]);

@@ -209,6 +209,7 @@ import cookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
 import compress from '@fastify/compress';
 import connectPgSimple from 'connect-pg-simple';
+import caching from '@fastify/caching';
 
 const log = (message: string) => {
   console.log(`[FASTIFY] ${message}`);
@@ -338,6 +339,12 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
 
   log('✅ Response compression configured');
 
+  await fastify.register(caching, {
+    privacy: 'public',
+    expiresIn: 3600,
+  });
+  log('✅ Caching configured');
+
   // 3. PostgreSQL Session Management
   // Must register cookie plugin BEFORE session plugin
   await fastify.register(cookie);
@@ -423,6 +430,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
         bodyParsing: true,
         sessions: true,
         logging: true,
+        caching: true,
       }
     };
   });
