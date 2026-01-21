@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { findTenantByApiKey, findTenantByDomain } from '../services/tenantService';
 import { asyncLocalStorage } from '../prisma'; // Using prisma's async local storage
+import { logSecurityEvent, SecurityEventType, SecurityEventSeverity } from '../utils/logger';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -15,6 +16,8 @@ export async function tenantIdentifier(
   try {
     const authHeader = request.headers.authorization;
     const hostname = request.hostname;
+    const ipAddress = request.ip;
+    const userAgent = request.headers['user-agent'];
 
     let tenant = null;
 
@@ -39,6 +42,24 @@ export async function tenantIdentifier(
 
     // If both methods are used, they must resolve to the same tenant
     if (tenant && tenantFromApiKey && tenant.id !== tenantFromApiKey.id) {
+        const mismatchDetails = { 
+          domainTenantId: tenant.id, 
+          apiKeyTenantId: tenantFromApiKey.id,
+          hostname,
+          path: request.url
+        };
+        
+        await logSecurityEvent({
+          tenantId: Number(tenantFromApiKey.id),
+          eventType: SecurityEventType.SECURITY_ALERT,
+          severity: SecurityEventSeverity.WARN,
+          action: "Tenant Mismatch",
+          resource: "tenantIdentifier",
+          details: mismatchDetails,
+          ipAddress,
+          userAgent
+        });
+
         console.error(`[Security Alert] Tenant mismatch: Domain(${tenant.id}) vs API Key(${tenantFromApiKey.id})`);
         return reply.status(403).send({ error: 'Forbidden: Domain and API Key mismatch.' });
     }
@@ -46,11 +67,32 @@ export async function tenantIdentifier(
     tenant = tenantFromApiKey || tenant;
 
     if (!tenant) {
+      await logSecurityEvent({
+        eventType: SecurityEventType.ACCESS_DENIED,
+        severity: SecurityEventSeverity.WARN,
+        action: "Unidentified Tenant Access",
+        resource: "tenantIdentifier",
+        details: { hostname, url: request.url },
+        ipAddress,
+        userAgent
+      });
+
       console.warn(`[Security Alert] Unidentified tenant access attempt from host: ${hostname}`);
       return reply.status(403).send({ error: 'Forbidden: Unidentified tenant' });
     }
 
     if (tenant.status !== 'active') {
+      await logSecurityEvent({
+        tenantId: Number(tenant.id),
+        eventType: SecurityEventType.ACCESS_DENIED,
+        severity: SecurityEventSeverity.WARN,
+        action: "Inactive Tenant Access",
+        resource: "tenantIdentifier",
+        details: { status: tenant.status, url: request.url },
+        ipAddress,
+        userAgent
+      });
+
       console.warn(`[Security Alert] Inactive tenant access attempt: ${tenant.id}`);
       return reply.status(403).send({ error: 'Forbidden: Inactive tenant' });
     }

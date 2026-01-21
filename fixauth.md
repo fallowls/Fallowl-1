@@ -64,9 +64,9 @@
 ## 5. Audit Logging for Cross-Tenant Access Attempts
 
 ### Phase 1: Foundation & Security Alerts
-- [ ] Create `audit_logs` table in `shared/schema.ts` for security events.
-- [ ] Implement `logSecurityEvent` utility in `server/utils/logger.ts`.
-- [ ] Hook into `tenantIdentifier.ts` to record mismatch and unauthorized attempts.
+- [x] Create `audit_logs` table in `shared/schema.ts` for security events.
+- [x] Implement `logSecurityEvent` utility in `server/utils/logger.ts`.
+- [x] Hook into `tenantIdentifier.ts` to record mismatch and unauthorized attempts.
 
 ### Phase 2: Comprehensive Logging
 - [ ] Add logging for unauthorized resource access in storage layer.

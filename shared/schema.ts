@@ -1768,3 +1768,26 @@ export interface ParallelDialerStatusUpdate {
   errorMessage?: string;
   timestamp: number;
 }
+
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
+  userId: integer("user_id").references(() => users.id),
+  eventType: text("event_type").notNull(), // security_alert, access_denied, config_change
+  severity: text("severity").notNull(), // info, warn, error, critical
+  action: text("action").notNull(),
+  resource: text("resource"),
+  details: jsonb("details").default({}),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  tenantIdx: index("audit_logs_tenant_id_idx").on(table.tenantId),
+  userIdx: index("audit_logs_user_id_idx").on(table.userId),
+  eventTypeIdx: index("audit_logs_event_type_idx").on(table.eventType),
+  createdAtIdx: index("audit_logs_created_at_idx").on(table.createdAt),
+}));
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs);
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
