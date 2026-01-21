@@ -1823,11 +1823,7 @@ export class DatabaseStorage implements IStorage {
     warnIfTenantScopedParamsInvalid('setSetting', { tenantId });
     const [setting] = await db
       .insert(settings)
-      .values({ key, value, tenantId, updatedAt: new Date() })
-      .onConflictDoUpdate({
-        target: [settings.tenantId, settings.key],
-        set: { value, updatedAt: new Date() }
-      })
+      .values({ key, value, tenantId })
       .returning();
     return setting;
   }
@@ -2005,8 +2001,8 @@ export class DatabaseStorage implements IStorage {
     return campaign || undefined;
   }
 
-  async createLeadCampaign(tenantId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign> {
-    const campaignData = { ...campaign, tenantId };
+  async createLeadCampaign(tenantId: number, userId: number, campaign: InsertLeadCampaign): Promise<LeadCampaign> {
+    const campaignData = { ...campaign, tenantId, userId };
     const [created] = await db.insert(leadCampaigns).values(campaignData).returning();
     return created;
   }
@@ -2173,6 +2169,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Mark that sample data initialization has been checked
+      // Note: setSetting will update updatedAt automatically
       await this.setSetting(1, 'sample_data_initialized', true); // Use tenant 1 for system setting
       console.log('✓ Sample data initialization skipped (multi-tenant mode)');
 

@@ -70,8 +70,6 @@ export const settings = pgTable("settings", {
   tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
   key: text("key").notNull(),
   value: jsonb("value").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   tenantKeyIdx: uniqueIndex("settings_tenant_key_idx").on(table.tenantId, table.key),
 }));
