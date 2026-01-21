@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { motion, AnimatePresence } from "framer-motion";
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid work email"),
@@ -26,7 +25,7 @@ const signupSchema = z.object({
 export default function AuthPage() {
   const [step, setStep] = useState<"email" | "login" | "signup">("email");
   const [email, setEmail] = useState("");
-  const { login, register, isLoading } = useAuth();
+  const { login, register } = useAuth();
   const { toast } = useToast();
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
@@ -82,11 +81,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-[#F9F9FB] flex items-center justify-center p-4">
       <div className="w-full max-w-[440px]">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EEEEEE] p-10 space-y-8"
-        >
+        <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EEEEEE] p-10 space-y-8">
           <div className="text-center space-y-2">
             <h1 className="text-[32px] font-bold tracking-tight text-black">consio.</h1>
             <p className="text-[#666666] text-sm">
@@ -95,16 +90,9 @@ export default function AuthPage() {
             </p>
           </div>
 
-          <AnimatePresence mode="wait">
+          <div className="relative">
             {step === "email" && (
-              <motion.form
-                key="email"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                onSubmit={emailForm.handleSubmit(onEmailSubmit)}
-                className="space-y-4"
-              >
+              <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
                 <div className="space-y-2">
                   <Input
                     {...emailForm.register("email")}
@@ -122,18 +110,11 @@ export default function AuthPage() {
                 >
                   {isCheckingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with email"}
                 </Button>
-              </motion.form>
+              </form>
             )}
 
             {step === "login" && (
-              <motion.form
-                key="login"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                onSubmit={loginForm.handleSubmit(onLoginSubmit)}
-                className="space-y-4"
-              >
+              <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                 <div className="space-y-2">
                   <p className="text-sm text-[#666666]">Welcome back, <span className="text-black font-medium">{email}</span></p>
                   <Input
@@ -164,18 +145,11 @@ export default function AuthPage() {
                     Back to email
                   </Button>
                 </div>
-              </motion.form>
+              </form>
             )}
 
             {step === "signup" && (
-              <motion.form
-                key="signup"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                onSubmit={signupForm.handleSubmit(onSignupSubmit)}
-                className="space-y-4"
-              >
+              <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
                 <div className="space-y-4">
                   <p className="text-sm text-[#666666]">Create account for <span className="text-black font-medium">{email}</span></p>
                   <div className="space-y-2">
@@ -218,9 +192,9 @@ export default function AuthPage() {
                     Back to email
                   </Button>
                 </div>
-              </motion.form>
+              </form>
             )}
-          </AnimatePresence>
+          </div>
 
           <div className="text-center">
             <p className="text-[#999999] text-[13px]">
@@ -228,7 +202,7 @@ export default function AuthPage() {
               <a href="#" className="text-[#333333] hover:underline font-medium">Terms of Use</a> and <a href="#" className="text-[#333333] hover:underline font-medium">Privacy Policy</a>.
             </p>
           </div>
-        </motion.div>
+        </div>
         <p className="mt-8 text-center text-[#666666] text-sm">
           We'll sign you in or create an account if you don't already have one.
         </p>
