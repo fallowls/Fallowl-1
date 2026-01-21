@@ -25,16 +25,23 @@ function generateWebhookToken(userId: number): string {
   return "dummy_token";
 }
 
-async function getUserFromAuth0(user: any) {
-  if (!user || !user.sub) {
-    throw new Error('Not authenticated');
+  // Resolution of tenant ID
+  const getTenantId = (request: FastifyRequest) => {
+    return request.tenantId || (request as any).session?.tenantId;
+  };
+
+  // Helper to resolve Auth0 user to DB user
+  async function getUserFromAuth0(request: FastifyRequest) {
+    const auth = (request as any).user;
+    if (!auth || !auth.sub) {
+      throw new Error('Not authenticated');
+    }
+    const dbUser = await storage.getUserByAuth0Id(auth.sub);
+    if (!dbUser) {
+      throw new Error('User not found');
+    }
+    return dbUser;
   }
-  const dbUser = await storage.getUserByAuth0Id(user.sub);
-  if (!dbUser) {
-    throw new Error('User not found');
-  }
-  return dbUser;
-}
 import type { Twilio } from 'twilio';
 
 interface HasUserId {
@@ -76,6 +83,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
+      const tenantId = request.tenantId;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -89,7 +97,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       }
 
       // Validate credentials before saving
-      console.log(`🔐 Validating Twilio credentials for user ${user.id}...`);
+      console.log(`🔐 Validating Twilio credentials for user ${user.id} in tenant ${tenantId}...`);
       try {
         const testClient = twilio(accountSid, authToken);
         await testClient.api.v2010.accounts(accountSid).fetch();
@@ -115,11 +123,10 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       });
 
       clearTwilioCacheOnLogout(user.id);
-      console.log(`✅ Twilio credentials saved for user ${user.id}`);
+      console.log(`✅ Twilio credentials saved for user ${user.id} in tenant ${tenantId}`);
 
       // Resolve tenant for the user
       const membership = await storage.ensureDefaultTenant(user.id);
-      const tenantId = membership.tenantId;
 
       // Auto-create TwiML Application if not provided
       let finalTwimlAppSid = twimlAppSid;
@@ -182,6 +189,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = request.userId!;
+      const tenantId = request.tenantId;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -189,7 +197,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const { client, credentials } = await userTwilioCache.getTwilioClient(user.id);
+        const { client, credentials } = await userTwilioCache.getTwilioClient(user.id, tenantId?.toString());
         
         let webhookUrls = null;
         if (credentials.twimlAppSid) {
@@ -236,13 +244,8 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
@@ -279,20 +282,16 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const tenantId = request.tenantId;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
       }
 
       try {
-        const { credentials } = await userTwilioCache.getTwilioClient(user.id);
+        const { credentials } = await userTwilioCache.getTwilioClient(user.id, tenantId?.toString());
         const connectionStatus = await userTwilioCache.getConnectionStatus(user.id);
 
         return reply.send({
@@ -334,23 +333,14 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const user = await getUserFromAuth0(request);
+      const tenantId = getTenantId(request);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
       }
 
-      const baseUrl = process.env.REPLIT_DOMAINS 
-        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : (request.hostname && !request.hostname.includes('localhost')) 
-          ? `https://${request.hostname}`
-          : undefined;
+      const baseUrl = getBaseUrl(request);
 
       const accessToken = await userTwilioCache.generateAccessToken(user.id, user.username, baseUrl);
       
@@ -377,20 +367,16 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const tenantId = request.tenantId;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
       }
 
       const connectionStatus = await userTwilioCache.getConnectionStatus(user.id);
-      const { credentials } = await userTwilioCache.getTwilioClient(user.id);
+      const { credentials } = await userTwilioCache.getTwilioClient(user.id, tenantId?.toString());
       
       return reply.send({
         isConfigured: connectionStatus.diagnostics.hasCredentials,
@@ -416,20 +402,16 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const tenantId = request.tenantId;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
       }
 
       const connectionStatus = await userTwilioCache.getConnectionStatus(user.id);
-      const { credentials } = await userTwilioCache.getTwilioClient(user.id);
+      const { credentials } = await userTwilioCache.getTwilioClient(user.id, tenantId?.toString());
       
       return reply.send({
         connected: connectionStatus.isConnected,
@@ -456,23 +438,13 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const user = await getUserFromAuth0(request);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
       }
 
-      const baseUrl = process.env.REPLIT_DOMAINS 
-        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : (request.hostname && !request.hostname.includes('localhost')) 
-          ? `https://${request.hostname}`
-          : undefined;
+      const baseUrl = getBaseUrl(request);
 
       const accessToken = await userTwilioCache.generateAccessToken(user.id, user.username, baseUrl);
       
@@ -503,13 +475,8 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
@@ -546,13 +513,8 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
@@ -562,7 +524,7 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       
       console.log(`🔄 Updating TwiML App webhooks for user ${user.id} with base URL:`, baseUrl);
       
-      const { client, credentials } = await userTwilioCache.getTwilioClient(user.id);
+      const { client, credentials } = await userTwilioCache.getTwilioClient(user.id, request.tenantId?.toString());
       
       if (!credentials.twimlAppSid) {
         return reply.code(400).send({ 
@@ -610,13 +572,8 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const auth = (request as any).user;
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const user = await storage.getUserByAuth0Id(auth0UserId);
+      const userId = request.userId!;
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return reply.code(404).send({ message: "User not found" });
@@ -626,9 +583,10 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       
       console.log(`📞 Configuring phone number webhook for user ${user.id}...`);
       
-      const { client, credentials } = await userTwilioCache.getTwilioClient(user.id);
+      const { client, credentials } = await userTwilioCache.getTwilioClient(user.id, request.tenantId?.toString());
       
       if (!credentials.phoneNumber) {
+
         return reply.code(400).send({ 
           message: "No phone number configured. Please save your Twilio credentials first.",
           code: 'NO_PHONE_NUMBER'
@@ -1724,9 +1682,10 @@ export default async function twilioRoutes(fastify: FastifyInstance) {
       
       const formattedTo = to.startsWith('+') ? to : `+${to}`;
       
-      const { client, credentials } = await userTwilioCache.getTwilioClient(user.id);
+      const { client, credentials } = await userTwilioCache.getTwilioClient(user.id, request.tenantId?.toString());
       
       if (!credentials.phoneNumber) {
+
         return reply.code(400).send({ 
           message: 'Phone number not configured. Please save your Twilio credentials first.',
           code: 'NO_PHONE_NUMBER'

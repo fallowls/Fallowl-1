@@ -94,7 +94,7 @@ export class TwilioService {
 
       // Store the recording preference using storage
       const { storage } = await import('./storage');
-      await storage.setSetting("auto_record_calls", enabled);
+      await storage.setSetting(Number(this.credentials?.accountSid), "auto_record_calls", enabled);
 
       return {
         success: true,
@@ -110,7 +110,7 @@ export class TwilioService {
   public async getAutoRecordingSetting(): Promise<boolean> {
     try {
       const { storage } = await import('./storage');
-      const setting = await storage.getSetting("auto_record_calls");
+      const setting = await storage.getSetting(Number(this.credentials?.accountSid), "auto_record_calls");
       // Handle JSON-encoded values from database
       if (setting?.value === "true" || setting?.value === true) {
         return true;
@@ -364,7 +364,9 @@ export class TwilioService {
       // Get base URL from environment
       const baseUrl = process.env.REPLIT_DOMAINS 
         ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : 'https://localhost:5000';
+        : process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : 'https://localhost:5000';
       
       const voiceUrl = `${baseUrl}/api/twilio/voice`;
       const statusCallbackUrl = `${baseUrl}/api/twilio/status`;
@@ -388,7 +390,7 @@ export class TwilioService {
           
           // Update database
           const { storage } = await import('./storage');
-          await storage.setSetting('twilio', updatedCredentials);
+          await storage.setSetting(Number(this.credentials.accountSid), 'twilio', updatedCredentials);
           
           // Update current credentials
           this.credentials = updatedCredentials;
@@ -439,7 +441,7 @@ export class TwilioService {
               
               // Update database
               const { storage } = await import('./storage');
-              await storage.setSetting('twilio', updatedCredentials);
+              await storage.setSetting(Number(this.credentials.accountSid), 'twilio', updatedCredentials);
               
               // Update current credentials
               this.credentials = updatedCredentials;

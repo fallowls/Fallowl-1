@@ -45,7 +45,7 @@ class UserTwilioClientCache {
     console.log('🗑️ Cleared all Twilio client cache');
   }
 
-  public async getTwilioClient(userId: number): Promise<{ client: twilio.Twilio; credentials: TwilioCredentials }> {
+  public async getTwilioClient(userId: number, tenantId?: string): Promise<{ client: twilio.Twilio; credentials: TwilioCredentials }> {
     const cached = this.cache.get(userId);
     const now = Date.now();
 
@@ -57,6 +57,14 @@ class UserTwilioClientCache {
 
     if (!dbCredentials || !dbCredentials.twilioConfigured) {
       throw new Error(`Twilio credentials not configured for user ${userId}`);
+    }
+
+    // If tenantId is provided, verify it matches (for multi-tenant safety)
+    if (tenantId) {
+      const membership = await storage.getTenantMembership(userId, Number(tenantId));
+      if (!membership) {
+        throw new Error(`User ${userId} does not belong to tenant ${tenantId}`);
+      }
     }
 
     if (!dbCredentials.twilioAccountSid || !dbCredentials.twilioAuthToken || !dbCredentials.twilioPhoneNumber) {

@@ -305,7 +305,9 @@ export class TwilioConfigService {
         callQualityReporting: true
       };
       
-      await storage.setSetting('call-settings', defaultCallSettings);
+      // We need a tenant context here, ideally passed in. 
+      // For now using a placeholder or resolving from credentials if possible
+      await storage.setSetting(1, 'call-settings', defaultCallSettings);
       console.log('✅ Configured default call settings');
       
       return { configured: true };
@@ -327,7 +329,7 @@ export class TwilioConfigService {
     twimlAppSid: string;
   }): Promise<{ saved: boolean }> {
     try {
-      await storage.setSetting('twilio', {
+      await storage.setSetting(1, 'twilio', {
         accountSid: credentials.accountSid,
         authToken: credentials.authToken,
         apiKeySid: credentials.apiKeySid,
