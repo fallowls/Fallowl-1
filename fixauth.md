@@ -23,7 +23,7 @@
 - [x] Implement `POST /api/logout` and `GET /api/user` (profile).
 
 ### Phase 3: Auth Infrastructure Integration
-- [ ] Create `requireAuth` and `requireTenant` decorators.
+- [x] Create `requireAuth` and `requireTenant` decorators.
 - [ ] Replace Auth0 decorators across all existing routes.
 - [ ] Implement tenant-context injection middleware.
 

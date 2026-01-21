@@ -466,81 +466,20 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // Add requireAuth decorator for route protection
   fastify.decorate('requireAuth', async function requireAuthFastify(request: FastifyRequest, reply: FastifyReply) {
     try {
-      // Check session first as a more reliable fallback in this environment
-      if ((request as any).session?.userId) {
-        const { storage } = await import('./storage');
-        const userId = (request as any).session.userId;
-        const user = await storage.getUser(userId);
-        if (user) {
-          request.userId = user.id;
-          request.auth0UserId = user.auth0Id || undefined;
-          const membership = await storage.ensureDefaultTenant(user.id);
-          request.tenantId = membership.tenantId;
-          request.tenantRole = membership.role;
-          return; // Success via session
-        }
+      if (!(request as any).session?.userId) {
+        return reply.code(401).send({ message: "Authentication required" });
       }
 
-      // Then try to verify JWT from header
-      try {
-        await request.jwtVerify();
-      } catch (jwtError: any) {
-        // If JWT verification fails, and we already checked session, return 401
-        return reply.code(401).send({ message: jwtError.message || "Authentication required" });
-      }
-
-      const auth = (request as any).user;
-      
-      if (!auth || !auth.sub) {
-        return reply.code(401).send({ message: "Not authenticated" });
-      }
-
-      const auth0UserId = auth.sub;
-      const email = auth['https://app.com/email'] || auth.email || '';
-      let username = auth['https://app.com/name'] || auth.name || auth.nickname || '';
-      
-      if (!username || username.trim() === '') {
-        if (email) {
-          username = email.split('@')[0];
-        } else {
-          username = `user_${auth0UserId.split('|')[1] || auth0UserId}`;
-        }
-      }
-
-      // Import storage (will be injected)
+      const userId = (request as any).session.userId;
       const { storage } = await import('./storage');
-      let user = await storage.getUserByAuth0Id(auth0UserId);
-      
-      if (!user) {
-        const firstName = auth.given_name || username;
-        const lastName = auth.family_name || '';
-        
-        try {
-          user = await storage.createUser({
-            auth0Id: auth0UserId,
-            email,
-            username,
-            firstName,
-            lastName,
-            password: '',
-            role: auth['https://app.com/roles']?.[0] || 'user'
-          });
-        } catch (createError: any) {
-          if (createError.code === '23505' && createError.constraint === 'users_auth0_id_unique') {
-            user = await storage.getUserByAuth0Id(auth0UserId);
-          } else {
-            throw createError;
-          }
-        }
-      }
+      const user = await storage.getUser(userId);
 
       if (!user) {
-        return reply.code(500).send({ message: "Failed to create or retrieve user" });
+        return reply.code(401).send({ message: "User not found" });
       }
 
-      // Set userId on request (now properly typed via module augmentation)
+      // Set userId on request
       request.userId = user.id;
-      request.auth0UserId = auth0UserId;
       
       // Resolve tenant for the user
       const membership = await storage.ensureDefaultTenant(user.id);
@@ -549,6 +488,24 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
     } catch (error: any) {
       console.error('Auth helper error:', error);
       return reply.code(401).send({ message: error.message || "Authentication error" });
+    }
+  });
+
+  // Add requireTenant decorator for tenant-specific access
+  fastify.decorate('requireTenant', async function requireTenantFastify(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      // First ensure user is authenticated
+      if (!request.userId) {
+        await (fastify as any).requireAuth(request, reply);
+        if (reply.sent) return;
+      }
+
+      if (!request.tenantId) {
+        return reply.code(403).send({ message: "Tenant context required" });
+      }
+    } catch (error: any) {
+      console.error('Tenant helper error:', error);
+      return reply.code(403).send({ message: error.message || "Tenant access error" });
     }
   });
 
