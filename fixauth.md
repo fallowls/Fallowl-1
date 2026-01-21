@@ -48,8 +48,8 @@
 
 ### Phase 1: Enhanced Tenant Context & Validation
 - [x] Add audit logging for cross-tenant access attempts in `server/middleware/tenantIdentifier.ts`.
-- [ ] Implement strict `tenantId` validation in all storage operations.
-- [ ] Verify that all user-facing resources are correctly filtered by `tenantId`.
+- [x] Implement strict `tenantId` validation in all storage operations.
+- [x] Verify that all user-facing resources are correctly filtered by `tenantId`.
 
 ### Phase 2: Security & Isolation Policies
 - [ ] Implement Row Level Security (RLS) style checks in the storage layer.

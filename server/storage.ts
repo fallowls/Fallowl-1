@@ -31,9 +31,9 @@ function warnIfTenantScopedParamsInvalid(
   method: string,
   params: Record<string, unknown>
 ): void {
-  // Only log when params are suspicious; avoids spamming normal traffic.
+  // Strict validation for production hardening
   const isBadInt = (v: unknown) =>
-    typeof v !== 'number' || !Number.isFinite(v) || Number.isNaN(v) || !Number.isInteger(v);
+    typeof v !== 'number' || !Number.isFinite(v) || Number.isNaN(v) || !Number.isInteger(v) || (v as number) <= 0;
 
   const badKeys = Object.entries(params)
     .filter(([k, v]) => k.endsWith('Id') && v !== undefined && isBadInt(v))
@@ -41,13 +41,16 @@ function warnIfTenantScopedParamsInvalid(
 
   if (badKeys.length === 0) return;
 
-  // This is the most common failure mode when legacy call-sites still use the old
-  // (userId, id) signature after migrating to (tenantId, userId, id).
-  console.warn(`[MULTITENANT][PARAMS] Suspicious call to storage.${method}: bad=${badKeys.join(',')} params=${JSON.stringify(params)}`);
+  const errorMsg = `[MULTITENANT][SECURITY] Strict validation failed for storage.${method}: bad=${badKeys.join(',')} params=${JSON.stringify(params)}`;
+  console.error(errorMsg);
+  
   const stack = new Error().stack;
   if (stack) {
-    console.warn(`[MULTITENANT][PARAMS] stack (top):\n${stack.split('\n').slice(0, 6).join('\n')}`);
+    console.error(`[MULTITENANT][SECURITY] stack (top):\n${stack.split('\n').slice(0, 6).join('\n')}`);
   }
+
+  // In hardening phase, we might want to throw error to prevent data leakage, 
+  // but for now we'll start with loud errors to identify all legacy call sites.
 }
 
 export interface IStorage {
