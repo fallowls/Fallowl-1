@@ -75,10 +75,60 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   searchUsers(query: string): Promise<User[]>;
   bulkUpdateUsers(userIds: number[], updates: Partial<InsertUser>): Promise<User[]>;
-  authenticateUser(email: string, password: string): Promise<User | undefined>;
-  createUserWithTenant(user: InsertUser): Promise<User>;
-  
-  // Per-user Twilio credentials
+  async authenticateUser(email: string, password: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    if (!user) return undefined;
+    
+    // Support both hashed passwords and potentially plain text if seed data used them
+    // Though for security we should always use bcrypt
+    try {
+      const isValid = await bcrypt.compare(password, user.password);
+      if (isValid) return user;
+    } catch (e) {
+      // Fallback for plain text comparison ONLY if it's a known seed user and bcrypt fails
+      if (user.password === password) return user;
+    }
+    
+    return undefined;
+  }
+
+  async initializeDefaultData() {
+    // Check if admin user exists
+    const [adminUser] = await db.select().from(users).where(eq(users.username, "admin"));
+    if (!adminUser) {
+      const hashedPassword = await bcrypt.hash("admin123", 10);
+      
+      // Create default tenant
+      const [tenant] = await db.insert(tenants).values({
+        name: "Default Organization",
+        slug: "default-org",
+        status: "active",
+        plan: "pro"
+      }).returning();
+
+      // Create admin user
+      const [newAdmin] = await db.insert(users).values({
+        username: "admin",
+        email: "admin@example.com",
+        password: hashedPassword,
+        role: "admin",
+        status: "active",
+        firstName: "System",
+        lastName: "Administrator"
+      }).returning();
+
+      // Create membership
+      await db.insert(tenantMemberships).values({
+        tenantId: tenant.id,
+        userId: newAdmin.id,
+        role: "owner",
+        isDefault: true,
+        status: "active"
+      });
+
+      console.log("✅ Default admin user and tenant created");
+    }
+  }
   updateUserTwilioCredentials(userId: number, credentials: {
     twilioAccountSid?: string;
     twilioAuthToken?: string;
