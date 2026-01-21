@@ -2,7 +2,6 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { storage } from '../storage';
 import { clearTwilioCacheOnLogout } from '../userTwilioService';
 import { rateLimitConfigs } from './rateLimiters';
-import bcrypt from "bcryptjs";
 
 /**
  * Authentication Routes Plugin for Fastify
@@ -139,12 +138,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ message: "User already exists" });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create new user
-      const user = await storage.createUser({
+      // Create new user - storage layer handles password hashing
+      const user = await storage.createUserWithTenant({
         email,
-        password: hashedPassword,
+        password,
         username: email.split('@')[0],
         firstName: fullName.split(' ')[0],
         lastName: fullName.split(' ').slice(1).join(' ') || '',
