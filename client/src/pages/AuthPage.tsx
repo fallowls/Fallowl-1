@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import ClosoLogo from "@assets/closo_logo_png_1768808340025.png";
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid work email"),
@@ -82,8 +83,14 @@ export default function AuthPage() {
     <div className="min-h-screen bg-[#F9F9FB] flex items-center justify-center p-4">
       <div className="w-full max-w-[440px]">
         <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EEEEEE] p-10 space-y-8">
-          <div className="text-center space-y-2">
-            <h1 className="text-[32px] font-bold tracking-tight text-black">consio.</h1>
+          <div className="text-center space-y-4">
+            <div className="flex justify-center">
+              <img 
+                src={ClosoLogo} 
+                alt="Closo" 
+                className="h-10 w-auto brightness-0 dark:invert opacity-90"
+              />
+            </div>
             <p className="text-[#666666] text-sm">
               Launch your campaign in ten minutes.<br />
               No credit card required.
