@@ -316,6 +316,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply general API rate limiter to all /api routes
   app.use('/api', apiLimiter);
 
+  // Smart Login: Check if email exists
+  app.post("/api/auth/check-email", async (req, res) => {
+    try {
+      const { email } = z.object({ email: z.string().email() }).parse(req.body);
+      const user = await storage.getUserByEmail(email);
+      res.json({ exists: !!user });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
@@ -346,6 +360,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Smart Login: Signup
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const signupSchema = z.object({
+        email: z.string().email(),
+        password: z.string().min(8),
+        fullName: z.string().min(1)
+      });
+      const { email, password, fullName } = signupSchema.parse(req.body);
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      const user = await storage.createUser({
+        email,
+        password,
+        username: email.split('@')[0], // Generate username from email
+        firstName: fullName.split(' ')[0],
+        lastName: fullName.split(' ').slice(1).join(' ') || '',
+        role: 'user',
+        status: 'active'
+      });
+
+      // Create session
+      (req as any).session.userId = user.id;
+      (req as any).session.user = user;
+
+      res.status(201).json({
+        message: "User created successfully",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        }
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
       res.status(500).json({ message: error.message });
     }
   });
