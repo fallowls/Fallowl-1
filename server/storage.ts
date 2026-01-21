@@ -58,7 +58,6 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  getUserByAuth0Id(auth0Id: string): Promise<User | undefined>;
   getUserByTwilioPhoneNumber(phoneNumber: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
@@ -449,9 +448,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Hash password if provided and not an Auth0 user
+    // Hash password if provided
     let hashedPassword = insertUser.password;
-    if (insertUser.password && !insertUser.auth0Id) {
+    if (insertUser.password) {
       hashedPassword = await bcrypt.hash(insertUser.password, 10);
     }
 
@@ -528,18 +527,13 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Check if it's the admin user with the system placeholder hash
-    if (user.email === 'admin@demonflare.com' && user.auth0Id === 'system_admin_001' && password === 'admin123') {
+    if (user.email === 'admin@demonflare.com' && password === 'admin123') {
       // Update last login for admin too
       await db
         .update(users)
         .set({ lastLogin: new Date() })
         .where(eq(users.id, user.id));
       return { ...user, lastLogin: new Date() };
-    }
-
-    // For Auth0 users (no password), always return undefined
-    if (user.auth0Id && !user.password) {
-      return undefined;
     }
 
     // Use bcrypt to compare passwords

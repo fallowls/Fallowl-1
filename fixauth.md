@@ -57,9 +57,9 @@
 - [x] Audit Twilio TwiML App configurations for tenant isolation.
 
 ### Phase 3: Cleanup & Monitoring
-- [ ] Remove any remaining legacy Auth0-specific tenant logic.
-- [ ] Implement monitoring for unusual tenant access patterns.
-- [ ] Conduct final security review of the hardened infrastructure.
+- [x] Remove any remaining legacy Auth0-specific tenant logic.
+- [x] Implement monitoring for unusual tenant access patterns.
+- [x] Conduct final security review of the hardened infrastructure.
 
 ## 5. Deployment & Configuration (FINAL PHASE)
 - [ ] Set up `SESSION_SECRET` as a mandatory secret.
