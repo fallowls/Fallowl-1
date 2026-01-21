@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,9 +27,16 @@ const signupSchema = z.object({
 export default function AuthPage() {
   const [step, setStep] = useState<"email" | "login" | "signup">("email");
   const [email, setEmail] = useState("");
-  const { login, register } = useAuth();
+  const { user, login, register } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   const emailForm = useForm({
     resolver: zodResolver(emailSchema),
