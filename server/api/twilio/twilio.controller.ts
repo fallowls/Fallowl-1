@@ -106,14 +106,27 @@ export async function getAccessToken(request: FastifyRequest, reply: FastifyRepl
 }
 
 export async function handleVoice(request: FastifyRequest, reply: FastifyReply) {
-    // Logic for handling voice webhooks
-    // This often involves generating TwiML
-    // Adapting from main routes
-    const { From, To, CallSid } = request.body as any;
+    const { To, From, CallSid, Direction } = request.body as any;
     
-    // ... simplified for example, full implementation would follow routes.ts logic ...
+    console.log(`📞 Incoming voice webhook: Direction=${Direction}, From=${From}, To=${To}, CallSid=${CallSid}`);
+
     reply.header('Content-Type', 'text/xml');
-    return reply.send('<?xml version="1.0" encoding="UTF-8"?><Response><Say>Hello</Say></Response>');
+
+    // For outbound calls from browser client
+    if (To && To.startsWith('client:')) {
+        const clientName = To.replace('client:', '');
+        return reply.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Dial><Client>${clientName}</Client></Dial></Response>`);
+    }
+
+    // For calls to external numbers
+    if (To && To !== process.env.TWILIO_PHONE_NUMBER) {
+        // If it's an outbound call from the client to a real number
+        // The From will be the client identity
+        return reply.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Dial callerId="${From.startsWith('client:') ? (request as any).userPhoneNumber || From : From}">${To}</Dial></Response>`);
+    }
+
+    // Default response
+    return reply.send('<?xml version="1.0" encoding="UTF-8"?><Response><Say>Welcome to the platform. Please wait while we connect you.</Say><Dial><Client>admin</Client></Dial></Response>');
 }
 
 // ... other twilio methods would be refactored here ...
