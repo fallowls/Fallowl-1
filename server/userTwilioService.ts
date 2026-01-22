@@ -72,9 +72,11 @@ class UserTwilioClientCache {
 
     // If tenantId is provided, verify it matches (for multi-tenant safety)
     if (tenantId) {
+      // Corrected parameter order: tenantId first, then userId
       const membership = await storage.getTenantMembership(Number(tenantId), userId);
       if (!membership) {
-        throw new Error(`Security Alert: User ${userId} attempted to access Twilio credentials for tenant ${tenantId} without membership.`);
+        console.warn(`🔒 Security Alert: User ${userId} attempted to access Twilio credentials for tenant ${tenantId} without membership.`);
+        throw new Error(`Security Alert: Access denied for tenant ${tenantId}.`);
       }
     }
 

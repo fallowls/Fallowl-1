@@ -697,11 +697,24 @@ export const useTwilioDeviceV2 = () => {
   const globalStore = useStore();
   const { user } = useAuth();
 
-  // Query to get Twilio status
-  const { data: twilioStatus } = useQuery<TwilioStatusResponse>({
+  const { data: twilioStatus, isLoading: isLoadingStatus } = useQuery<TwilioStatusResponse>({
     queryKey: ['/api/twilio/status'],
-    refetchInterval: 60000, // Check every minute
-    staleTime: 30000,
+    queryFn: async () => {
+      try {
+        const res = await apiRequest('GET', '/api/twilio/credentials');
+        if (!res.ok) throw new Error('Failed to fetch status');
+        const data = await res.json();
+        return {
+          isConfigured: !!data.configured,
+          phoneNumber: data.credentials?.phoneNumber
+        };
+      } catch (err) {
+        console.error('Error fetching Twilio status:', err);
+        return { isConfigured: false };
+      }
+    },
+    enabled: !!user,
+    refetchInterval: 30000,
   });
 
   // Query to get access token - only when needed

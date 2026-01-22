@@ -578,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: user.firstName,
           lastName: user.lastName,
           avatar: user.avatar,
-          twilioConfigured: user.twilioConfigured || false
+          twilioConfigured: !!(user.twilioConfigured || (user.twilioAccountSid && user.twilioAuthToken))
         }
       });
     } catch (error: any) {

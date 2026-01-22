@@ -56,7 +56,7 @@ export async function getCredentials(request: FastifyRequest, reply: FastifyRepl
     }
 
     return reply.send({
-      configured: !!dbCredentials.twilioConfigured,
+      configured: true,
       credentials: {
         accountSid: dbCredentials.twilioAccountSid ? `${dbCredentials.twilioAccountSid.slice(0, 10)}...` : null,
         phoneNumber: dbCredentials.twilioPhoneNumber,
