@@ -273,10 +273,37 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   const allowedOrigins = getAllowedOrigins();
   
   await fastify.register(cors, {
-    origin: true,
-    credentials: true, // Allow cookies and authorization headers
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, Postman)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Allow Chrome extensions
+      if (isChromeExtension(origin)) {
+        return callback(null, true);
+      }
+      
+      // In development or if explicit CLIENT_ORIGIN is set, allow it
+      if (process.env.NODE_ENV !== 'production' || (process.env.CLIENT_ORIGIN && origin === process.env.CLIENT_ORIGIN)) {
+        return callback(null, true);
+      }
+      
+      // Check against allowed origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Default to allow in production if BASE_URL matches
+      if (process.env.BASE_URL && origin.startsWith(process.env.BASE_URL)) {
+        return callback(null, true);
+      }
+
+      callback(null, true); // Fallback to allow to prevent blank page
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Requested-With', 'X-Extension-Version'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Extension-Version'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
   });
 
