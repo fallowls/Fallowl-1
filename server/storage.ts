@@ -2660,6 +2660,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Cleanup duplicate definition
+  // initializeDefaultData is already defined elsewhere in the file
+
 
 }
 
