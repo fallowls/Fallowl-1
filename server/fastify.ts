@@ -210,6 +210,8 @@ import fastifySession from '@fastify/session';
 import compress from '@fastify/compress';
 import connectPgSimple from 'connect-pg-simple';
 import caching from '@fastify/caching';
+import { errorHandler } from './middleware/errorHandler';
+import { authMiddleware } from './middleware/auth';
 
 const log = (message: string) => {
   console.log(`[FASTIFY] ${message}`);
@@ -446,32 +448,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // ============================================================================
 
   // Add requireAuth decorator for route protection
-  fastify.decorate('requireAuth', async function requireAuthFastify(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      if (!(request as any).session?.userId) {
-        return reply.code(401).send({ message: "Authentication required" });
-      }
-
-      const userId = (request as any).session.userId;
-      const { storage } = await import('./storage');
-      const user = await storage.getUser(userId);
-
-      if (!user) {
-        return reply.code(401).send({ message: "User not found" });
-      }
-
-      // Set userId on request
-      request.userId = user.id;
-      
-      // Resolve tenant for the user
-      const membership = await storage.ensureDefaultTenant(user.id);
-      request.tenantId = membership.tenantId;
-      request.tenantRole = membership.role;
-    } catch (error: any) {
-      console.error('Auth helper error:', error);
-      return reply.code(401).send({ message: error.message || "Authentication error" });
-    }
-  });
+  fastify.decorate('requireAuth', authMiddleware);
 
   // Add requireTenant decorator for tenant-specific access
   fastify.decorate('requireTenant', async function requireTenantFastify(request: FastifyRequest, reply: FastifyReply) {
@@ -548,13 +525,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // PHASE 7: ERROR HANDLER
   // ============================================================================
 
-  fastify.setErrorHandler((error, request, reply) => {
-    const status = error.statusCode || 500;
-    const message = error.message || "Internal Server Error";
-    
-    console.error('Fastify error:', error);
-    reply.code(status).send({ message });
-  });
+  fastify.setErrorHandler(errorHandler);
 
   log('✅ Error handler configured');
 
@@ -562,19 +533,20 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // ROUTE REGISTRATION - Migrated Fastify Routes
   // ============================================================================
   
-  await fastify.register(import('./plugins/authRoutes'), { prefix: '/api' });
+  await fastify.register(import('./api/auth/auth.routes'), { prefix: '/api' });
+  await fastify.register(import('./api/tenants/tenants.routes'), { prefix: '/api' });
   await fastify.register(import('./plugins/profileRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/parallelDialerRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/activityRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/billingRoutes'), { prefix: '/api' });
-  await fastify.register(import('./plugins/callsRoutes'), { prefix: '/api' });
-  await fastify.register(import('./plugins/contactsRoutes'), { prefix: '/api' });
+  await fastify.register(import('./api/calls/calls.routes'), { prefix: '/api' });
+  await fastify.register(import('./api/contacts/contacts.routes'), { prefix: '/api' });
   await fastify.register(import('./plugins/messagesRoutes'), { prefix: '/api' });
-  await fastify.register(import('./plugins/recordingsRoutes'), { prefix: '/api' });
+  await fastify.register(import('./api/recordings/recordings.routes'), { prefix: '/api' });
   await fastify.register(import('./plugins/rolesRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/settingsRoutes'), { prefix: '/api' });
-  await fastify.register(import('./plugins/twilioRoutes'), { prefix: '/api' });
-  await fastify.register(import('./plugins/usersRoutes'), { prefix: '/api' });
+  await fastify.register(import('./api/twilio/twilio.routes'), { prefix: '/api' });
+  await fastify.register(import('./api/users/users.routes'), { prefix: '/api' });
   await fastify.register(import('./plugins/voicemailsRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/leadsRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/supportRoutes'), { prefix: '/api' });

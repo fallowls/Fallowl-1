@@ -11,6 +11,9 @@ import { seedSmsData, seedLeadData, seedContactLists } from "./seedData";
 import { seedDemoContacts } from "./seedContacts";
 import { twilioWebhookVerifier } from "./services/twilioWebhookVerifier";
 import { wsService } from "./websocketService";
+import { tenantIdentifier } from "./middleware/tenantIdentifier";
+import { dbConnectionManager } from "./middleware/dbConnectionManager";
+import { userContext } from "./middleware/userContext";
 
 // Validate environment before starting
 const envValidation = validateEnvironment();
@@ -76,6 +79,11 @@ if (!envValidation.isValid) {
 
   // Create Fastify server
   const fastify = await createFastifyServer();
+
+  // Register middleware
+  fastify.addHook('onRequest', tenantIdentifier);
+  fastify.addHook('preHandler', dbConnectionManager);
+  fastify.addHook('preHandler', userContext);
 
   // Get the HTTP server instance for WebSocket and Vite
   const server = fastify.server;
