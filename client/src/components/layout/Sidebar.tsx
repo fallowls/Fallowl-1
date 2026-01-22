@@ -22,8 +22,8 @@ import {
   Zap
 } from "lucide-react";
 
-import ClosoLogo from "@assets/closo_logo_png_1768808340025.png";
-import ClosoIcon from "@assets/closo_icon_png_1768905355569.png";
+import ClosoLogo from "@/assets/closo_logo.png";
+import ClosoIcon from "@/assets/closo_favicon.png";
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },

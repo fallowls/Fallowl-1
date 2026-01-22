@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import ClosoLogo from "@assets/closo_logo_png_1768808340025.png";
+import ClosoLogo from "@/assets/closo_logo.png";
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid work email"),
