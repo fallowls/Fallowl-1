@@ -64,7 +64,7 @@ export async function validateTwilioWebhook(request: FastifyRequest, reply: Fast
     // For calls with SID, find the user from call record using direct SID lookup
     if (!userId && CallSid) {
       try {
-        const call = await storage.getCallByTwilioSid(CallSid);
+        const call = await storage.getCallByTwilioSid(tenantId || 1, CallSid);
         if (call) {
           userId = call.userId;
           console.log('✅ User identified from CallSid:', userId);
@@ -77,7 +77,7 @@ export async function validateTwilioWebhook(request: FastifyRequest, reply: Fast
     // For messages with SID, find the user from message record using direct SID lookup
     if (!userId && MessageSid) {
       try {
-        const message = await storage.getMessageByTwilioSid(MessageSid);
+        const message = await storage.getMessageByTwilioSid(tenantId || 1, MessageSid);
         if (message) {
           userId = message.userId;
           console.log('✅ User identified from MessageSid:', userId);

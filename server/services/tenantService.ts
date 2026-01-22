@@ -6,9 +6,10 @@ import { NotFoundError } from '../utils/errors';
 
 export class TenantService {
   async createTenant(tenantData: { name: string; slug?: string }) {
+    const slugValue = tenantData.slug || tenantData.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
     const [newTenant] = await db.insert(tenants).values({
-      ...tenantData,
-      slug: tenantData.slug || tenantData.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      name: tenantData.name,
+      slug: slugValue,
       status: 'active',
       plan: 'free'
     }).returning();
