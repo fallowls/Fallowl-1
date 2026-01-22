@@ -26,9 +26,18 @@
 ## 4. Multi-Tenant Security Alerts
 - **Issue**: Unauthorized tenant access attempts detected during startup webhook verification.
 - **Detail**: The `verifyAllWebhooks` process is attempting to verify webhooks for users across different tenants without proper membership validation or setup.
+- **Status**: PENDING
 - **Fix Required**: Update `twilioWebhookVerifier` to handle missing memberships gracefully during startup or ensure the seeding process creates correct memberships first.
 
 ## 5. Duplicate Code & LSP Errors
 - **Issue**: Multiple "Duplicate function implementation" errors in `server/storage.ts`.
 - **Detail**: Files likely became corrupted or over-appended during git sync.
+- **Status**: PENDING
 - **Fix Required**: Manually clean up `server/storage.ts` to remove duplicate method definitions (e.g., `initializeDefaultData` appearing twice).
+
+## Summary of Pending Tasks
+
+| Task | Location | Description |
+| :--- | :--- | :--- |
+| **Fix Webhook Verification** | `twilioWebhookVerifier` | Gracefully handle missing memberships during startup verification to avoid unauthorized access alerts. |
+| **Storage Cleanup** | `server/storage.ts` | Remove duplicate method definitions (like `initializeDefaultData`) causing LSP errors. |
