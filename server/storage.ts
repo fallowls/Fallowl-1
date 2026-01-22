@@ -2247,84 +2247,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async initializeDefaultData(): Promise<void> {
-    try {
-      // Ensure default tenant exists
-      const [defaultTenant] = await db.select().from(tenants).where(eq(tenants.id, 1));
-      if (!defaultTenant) {
-        await db.insert(tenants).values({
-          id: 1,
-          name: "Default Organization",
-          slug: "default",
-          status: "active",
-          plan: "free"
-        });
-      }
 
-      // Check if admin user already exists
-      const adminUser = await this.getUserByEmail('admin@demonflare.com');
-      
-      if (!adminUser) {
-        // Create admin user with password from environment variable
-        if (!process.env.ADMIN_PASSWORD) {
-          throw new Error('ADMIN_PASSWORD environment variable must be set for security. Please set ADMIN_PASSWORD before starting the application.');
-        }
-        
-        await this.createUser({
-          username: 'admin',
-          email: 'admin@demonflare.com',
-          password: process.env.ADMIN_PASSWORD,
-          firstName: 'Admin',
-          lastName: 'User',
-          role: 'admin',
-          status: 'active',
-          emailVerified: true,
-          gdprConsent: true,
-          gdprConsentDate: new Date(),
-        });
-        console.log('✓ Admin user created successfully');
-      }
-
-      // Initialize critical system settings
-      const defaultSettings = [
-        { key: "auto_record_calls", value: false },
-        { key: "amd_enabled", value: true },
-        { key: "recording_storage", value: "twilio" },
-        { key: "sample_data_initialized", value: true },
-        { key: "system", value: {
-          appName: 'DialPax CRM',
-          timezone: 'America/New_York',
-          dateFormat: 'MM/DD/YYYY',
-          currency: 'USD',
-          autoSave: true,
-          theme: 'light'
-        }},
-        { key: "twilio", value: {
-          configured: false,
-          accountSid: null,
-          authToken: null,
-          phoneNumber: null,
-          apiKeySid: null,
-          apiKeySecret: null,
-          twimlAppSid: null
-        }}
-      ];
-
-      for (const s of defaultSettings) {
-        try {
-          await this.setSetting(1, s.key, s.value);
-        } catch (setSettingError) {
-          // Log but don't fail if setting already exists or fails
-          console.warn(`Could not set default setting ${s.key}:`, setSettingError);
-        }
-      }
-      
-      console.log('✓ Default system data initialized');
-
-    } catch (error) {
-      console.error('Error initializing default data:', error);
-    }
-  }
 
   // Lead Activities (tenant-scoped)
   async getLeadActivity(tenantId: number, userId: number, id: number): Promise<LeadActivity | undefined> {
@@ -3176,43 +3099,7 @@ export class DatabaseStorage implements IStorage {
     return membership;
   }
 
-  async createUserWithTenant(insertUser: InsertUser): Promise<User> {
-    // Generate a unique slug for the tenant's organization
-    const orgName = `${insertUser.username}'s Organization`;
-    const baseSlug = (insertUser.username || 'user').toLowerCase().replace(/[^a-z0-9]/g, '-');
-    let slug = baseSlug;
-    let tenant = await this.getTenantBySlug(slug);
-    let i = 1;
-    while (tenant) {
-      slug = `${baseSlug}-${i}`;
-      tenant = await this.getTenantBySlug(slug);
-      i++;
-    }
-  
-    // Create a new tenant for the user
-    const newTenant = await this.createTenant({
-      name: orgName,
-      slug: slug,
-      status: 'active',
-      plan: 'free',
-    });
-  
-    // Create the new user
-    const newUser = await this.createUser({
-      ...insertUser,
-    });
-  
-    // Create the tenant membership for the user
-    await this.createTenantMembership({
-      tenantId: newTenant.id,
-      userId: newUser.id,
-      role: 'admin', // The user is the admin of their own tenant
-      status: 'active',
-      isDefault: true,
-    });
-  
-    return newUser;
-  }
+
 }
 
 export const storage = new DatabaseStorage();

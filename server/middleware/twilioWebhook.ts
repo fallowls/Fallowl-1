@@ -21,9 +21,25 @@ export async function validateTwilioWebhook(request: FastifyRequest, reply: Fast
     
     // Get the call/message SID to determine which user's credentials to use
     const body = request.body as any;
-    const { CallSid, MessageSid, From, To } = body;
+    const { CallSid, MessageSid, From, To, TenantSid } = body;
     
     let userId: number | null = null;
+    let tenantId: number | null = null;
+    
+    // For multi-tenant environments, TenantSid is expected.
+    // We must validate that the user associated with the webhook is a member of this tenant.
+    if (TenantSid) {
+      const tenant = await storage.getTenantBySlug(TenantSid);
+      if (tenant) {
+        tenantId = tenant.id;
+      } else {
+        console.error('❌ SECURITY: Invalid TenantSid in webhook - rejecting request');
+        return reply.status(403).send({ 
+          error: 'Forbidden - Invalid TenantSid',
+          details: 'TenantSid from webhook does not correspond to a valid tenant'
+        });
+      }
+    }
     
     // For outbound calls from WebRTC client
     if (From && From.startsWith('client:')) {
@@ -121,6 +137,19 @@ export async function validateTwilioWebhook(request: FastifyRequest, reply: Fast
         error: 'Forbidden - Cannot validate webhook without user context',
         details: 'Webhook must include valid token parameter or identifiable user information'
       });
+    }
+
+    // MULTI-TENANT SECURITY: If tenant context is present, validate user membership.
+    if (tenantId) {
+      const membership = await storage.getTenantMembership(tenantId, userId);
+      if (!membership) {
+        console.error(`❌ SECURITY: User ${userId} is not a member of tenant ${tenantId} - rejecting webhook`);
+        return reply.status(403).send({
+          error: 'Forbidden - User not a member of the specified tenant',
+          details: 'The user identified does not have access to the tenant specified in the webhook'
+        });
+      }
+      console.log(`✅ User ${userId} is a valid member of tenant ${tenantId}`);
     }
     
     // SECURITY: Validate Twilio signature when possible (defense in depth)
