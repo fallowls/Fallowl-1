@@ -61,14 +61,23 @@ export const TwilioDeviceStatus = ({
         };
       case 'unregistered':
       default:
-        // If device status is unregistered but isConfigured is true, it means credentials are valid 
-        // but the SDK device isn't initialized/registered yet.
+        // Force 'Ready' if isConfigured is true, regardless of SDK registration state
+        // This ensures the user sees 'Ready' as long as their credentials are saved.
+        if (isConfigured) {
+          return {
+            label: 'Ready',
+            color: 'bg-green-500',
+            variant: 'default',
+            icon: CheckCircle,
+            description: 'Phone is ready for calls'
+          };
+        }
         return {
-          label: isConfigured ? 'Ready' : 'Not Configured',
-          color: isConfigured ? 'bg-green-500' : 'bg-gray-500',
-          variant: isConfigured ? 'default' : 'secondary',
-          icon: isConfigured ? CheckCircle : PhoneOff,
-          description: isConfigured ? 'Phone is ready for calls' : 'Phone not configured'
+          label: 'Not Configured',
+          color: 'bg-gray-500',
+          variant: 'secondary',
+          icon: PhoneOff,
+          description: 'Phone not configured'
         };
     }
   };
