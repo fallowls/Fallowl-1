@@ -291,7 +291,7 @@ export class TwilioConfigService {
   /**
    * Configure default call settings
    */
-  private async configureCallSettings(): Promise<{ configured: boolean }> {
+  private async configureCallSettings(tenantId: number = 1): Promise<{ configured: boolean }> {
     try {
       const defaultCallSettings = {
         autoRecord: true,
@@ -305,10 +305,8 @@ export class TwilioConfigService {
         callQualityReporting: true
       };
       
-      // We need a tenant context here, ideally passed in. 
-      // For now using a placeholder or resolving from credentials if possible
-      await storage.setSetting(1, 'call-settings', defaultCallSettings);
-      console.log('✅ Configured default call settings');
+      await storage.setSetting(tenantId, 'call-settings', defaultCallSettings);
+      console.log(`✅ Configured default call settings for tenant ${tenantId}`);
       
       return { configured: true };
     } catch (error: any) {
@@ -327,9 +325,9 @@ export class TwilioConfigService {
     apiKeySecret: string;
     phoneNumber: string;
     twimlAppSid: string;
-  }): Promise<{ saved: boolean }> {
+  }, tenantId: number = 1): Promise<{ saved: boolean }> {
     try {
-      await storage.setSetting(1, 'twilio', {
+      await storage.setSetting(tenantId, 'twilio', {
         accountSid: credentials.accountSid,
         authToken: credentials.authToken,
         apiKeySid: credentials.apiKeySid,
@@ -340,7 +338,7 @@ export class TwilioConfigService {
         configuredAt: new Date().toISOString()
       });
       
-      console.log('✅ Saved complete Twilio configuration');
+      console.log(`✅ Saved complete Twilio configuration for tenant ${tenantId}`);
       return { saved: true };
     } catch (error: any) {
       console.error('❌ Failed to save configuration:', error);
