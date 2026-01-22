@@ -2627,32 +2627,37 @@ export class DatabaseStorage implements IStorage {
     return firstMembership || undefined;
   }
 
-  async ensureDefaultTenant(userId: number): Promise<TenantMembership> {
-    // Check if user already has a default tenant
-    const existing = await this.getDefaultTenantForUser(userId);
-    if (existing) return existing;
-    
-    // Get or create the default organization tenant
-    let defaultTenant = await this.getTenantBySlug('default');
-    if (!defaultTenant) {
-      defaultTenant = await this.createTenant({
-        name: 'Default Organization',
-        slug: 'default',
+  async ensureDefaultTenant(userId: number): Promise<TenantMembership | undefined> {
+    try {
+      // Check if user already has a default tenant
+      const existing = await this.getDefaultTenantForUser(userId);
+      if (existing) return existing;
+      
+      // Get or create the default organization tenant
+      let defaultTenant = await this.getTenantBySlug('default');
+      if (!defaultTenant) {
+        defaultTenant = await this.createTenant({
+          name: 'Default Organization',
+          slug: 'default',
+          status: 'active',
+          plan: 'free',
+        });
+      }
+      
+      // Create membership for the user
+      const membership = await this.createTenantMembership({
+        tenantId: defaultTenant.id,
+        userId,
+        role: 'member',
         status: 'active',
-        plan: 'free',
+        isDefault: true,
       });
+      
+      return membership;
+    } catch (error) {
+      console.error(`[STORAGE] Error ensuring default tenant for user ${userId}:`, error);
+      return undefined;
     }
-    
-    // Create membership for the user
-    const membership = await this.createTenantMembership({
-      tenantId: defaultTenant.id,
-      userId,
-      role: 'member',
-      status: 'active',
-      isDefault: true,
-    });
-    
-    return membership;
   }
 
 

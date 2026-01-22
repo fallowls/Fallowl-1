@@ -107,6 +107,15 @@ export class TwilioWebhookVerifier {
 
       // Get user's Twilio client
       const membership = await storage.ensureDefaultTenant(userId);
+      if (!membership) {
+        console.warn(`⚠️ User ${username} (${userId}): No default tenant membership found/created. Skipping.`);
+        return {
+          userId,
+          username,
+          status: 'skipped',
+          message: 'No tenant membership available'
+        };
+      }
       const tenantId = membership.tenantId;
       const { client } = await userTwilioCache.getTwilioClient(userId, tenantId.toString());
       

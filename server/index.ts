@@ -48,6 +48,18 @@ if (!envValidation.isValid) {
   } catch (error: any) {
     console.error("Error seeding SMS data:", error?.message || error);
   }
+
+  // Ensure memberships are created for all users after initial seeding
+  try {
+    console.log("🛠️ Ensuring default tenant memberships for all users...");
+    const users = await storage.getAllUsers();
+    for (const user of users) {
+      await storage.ensureDefaultTenant(user.id);
+    }
+    console.log("✅ Memberships synchronized.");
+  } catch (error: any) {
+    console.error("Error synchronizing memberships:", error?.message || error);
+  }
   
   try {
     // Seed lead management data (sources, statuses, campaigns, leads)
