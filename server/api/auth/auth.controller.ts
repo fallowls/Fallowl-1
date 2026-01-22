@@ -1,9 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { authService } from '../services/AuthService';
+import { authService } from '../../services/AuthService';
 import { z } from 'zod';
-import { BadRequestError } from '../utils/errors';
-import { clearTwilioCacheOnLogout } from '../userTwilioService';
-import { storage } from '../storage';
+import { BadRequestError } from '../../utils/errors';
+import { clearTwilioCacheOnLogout } from '../../userTwilioService';
+import { storage } from '../../storage';
 
 export async function loginUser(request: FastifyRequest, reply: FastifyReply) {
   const loginSchema = z.object({
