@@ -43,14 +43,25 @@ export async function getCredentials(request: FastifyRequest, reply: FastifyRepl
   if (!userId) throw new UnauthorizedError();
 
   try {
-    const { credentials } = await userTwilioCache.getTwilioClient(userId);
+    const dbCredentials = await storage.getUserTwilioCredentials(userId);
+    
+    if (!dbCredentials) {
+      return reply.send({ configured: false, credentials: null });
+    }
+
+    // Auto-fix configured status if credentials exist
+    if (!dbCredentials.twilioConfigured && dbCredentials.twilioAccountSid && dbCredentials.twilioAuthToken) {
+      await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
+      dbCredentials.twilioConfigured = true;
+    }
+
     return reply.send({
-      configured: true,
+      configured: !!dbCredentials.twilioConfigured,
       credentials: {
-        accountSid: credentials.accountSid ? `${credentials.accountSid.slice(0, 10)}...` : null,
-        phoneNumber: credentials.phoneNumber,
-        hasApiKey: !!credentials.apiKeySid,
-        twimlAppSid: credentials.twimlAppSid
+        accountSid: dbCredentials.twilioAccountSid ? `${dbCredentials.twilioAccountSid.slice(0, 10)}...` : null,
+        phoneNumber: dbCredentials.twilioPhoneNumber,
+        hasApiKey: !!dbCredentials.twilioApiKeySid,
+        twimlAppSid: dbCredentials.twilioTwimlAppSid
       }
     });
   } catch (error) {

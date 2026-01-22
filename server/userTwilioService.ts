@@ -55,13 +55,24 @@ class UserTwilioClientCache {
 
     const dbCredentials = await storage.getUserTwilioCredentials(userId);
 
-    if (!dbCredentials || !dbCredentials.twilioConfigured) {
+    if (!dbCredentials) {
+      throw new Error(`Twilio credentials not found for user ${userId}`);
+    }
+
+    // Workaround: The UI might check this flag, and it should be true if we have SID and Token
+    if (!dbCredentials.twilioConfigured && dbCredentials.twilioAccountSid && dbCredentials.twilioAuthToken) {
+      console.log(`🔧 User ${userId} has credentials but configured flag is false. Auto-fixing state...`);
+      await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
+      dbCredentials.twilioConfigured = true;
+    }
+
+    if (!dbCredentials.twilioConfigured) {
       throw new Error(`Twilio credentials not configured for user ${userId}`);
     }
 
     // If tenantId is provided, verify it matches (for multi-tenant safety)
     if (tenantId) {
-      const membership = await storage.getTenantMembership(userId, Number(tenantId));
+      const membership = await storage.getTenantMembership(Number(tenantId), userId);
       if (!membership) {
         throw new Error(`Security Alert: User ${userId} attempted to access Twilio credentials for tenant ${tenantId} without membership.`);
       }
