@@ -97,7 +97,7 @@ export default function Sidebar() {
               <img 
                 src={ClosoIcon} 
                 alt="Closo" 
-                className="h-10 w-10 min-w-[40px] object-contain brightness-0 dark:invert"
+                className="w-10 h-auto min-w-[40px] object-contain brightness-0 dark:invert"
                 style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
                 loading="lazy"
               />
