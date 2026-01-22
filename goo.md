@@ -3,7 +3,10 @@
 ## 1. Database & Storage Issues
 - **Issue**: `ON CONFLICT` error in `setSetting` method in `server/storage.ts`.
 - **Detail**: The `settings` table lacks the expected unique constraint on `(tenant_id, key)` that Drizzle's `onConflictDoUpdate` expects.
-- **Fix Applied**: Executed SQL to add a unique constraint to the `settings` table: `ALTER TABLE settings ADD CONSTRAINT settings_tenant_key_unique UNIQUE (tenant_id, key);` (Completed Jan 22, 2026)
+- **Fix Applied**: 
+    - Executed SQL to add a unique constraint to the `settings` table: `ALTER TABLE settings ADD CONSTRAINT settings_tenant_key_unique UNIQUE (tenant_id, key);` (Completed Jan 22, 2026)
+    - Removed duplicate `initializeDefaultData` implementation in `server/storage.ts`. (Completed Jan 22, 2026)
+    - Fixed invalid `updatedAt` reference in `setSetting` ON CONFLICT clause. (Completed Jan 22, 2026)
 
 ## 2. Fastify Hook Errors
 - **Issue**: `FST_ERR_HOOK_INVALID_ASYNC_HANDLER` in `server/index.ts`.
