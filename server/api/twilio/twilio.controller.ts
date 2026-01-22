@@ -120,9 +120,36 @@ export async function handleVoice(request: FastifyRequest, reply: FastifyReply) 
 
     // For calls to external numbers
     if (To && To !== process.env.TWILIO_PHONE_NUMBER) {
-        // If it's an outbound call from the client to a real number
-        // The From will be the client identity
-        return reply.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Dial callerId="${From.startsWith('client:') ? (request as any).userPhoneNumber || From : From}">${To}</Dial></Response>`);
+        // Find user by From if it's a client
+        let callerId = process.env.TWILIO_PHONE_NUMBER;
+        let userId: number | null = null;
+        
+        if (From && From.startsWith('client:')) {
+            const username = From.replace('client:', '');
+            const user = await storage.getUserByUsername(username);
+            if (user) {
+                userId = user.id;
+                const credentials = await storage.getUserTwilioCredentials(user.id);
+                if (credentials?.twilioPhoneNumber) {
+                    callerId = credentials.twilioPhoneNumber;
+                }
+            }
+        }
+
+        // Generate the Dial TwiML
+        const dialParams: any = { callerId };
+        
+        // Add recording if enabled for the user
+        if (userId) {
+            const { twilioService } = await import('../../twilioService');
+            const autoRecord = await twilioService.getAutoRecordingSetting(userId); // Assuming tenantId=userId for default
+            if (autoRecord) {
+                dialParams.record = 'record-from-answer';
+                dialParams.recordingStatusCallback = `${process.env.BASE_URL || ''}/api/twilio/recordings/status`;
+            }
+        }
+
+        return reply.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Dial${Object.entries(dialParams).map(([k,v]) => ` ${k}="${v}"`).join('')}>${To}</Dial></Response>`);
     }
 
     // Default response
