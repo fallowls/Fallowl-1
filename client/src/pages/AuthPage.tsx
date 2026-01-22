@@ -73,7 +73,11 @@ export default function AuthPage() {
 
   const onLoginSubmit = async (data: any) => {
     try {
-      await login.mutateAsync({ username: email, password: data.password });
+      await login.mutateAsync({ 
+        email: email, 
+        username: email, // Backend might expect username, and we use email as username in our system
+        password: data.password 
+      } as any);
       toast({
         title: "Welcome back",
         description: "Successfully signed in.",
