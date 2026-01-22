@@ -4,11 +4,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 
 const tenantDBs = new Map<string, any>();
 
-export async function dbConnectionManager(request: FastifyRequest, reply: FastifyReply, next: (err?: Error) => void) {
+export async function dbConnectionManager(request: FastifyRequest, reply: FastifyReply) {
   const tenantId = request.tenantId; // Assuming tenantId is attached by tenantIdentifier middleware
 
   if (!tenantId) {
-    return next();
+    return;
   }
 
   if (!tenantDBs.has(tenantId)) {
@@ -21,5 +21,4 @@ export async function dbConnectionManager(request: FastifyRequest, reply: Fastif
   }
 
   request.db = tenantDBs.get(tenantId).db;
-  next();
 }
