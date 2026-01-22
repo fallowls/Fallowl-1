@@ -116,7 +116,21 @@ export class TwilioWebhookVerifier {
           message: 'No tenant membership available'
         };
       }
+      
       const tenantId = membership.tenantId;
+      
+      // Verify user is still a member of this tenant to prevent security alerts
+      const currentMembership = await storage.getTenantMembership(tenantId, userId);
+      if (!currentMembership) {
+        console.error(`❌ User ${username} (${userId}): Security Alert - Membership lost for tenant ${tenantId}`);
+        return {
+          userId,
+          username,
+          status: 'error',
+          message: `Security Alert: User ${userId} no longer member of tenant ${tenantId}`
+        };
+      }
+
       const { client } = await userTwilioCache.getTwilioClient(userId, tenantId.toString());
       
       // Fetch current TwiML application

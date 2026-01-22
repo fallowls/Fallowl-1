@@ -1447,7 +1447,6 @@ export const insertVoicemailSchema = createInsertSchema(voicemails).omit({
 
 export const insertSettingSchema = createInsertSchema(settings).omit({
   id: true,
-  updatedAt: true,
 });
 
 export const insertRoleSchema = createInsertSchema(roles).omit({

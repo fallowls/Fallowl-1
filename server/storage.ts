@@ -2765,7 +2765,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addContactToList(tenantId: number, contactId: number, listId: number, addedBy?: number): Promise<ContactListMembership> {
-    return await this.createContactListMembership(tenantId, { contactId, listId, addedBy });
+    const membershipData: InsertContactListMembership = {
+      tenantId,
+      userId: addedBy || 1, // Fallback to system user if addedBy is not provided
+      contactId,
+      listId,
+      addedBy
+    };
+    return await this.createContactListMembership(tenantId, membershipData);
   }
 
   async removeContactFromList(tenantId: number, contactId: number, listId: number): Promise<void> {
@@ -2797,7 +2804,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(contacts)
       .innerJoin(aiLeadScores, eq(contacts.id, aiLeadScores.contactId))
       .where(eq(contacts.tenantId, tenantId))
-      .orderBy(desc(aiLeadScores.score))
+      .orderBy(desc(aiLeadScores.overallScore))
       .limit(limit);
     return result.map(r => ({ ...r.contacts, aiScore: r.ai_lead_scores }));
   }
