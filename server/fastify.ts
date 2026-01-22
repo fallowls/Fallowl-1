@@ -273,53 +273,10 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   const allowedOrigins = getAllowedOrigins();
   
   await fastify.register(cors, {
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, Postman)
-      if (!origin) {
-        return callback(null, true);
-      }
-      
-      // In development, allow all origins including Chrome extensions
-      if (process.env.NODE_ENV !== 'production') {
-        return callback(null, true);
-      }
-      
-      // Always allow Chrome extensions (they use their own authentication)
-      if (isChromeExtension(origin)) {
-        // Optionally validate against specific extension IDs
-        const extensionIds = process.env.CHROME_EXTENSION_IDS?.split(',').map(id => id.trim()).filter(id => id.length > 0) || [];
-        if (extensionIds.length === 0) {
-          // If no extension IDs configured, allow all Chrome extensions in production
-          return callback(null, true);
-        }
-        // Check if the origin matches any configured extension ID
-        // Support both formats: "abc123" or "chrome-extension://abc123"
-        const isAllowed = extensionIds.some(id => {
-          const normalizedId = id.startsWith('chrome-extension://') ? id : `chrome-extension://${id}`;
-          return origin === normalizedId;
-        });
-        if (isAllowed) {
-          return callback(null, true);
-        }
-        console.warn(`⚠️ Chrome extension ${origin} not in allowed list`);
-      }
-      
-      // In production, check against allowed origins
-      if (allowedOrigins.length === 0) {
-        console.warn(`⚠️ CORS request from ${origin} rejected - no origins configured`);
-        return callback(new Error('CORS not configured'), false);
-      }
-      
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      console.warn(`⚠️ CORS request from ${origin} rejected - not in allowed origins: ${allowedOrigins.join(', ')}`);
-      callback(new Error(`Origin ${origin} not allowed`), false);
-    },
+    origin: true,
     credentials: true, // Allow cookies and authorization headers
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Extension-Version'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Requested-With', 'X-Extension-Version'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
   });
 
