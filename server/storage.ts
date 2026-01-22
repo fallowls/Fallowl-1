@@ -426,7 +426,7 @@ export interface IStorage {
   updateTenantMembership(id: number, membership: Partial<InsertTenantMembership>): Promise<TenantMembership>;
   deleteTenantMembership(id: number): Promise<void>;
   getDefaultTenantForUser(userId: number): Promise<TenantMembership | undefined>;
-  ensureDefaultTenant(userId: number): Promise<TenantMembership>;
+  ensureDefaultTenant(userId: number): Promise<TenantMembership | undefined>;
 }
 
 
