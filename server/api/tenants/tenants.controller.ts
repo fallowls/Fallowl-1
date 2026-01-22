@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { tenantService } from '../../services/TenantService';
+import { tenantService } from '../../services/tenantService';
 import { BadRequestError } from '../../utils/errors';
 import { z } from 'zod';
 

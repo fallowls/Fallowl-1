@@ -2247,9 +2247,20 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Initialize default data (admin user and sample data)
   async initializeDefaultData(): Promise<void> {
     try {
+      // Ensure default tenant exists
+      const [defaultTenant] = await db.select().from(tenants).where(eq(tenants.id, 1));
+      if (!defaultTenant) {
+        await db.insert(tenants).values({
+          id: 1,
+          name: "Default Organization",
+          slug: "default",
+          status: "active",
+          plan: "free"
+        });
+      }
+
       // Check if admin user already exists
       const adminUser = await this.getUserByEmail('admin@demonflare.com');
       
@@ -2274,34 +2285,21 @@ export class DatabaseStorage implements IStorage {
         console.log('✓ Admin user created successfully');
       }
 
-      // Resolve tenant for the admin user
-      const admin = await this.getUserByEmail('admin@demonflare.com');
-      if (admin) {
-          
-      }
-
-      // Mark that sample data initialization has been checked
-      // Note: setSetting will update updatedAt automatically
-      await this.setSetting(1, 'sample_data_initialized', true); // Use tenant 1 for system setting
-      console.log('✓ Sample data initialization skipped (multi-tenant mode)');
-
-      // Initialize default system and twilio settings to prevent 404 errors
-      const systemSetting = await this.getSetting(1, 'system');
-      if (!systemSetting) {
-        await this.setSetting(1, 'system', {
+      // Initialize critical system settings
+      const defaultSettings = [
+        { key: "auto_record_calls", value: false },
+        { key: "amd_enabled", value: true },
+        { key: "recording_storage", value: "twilio" },
+        { key: "sample_data_initialized", value: true },
+        { key: "system", value: {
           appName: 'DialPax CRM',
           timezone: 'America/New_York',
           dateFormat: 'MM/DD/YYYY',
           currency: 'USD',
           autoSave: true,
           theme: 'light'
-        });
-        console.log('✓ Default system settings created');
-      }
-
-      const twilioSetting = await this.getSetting(1, 'twilio');
-      if (!twilioSetting) {
-        await this.setSetting(1, 'twilio', {
+        }},
+        { key: "twilio", value: {
           configured: false,
           accountSid: null,
           authToken: null,
@@ -2309,9 +2307,19 @@ export class DatabaseStorage implements IStorage {
           apiKeySid: null,
           apiKeySecret: null,
           twimlAppSid: null
-        });
-        console.log('✓ Default twilio settings created');
+        }}
+      ];
+
+      for (const s of defaultSettings) {
+        try {
+          await this.setSetting(1, s.key, s.value);
+        } catch (setSettingError) {
+          // Log but don't fail if setting already exists or fails
+          console.warn(`Could not set default setting ${s.key}:`, setSettingError);
+        }
       }
+      
+      console.log('✓ Default system data initialized');
 
     } catch (error) {
       console.error('Error initializing default data:', error);
