@@ -701,7 +701,7 @@ export const useTwilioDeviceV2 = () => {
     queryKey: ['/api/twilio/status'],
     queryFn: async () => {
       try {
-        const res = await apiRequest('GET', '/api/twilio/credentials');
+        const res = await apiRequest('GET', '/api/user/twilio/credentials');
         if (!res.ok) throw new Error('Failed to fetch status');
         const data = await res.json();
         return {
