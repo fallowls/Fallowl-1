@@ -112,7 +112,7 @@ export default function AuthPage() {
               <img 
                 src={ClosoLogo} 
                 alt="Closo" 
-                className="h-10 w-auto brightness-0 dark:invert opacity-90"
+                className="h-16 w-auto brightness-0 dark:invert opacity-90"
               />
             </div>
             <p className="text-[#666666] text-sm">

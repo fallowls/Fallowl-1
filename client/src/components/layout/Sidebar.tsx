@@ -97,15 +97,15 @@ export default function Sidebar() {
               <img 
                 src={ClosoIcon} 
                 alt="Closo" 
-                className="h-8 w-8 min-w-[32px] object-contain brightness-0 dark:invert"
+                className="h-10 w-10 min-w-[40px] object-contain brightness-0 dark:invert"
                 style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
                 loading="lazy"
               />
               <div className={cn(
                 "overflow-hidden transition-all duration-500 ease-in-out whitespace-nowrap",
-                (sidebarExpanded || isMobile) ? "max-w-[150px] opacity-100 ml-2" : "max-w-0 opacity-0 ml-0"
+                (sidebarExpanded || isMobile) ? "max-w-[150px] opacity-100 ml-2.5" : "max-w-0 opacity-0 ml-0"
               )}>
-                <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+                <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                   Closo
                 </span>
               </div>
