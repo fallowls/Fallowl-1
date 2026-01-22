@@ -17,8 +17,11 @@
 - **Issue**: `ERR_MODULE_NOT_FOUND` for multiple services.
 - **Detail**:
     - `TenantService` vs `tenantService.ts` (Case sensitivity issues).
-    - Relative paths in `server/api/auth/auth.controller.ts` were incorrect (`../services/` instead of `../../services/`).
-- **Fix Required**: Audit all controllers in `server/api/` and ensure imports match the actual file system casing and depth.
+    - Relative paths in controllers were inconsistent.
+- **Fix Applied**: 
+    - Standardized service and utility imports across all controllers in `server/api/`. (Completed Jan 22, 2026)
+    - Fixed case sensitivity for `tenantService`. (Completed Jan 22, 2026)
+    - Corrected relative path depth for deep-nested controllers. (Completed Jan 22, 2026)
 
 ## 4. Multi-Tenant Security Alerts
 - **Issue**: Unauthorized tenant access attempts detected during startup webhook verification.

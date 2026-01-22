@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { userService } from '../../services/UserService';
-import { sanitizeUser, sanitizeUsers } from '../../dataSanitization';
+import { sanitizeUser, sanitizeUsers } from '../../utils/dataSanitization';
 import { insertUserSchema } from '@shared/schema';
 import { BadRequestError } from '../../utils/errors';
 
