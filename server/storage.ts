@@ -546,8 +546,14 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ lastLogin: new Date() })
       .where(eq(users.id, user.id));
+    
+    console.log('Login successful, returning user with twilioConfigured:', user.twilioConfigured);
 
-    return { ...user, lastLogin: new Date() };
+    return { 
+      ...user, 
+      lastLogin: new Date(),
+      twilioConfigured: user.twilioConfigured || false 
+    };
   }
 
   async initializeDefaultData(): Promise<void> {
