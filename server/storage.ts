@@ -2627,6 +2627,196 @@ export class DatabaseStorage implements IStorage {
     return firstMembership || undefined;
   }
 
+  async getLeadScoring(tenantId: number, userId: number, id: number): Promise<LeadScoring | undefined> {
+    const result = await db.select({ scoring: leadScoring }).from(leadScoring)
+      .innerJoin(leads, eq(leadScoring.leadId, leads.id))
+      .where(and(eq(leadScoring.id, id), eq(leads.tenantId, tenantId)));
+    return result[0]?.scoring || undefined;
+  }
+
+  async getLeadScoringByLead(tenantId: number, userId: number, leadId: number): Promise<LeadScoring[]> {
+    const result = await db.select({ scoring: leadScoring }).from(leadScoring)
+      .innerJoin(leads, eq(leadScoring.leadId, leads.id))
+      .where(and(eq(leadScoring.leadId, leadId), eq(leads.tenantId, tenantId)));
+    return result.map(r => r.scoring);
+  }
+
+  async createLeadScoring(tenantId: number, userId: number, scoring: InsertLeadScoring): Promise<LeadScoring> {
+    const [created] = await db.insert(leadScoring).values(scoring).returning();
+    return created;
+  }
+
+  async updateLeadScoring(tenantId: number, userId: number, id: number, scoring: Partial<InsertLeadScoring>): Promise<LeadScoring> {
+    const [updated] = await db.update(leadScoring).set(scoring).where(eq(leadScoring.id, id)).returning();
+    return updated;
+  }
+
+  async deleteLeadScoring(tenantId: number, userId: number, id: number): Promise<void> {
+    await db.delete(leadScoring).where(eq(leadScoring.id, id));
+  }
+
+  async getLeadScoringHistory(tenantId: number, userId: number, leadId: number): Promise<LeadScoring[]> {
+    return this.getLeadScoringByLead(tenantId, userId, leadId);
+  }
+
+  async getLeadNurturing(tenantId: number, userId: number, id: number): Promise<LeadNurturing | undefined> {
+    const result = await db.select({ nurturing: leadNurturing }).from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.id, id), eq(leads.tenantId, tenantId)));
+    return result[0]?.nurturing || undefined;
+  }
+
+  async getLeadNurturingByLead(tenantId: number, userId: number, leadId: number): Promise<LeadNurturing[]> {
+    const result = await db.select({ nurturing: leadNurturing }).from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.leadId, leadId), eq(leads.tenantId, tenantId)));
+    return result.map(r => r.nurturing);
+  }
+
+  async createLeadNurturing(tenantId: number, userId: number, nurturing: InsertLeadNurturing): Promise<LeadNurturing> {
+    const [created] = await db.insert(leadNurturing).values(nurturing).returning();
+    return created;
+  }
+
+  async updateLeadNurturing(tenantId: number, userId: number, id: number, nurturing: Partial<InsertLeadNurturing>): Promise<LeadNurturing> {
+    const [updated] = await db.update(leadNurturing).set(nurturing).where(eq(leadNurturing.id, id)).returning();
+    return updated;
+  }
+
+  async deleteLeadNurturing(tenantId: number, userId: number, id: number): Promise<void> {
+    await db.delete(leadNurturing).where(eq(leadNurturing.id, id));
+  }
+
+  async getActiveNurturingSequences(tenantId: number, userId: number): Promise<LeadNurturing[]> {
+    const result = await db.select({ nurturing: leadNurturing }).from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.status, 'active'), eq(leads.tenantId, tenantId)));
+    return result.map(r => r.nurturing);
+  }
+
+  async getNurturingSequencesByStatus(tenantId: number, userId: number, status: string): Promise<LeadNurturing[]> {
+    const result = await db.select({ nurturing: leadNurturing }).from(leadNurturing)
+      .innerJoin(leads, eq(leadNurturing.leadId, leads.id))
+      .where(and(eq(leadNurturing.status, status), eq(leads.tenantId, tenantId)));
+    return result.map(r => r.nurturing);
+  }
+
+  async getContactList(tenantId: number, id: number): Promise<ContactList | undefined> {
+    const [list] = await db.select().from(contactLists).where(and(eq(contactLists.id, id), eq(contactLists.tenantId, tenantId)));
+    return list || undefined;
+  }
+
+  async getContactListByName(tenantId: number, name: string): Promise<ContactList | undefined> {
+    const [list] = await db.select().from(contactLists).where(and(eq(contactLists.name, name), eq(contactLists.tenantId, tenantId)));
+    return list || undefined;
+  }
+
+  async createContactList(tenantId: number, list: InsertContactList): Promise<ContactList> {
+    const [created] = await db.insert(contactLists).values({ ...list, tenantId }).returning();
+    return created;
+  }
+
+  async updateContactList(tenantId: number, id: number, list: Partial<InsertContactList>): Promise<ContactList> {
+    const [updated] = await db.update(contactLists).set(list).where(and(eq(contactLists.id, id), eq(contactLists.tenantId, tenantId))).returning();
+    return updated;
+  }
+
+  async deleteContactList(tenantId: number, id: number): Promise<void> {
+    await db.delete(contactLists).where(and(eq(contactLists.id, id), eq(contactLists.tenantId, tenantId)));
+  }
+
+  async getAllContactLists(tenantId: number): Promise<ContactList[]> {
+    return await db.select().from(contactLists).where(eq(contactLists.tenantId, tenantId));
+  }
+
+  async getContactListsByCategory(tenantId: number, category: string): Promise<ContactList[]> {
+    return await db.select().from(contactLists).where(and(eq(contactLists.category, category), eq(contactLists.tenantId, tenantId)));
+  }
+
+  async getContactListsByType(tenantId: number, type: string): Promise<ContactList[]> {
+    return await db.select().from(contactLists).where(and(eq(contactLists.type, type), eq(contactLists.tenantId, tenantId)));
+  }
+
+  async getContactListMembership(tenantId: number, id: number): Promise<ContactListMembership | undefined> {
+    const [membership] = await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.tenantId, tenantId)));
+    return membership || undefined;
+  }
+
+  async createContactListMembership(tenantId: number, membership: InsertContactListMembership): Promise<ContactListMembership> {
+    const [created] = await db.insert(contactListMemberships).values({ ...membership, tenantId }).returning();
+    return created;
+  }
+
+  async updateContactListMembership(tenantId: number, id: number, membership: Partial<InsertContactListMembership>): Promise<ContactListMembership> {
+    const [updated] = await db.update(contactListMemberships).set(membership).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.tenantId, tenantId))).returning();
+    return updated;
+  }
+
+  async deleteContactListMembership(tenantId: number, id: number): Promise<void> {
+    await db.delete(contactListMemberships).where(and(eq(contactListMemberships.id, id), eq(contactListMemberships.tenantId, tenantId)));
+  }
+
+  async getContactListMemberships(tenantId: number, listId: number): Promise<ContactListMembership[]> {
+    return await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.listId, listId), eq(contactListMemberships.tenantId, tenantId)));
+  }
+
+  async getContactMemberships(tenantId: number, contactId: number): Promise<ContactListMembership[]> {
+    return await db.select().from(contactListMemberships).where(and(eq(contactListMemberships.contactId, contactId), eq(contactListMemberships.tenantId, tenantId)));
+  }
+
+  async addContactToList(tenantId: number, contactId: number, listId: number, addedBy?: number): Promise<ContactListMembership> {
+    return await this.createContactListMembership(tenantId, { contactId, listId, addedBy });
+  }
+
+  async removeContactFromList(tenantId: number, contactId: number, listId: number): Promise<void> {
+    await db.delete(contactListMemberships).where(and(eq(contactListMemberships.contactId, contactId), eq(contactListMemberships.listId, listId), eq(contactListMemberships.tenantId, tenantId)));
+  }
+
+  async getContactsInList(tenantId: number, listId: number): Promise<Contact[]> {
+    const result = await db.select({ contact: contacts }).from(contacts)
+      .innerJoin(contactListMemberships, eq(contacts.id, contactListMemberships.contactId))
+      .where(and(eq(contactListMemberships.listId, listId), eq(contacts.tenantId, tenantId)));
+    return result.map(r => r.contact);
+  }
+
+  async getAiLeadScore(tenantId: number, contactId: number): Promise<AiLeadScore | undefined> {
+    const [score] = await db.select().from(aiLeadScores).where(and(eq(aiLeadScores.contactId, contactId), eq(aiLeadScores.tenantId, tenantId)));
+    return score || undefined;
+  }
+
+  async upsertAiLeadScore(tenantId: number, score: Omit<InsertAiLeadScore, 'tenantId'>): Promise<AiLeadScore> {
+    const [upserted] = await db.insert(aiLeadScores).values({ ...score, tenantId })
+      .onConflictDoUpdate({
+        target: [aiLeadScores.tenantId, aiLeadScores.contactId],
+        set: { ...score }
+      }).returning();
+    return upserted;
+  }
+
+  async getTopScoredContacts(tenantId: number, limit: number): Promise<Array<Contact & { aiScore: AiLeadScore }>> {
+    const result = await db.select().from(contacts)
+      .innerJoin(aiLeadScores, eq(contacts.id, aiLeadScores.contactId))
+      .where(eq(contacts.tenantId, tenantId))
+      .orderBy(desc(aiLeadScores.score))
+      .limit(limit);
+    return result.map(r => ({ ...r.contacts, aiScore: r.ai_lead_scores }));
+  }
+
+  async getCallIntelligence(tenantId: number, callId: number): Promise<CallIntelligence | undefined> {
+    const [intel] = await db.select().from(callIntelligence).where(and(eq(callIntelligence.callId, callId), eq(callIntelligence.tenantId, tenantId)));
+    return intel || undefined;
+  }
+
+  async createCallIntelligence(tenantId: number, intelligence: Omit<InsertCallIntelligence, 'tenantId'>): Promise<CallIntelligence> {
+    const [created] = await db.insert(callIntelligence).values({ ...intelligence, tenantId }).returning();
+    return created;
+  }
+
+  async updateCallIntelligence(tenantId: number, id: number, intelligence: Partial<InsertCallIntelligence>): Promise<CallIntelligence> {
+    const [updated] = await db.update(callIntelligence).set(intelligence).where(and(eq(callIntelligence.id, id), eq(callIntelligence.tenantId, tenantId))).returning();
+    return updated;
+  }
+
   async ensureDefaultTenant(userId: number): Promise<TenantMembership | undefined> {
     try {
       // Check if user already has a default tenant
