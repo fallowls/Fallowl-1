@@ -533,7 +533,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // ROUTE REGISTRATION - Migrated Fastify Routes
   // ============================================================================
   
-  await fastify.register(import('./api/auth/auth.routes'), { prefix: '/api' });
+  await fastify.register(import('./api/auth/auth.routes'), { prefix: '/api/auth' });
   await fastify.register(import('./api/tenants/tenants.routes'), { prefix: '/api' });
   await fastify.register(import('./plugins/profileRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/parallelDialerRoutes'), { prefix: '/api' });

@@ -9,13 +9,12 @@ import {
 } from './auth.controller';
 
 const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
-  // Use prefix-less routes as they are registered with /api prefix in fastify.ts
-  fastify.post('/auth/check-email', checkEmail);
-  fastify.post('/auth/login', loginUser);
-  fastify.post('/auth/signup', signup);
-  fastify.post('/auth/logout', logout);
-  fastify.post('/auth/auth0-session', auth0Session);
-  fastify.post('/auth/register', registerUser);
+  fastify.post('/check-email', checkEmail);
+  fastify.post('/login', loginUser);
+  fastify.post('/signup', signup);
+  fastify.post('/logout', logout);
+  fastify.post('/auth0-session', auth0Session);
+  fastify.post('/register', registerUser);
 };
 
 export default authRoutes;
