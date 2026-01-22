@@ -614,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If credentials exist but isConfigured is false, try to auto-fix
       if (!credentials.twilioConfigured && credentials.twilioAccountSid && credentials.twilioAuthToken) {
-        await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
+        await storage.updateUserTwilioCredentials(userId, { twilio_configured: true });
         credentials.twilioConfigured = true;
       }
 
