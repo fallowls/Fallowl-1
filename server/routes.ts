@@ -12,7 +12,7 @@ import { expressJwtSecret } from "jwks-rsa";
 import twilio from "twilio";
 import { z } from "zod";
 import { wsService } from "./websocketService";
-import { sanitizeUser, sanitizeUsers } from "./dataSanitization";
+import { sanitizeUser, sanitizeUsers } from "./utils/dataSanitization";
 import { 
   apiLimiter, 
   authLimiter, 
