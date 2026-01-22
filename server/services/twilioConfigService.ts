@@ -23,12 +23,12 @@ export class TwilioConfigService {
     apiKeySecret?: string;
     phoneNumber?: string;
     twimlAppSid?: string;
-  }): Promise<{
+  }, tenantId: number = 1): Promise<{
     success: boolean;
     message: string;
     details: Record<string, any>;
   }> {
-    console.log('🔧 Starting comprehensive dialer configuration...');
+    console.log(`🔧 Starting comprehensive dialer configuration for tenant ${tenantId}...`);
     
     try {
       const results: Record<string, any> = {};
@@ -62,7 +62,7 @@ export class TwilioConfigService {
       }
       
       // 6. Configure default call settings
-      results.callSettingsConfiguration = await this.configureCallSettings();
+      results.callSettingsConfiguration = await this.configureCallSettings(tenantId);
       
       // 7. Save all settings to database
       if (credentials.apiKeySid && credentials.apiKeySecret && credentials.phoneNumber && credentials.twimlAppSid) {
@@ -73,10 +73,10 @@ export class TwilioConfigService {
           apiKeySecret: credentials.apiKeySecret,
           phoneNumber: credentials.phoneNumber,
           twimlAppSid: credentials.twimlAppSid
-        });
+        }, tenantId);
       }
       
-      console.log('✅ Dialer configuration completed successfully');
+      console.log(`✅ Dialer configuration completed successfully for tenant ${tenantId}`);
       
       return {
         success: true,
