@@ -1,6 +1,6 @@
-# AWS Deployment Guide for FallOwl
+# AWS Deployment Guide for Closo
 
-This guide helps you deploy the FallOwl application to AWS EC2.
+This guide helps you deploy the Closo application to AWS EC2.
 
 ## Prerequisites
 
@@ -15,8 +15,8 @@ This guide helps you deploy the FallOwl application to AWS EC2.
 
 ```bash
 cd ~
-git clone <your-repo-url> Fallowl
-cd Fallowl
+git clone <your-repo-url> Closo
+cd Closo
 ```
 
 ### 2. Install Dependencies
@@ -50,12 +50,12 @@ DATABASE_URL="<your-postgres-connection-string>"
 AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}"
 AUTH0_CLIENT_ID="<your-auth0-client-id>"
 AUTH0_CLIENT_SECRET="<your-auth0-client-secret>"
-AUTH0_AUDIENCE="https://api.fallowl.com"
+AUTH0_AUDIENCE="https://api.closo.com"
 
 # Auth0 (Frontend - required for build)
 VITE_AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}"
 VITE_AUTH0_CLIENT_ID="<your-auth0-client-id>"
-VITE_AUTH0_AUDIENCE="https://api.fallowl.com"
+VITE_AUTH0_AUDIENCE="https://api.closo.com"
 
 # BunnyCDN
 BUNNYCDN_API_KEY="<your-bunnycdn-api-key>"
@@ -64,7 +64,7 @@ BUNNYCDN_STORAGE_ZONE="<your-storage-zone>"
 BUNNYCDN_PULL_ZONE_URL="<your-cdn-domain>"
 
 # CORS - CRITICAL for production
-CLIENT_ORIGIN="https://app.fallowl.com"
+CLIENT_ORIGIN="https://app.closo.com"
 ```
 
 ### 4. Build the Application
@@ -74,7 +74,7 @@ CLIENT_ORIGIN="https://app.fallowl.com"
 ```bash
 export VITE_AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}"
 export VITE_AUTH0_CLIENT_ID="<your-auth0-client-id>"
-export VITE_AUTH0_AUDIENCE="https://api.fallowl.com"
+export VITE_AUTH0_AUDIENCE="https://api.closo.com"
 
 npm run build
 ```
@@ -103,7 +103,7 @@ pm2 save
 Create an Nginx configuration file:
 
 ```bash
-sudo nano /etc/nginx/sites-available/fallowl
+sudo nano /etc/nginx/sites-available/closo
 ```
 
 Add this configuration:
@@ -111,7 +111,7 @@ Add this configuration:
 ```nginx
 server {
     listen 80;
-    server_name app.fallowl.com;
+    server_name app.closo.com;
 
     location / {
         proxy_pass http://localhost:5000;
@@ -141,7 +141,7 @@ server {
 Enable the site and restart Nginx:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/fallowl /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/closo /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 ```
@@ -150,7 +150,7 @@ sudo systemctl restart nginx
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d app.fallowl.com
+sudo certbot --nginx -d app.closo.com
 ```
 
 ## Updating the Application
@@ -158,7 +158,7 @@ sudo certbot --nginx -d app.fallowl.com
 When you need to deploy updates:
 
 ```bash
-cd ~/Fallowl
+cd ~/Closo
 
 # Pull latest changes
 git pull origin main
@@ -166,13 +166,13 @@ git pull origin main
 # If VITE_ variables changed, export them again
 export VITE_AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}"
 export VITE_AUTH0_CLIENT_ID="<your-auth0-client-id>"
-export VITE_AUTH0_AUDIENCE="https://api.fallowl.com"
+export VITE_AUTH0_AUDIENCE="https://api.closo.com"
 
 # Rebuild
 npm run build
 
 # Restart PM2
-pm2 restart fallowl
+pm2 restart closo
 ```
 
 ## Troubleshooting
@@ -180,7 +180,7 @@ pm2 restart fallowl
 ### Check PM2 Status
 ```bash
 pm2 status
-pm2 logs fallowl --lines 50
+pm2 logs closo --lines 50
 ```
 
 ### Check if Port 5000 is Running
@@ -198,7 +198,7 @@ sudo nginx -t
 If you see "getaddrinfo EAI_AGAIN undefined" errors, verify:
 1. DATABASE_URL is in your `.env` file
 2. The `start.sh` script is being used (it loads the .env file)
-3. Restart PM2: `pm2 restart fallowl`
+3. Restart PM2: `pm2 restart closo`
 
 ### Auth0 "placeholder" Client ID
 If Auth0 shows placeholder client ID:
@@ -211,10 +211,10 @@ If Auth0 shows placeholder client ID:
 
 ```bash
 pm2 start ecosystem.config.cjs  # Start application
-pm2 restart fallowl             # Restart application
-pm2 stop fallowl                # Stop application
-pm2 delete fallowl              # Remove from PM2
-pm2 logs fallowl                # View logs
+pm2 restart closo             # Restart application
+pm2 stop closo                # Stop application
+pm2 delete closo              # Remove from PM2
+pm2 logs closo                # View logs
 pm2 monit                       # Monitor resources
 pm2 save                        # Save current processes
 ```

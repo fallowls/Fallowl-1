@@ -566,8 +566,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-3 mb-4">
-                <img src={DialPaxWhiteIcon} alt="FallOwl" className="h-8 w-8" />
-                <img src={DialPaxWhiteLogo} alt="FallOwl" className="h-6" />
+                <img src={ClosoLogo} alt="Closo" className="h-8 w-auto brightness-0 invert" />
               </div>
               <p className="text-gray-400 mb-4">
                 The most advanced cloud-based dialer and CRM platform for modern teams.
