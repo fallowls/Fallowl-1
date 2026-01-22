@@ -618,17 +618,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         credentials.twilioConfigured = true;
       }
 
-      res.json({
+      return res.json({
         isConfigured: !!credentials.twilioConfigured,
         hasCredentials: true,
         phoneNumber: credentials.twilioPhoneNumber,
         connection: { status: credentials.twilioConfigured ? 'ready' : 'invalid' },
-        registeredDevices: 0, // In a real app, this would track active SDK instances
+        registeredDevices: 0,
         lastHealthCheck: new Date().toISOString()
       });
     } catch (error: any) {
       console.error('Error fetching Twilio status:', error);
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   });
 
