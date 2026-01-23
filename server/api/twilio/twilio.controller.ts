@@ -43,14 +43,16 @@ export async function getCredentials(request: FastifyRequest, reply: FastifyRepl
   if (!userId) throw new UnauthorizedError();
 
   try {
-    const dbCredentials = await storage.getUserTwilioCredentials(userId);
+    console.log(`🔍 Fetching Twilio credentials for user ${userId}. Found: ${!!dbCredentials}, Configured: ${dbCredentials?.twilioConfigured}`);
     
-    if (!dbCredentials) {
-      return reply.send({ configured: false, credentials: null });
+    if (!dbCredentials || (!dbCredentials.twilioAccountSid && !dbCredentials.twilioAuthToken)) {
+      console.log(`⚠️ User ${userId} has no Twilio credentials configured.`);
+      return reply.send({ isConfigured: false, credentials: null });
     }
 
     // Auto-fix configured status if credentials exist
     if (!dbCredentials.twilioConfigured && dbCredentials.twilioAccountSid && dbCredentials.twilioAuthToken) {
+      console.log(`🔧 Auto-fixing twilioConfigured for user ${userId}`);
       await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
       dbCredentials.twilioConfigured = true;
     }

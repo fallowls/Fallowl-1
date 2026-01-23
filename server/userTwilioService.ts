@@ -56,6 +56,7 @@ class UserTwilioClientCache {
     const dbCredentials = await storage.getUserTwilioCredentials(userId);
 
     if (!dbCredentials) {
+      console.log(`❌ Twilio credentials not found in DB for user ${userId}`);
       throw new Error(`Twilio credentials not found for user ${userId}`);
     }
 
@@ -65,6 +66,8 @@ class UserTwilioClientCache {
       await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
       dbCredentials.twilioConfigured = true;
     }
+
+    console.log(`🔍 User ${userId} status: configured=${dbCredentials.twilioConfigured}, hasSid=${!!dbCredentials.twilioAccountSid}, hasToken=${!!dbCredentials.twilioAuthToken}`);
 
     if (!dbCredentials.twilioConfigured) {
       throw new Error(`Twilio credentials not configured for user ${userId}`);
