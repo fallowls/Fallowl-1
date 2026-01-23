@@ -58,7 +58,7 @@ export const useTwilioDevice = () => {
 
   // Query to get Twilio status with enhanced monitoring
   const { data: twilioStatus, isLoading: statusLoading } = useQuery({
-    queryKey: ['/api/twilio/status'],
+    queryKey: ['/api/user/twilio/status'],
     refetchInterval: 60000, // Check status every 60 seconds (reduced from 30)
     staleTime: 30000, // Consider fresh for 30 seconds
   });

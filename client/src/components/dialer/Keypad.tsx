@@ -229,9 +229,19 @@ export default function Keypad() {
             autoComplete="tel"
             autoFocus
           />
-          <div className="flex justify-center mt-2">
-            <TwilioDeviceStatus variant="badge" showMicButton={true} />
-          </div>
+          <div className="flex items-center gap-2">
+          {isConfigured ? (
+            <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1">
+              <CheckCircle className="h-3 w-3" />
+              Configured
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-gray-500 flex items-center gap-1">
+              <PhoneOff className="h-3 w-3" />
+              Not Configured
+            </Badge>
+          )}
+        </div>
         </div>
 
         {/* Keypad */}
