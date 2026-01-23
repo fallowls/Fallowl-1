@@ -41,11 +41,11 @@ export async function getRecordings(request: FastifyRequest, reply: FastifyReply
   };
 
   const recordings = await storage.getRecordings(tenantId, userId, {
-    page: parseInt(page as string),
-    limit: parseInt(limit as string),
+    page: page ? parseInt(page as string) : 1,
+    limit: limit ? parseInt(limit as string) : 50,
     filters,
-    sortBy: sortBy as string,
-    sortOrder: sortOrder as 'asc' | 'desc'
+    sortBy: (sortBy as string) || 'createdAt',
+    sortOrder: (sortOrder as 'asc' | 'desc') || 'desc'
   });
   
   return reply.send(recordings);

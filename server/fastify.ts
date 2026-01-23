@@ -432,7 +432,28 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // ============================================================================
 
   // Add requireAuth decorator for route protection
-  fastify.decorate('requireAuth', authMiddleware);
+  fastify.decorate('requireAuth', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = (request as any).session?.userId;
+    if (!userId) {
+      return reply.code(401).send({ message: "Authentication required" });
+    }
+
+    try {
+      const { storage } = await import('./storage');
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return reply.code(401).send({ message: "User not found" });
+      }
+
+      const membership = await storage.ensureDefaultTenant(user.id);
+      request.userId = user.id;
+      request.tenantId = membership.tenantId;
+      request.tenantRole = membership.role;
+    } catch (error: any) {
+      console.error('Auth decorator error:', error);
+      return reply.code(500).send({ message: "Authentication error" });
+    }
+  });
 
   // Add requireTenant decorator for tenant-specific access
   fastify.decorate('requireTenant', async function requireTenantFastify(request: FastifyRequest, reply: FastifyReply) {
