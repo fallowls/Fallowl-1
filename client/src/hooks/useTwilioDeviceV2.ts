@@ -701,6 +701,7 @@ export const useTwilioDeviceV2 = () => {
     queryKey: ['/api/user/twilio/status'],
     enabled: !!user,
     staleTime: 30000,
+    refetchInterval: 30000,
   });
 
   const isConfigured = twilioStatus?.isConfigured ?? false;
