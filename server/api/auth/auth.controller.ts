@@ -22,6 +22,9 @@ export async function loginUser(request: FastifyRequest, reply: FastifyReply) {
   // Set session for legacy support if needed
   (request as any).session.userId = result.user.id;
   (request as any).session.user = result.user;
+  
+  // Explicitly save the session to ensure cookies are set before response
+  await (request as any).session.save();
 
   return reply.send(result);
 }

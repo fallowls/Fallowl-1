@@ -15,6 +15,11 @@ async function throwIfResNotOk(res: Response) {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
+  const token = localStorage.getItem("token");
+  if (token) {
+    return { "Authorization": `Bearer ${token}` };
+  }
+  
   if (getAccessToken) {
     try {
       const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
