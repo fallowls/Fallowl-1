@@ -618,15 +618,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isFullyConfigured = !!(
           credentials.twilioAccountSid && 
           credentials.twilioAuthToken && 
-          credentials.twilioApiKey && 
-          credentials.twilioApiSecret && 
-          credentials.twilioTwimlAppSid &&
           credentials.twilioPhoneNumber
         );
 
         // Auto-fix twilioConfigured flag if it's out of sync
         if (isFullyConfigured && !credentials.twilioConfigured) {
-          await storage.updateUserTwilioCredentials(userId, { twilio_configured: true });
+          await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
           response.isConfigured = true;
           response.connection.status = 'ready';
         } else {
