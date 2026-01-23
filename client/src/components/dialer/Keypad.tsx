@@ -2,12 +2,13 @@ import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { Delete, Phone, PhoneIncoming, AlertTriangle, Settings } from "lucide-react";
+import { Delete, Phone, PhoneOff, CheckCircle, AlertTriangle, Settings } from "lucide-react";
 import { useTwilioDeviceV2 } from "@/hooks/useTwilioDeviceV2";
 import TwilioDeviceStatus from "@/components/TwilioDeviceStatus";
 import { Link } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import { formatForDialing, formatForDisplay, cleanPhoneNumber } from "@/utils/phoneNumber";
+import { Badge } from "@/components/ui/badge";
 
 const keypadNumbers = [
   { number: '1', letters: '' },
