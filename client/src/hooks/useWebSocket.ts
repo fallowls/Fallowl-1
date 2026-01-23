@@ -39,12 +39,15 @@ export function useWebSocket() {
     }
 
     try {
-      const token = await getAccessTokenSilently();
+      // Check for token in localStorage (common for JWT-based auth)
+      const token = localStorage.getItem("token") || "";
       const wsUrl = wsConfig.url;
 
       console.log(`🔌 Connecting to WebSocket: ${wsUrl} (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
 
-      const ws = new WebSocket(wsUrl, [`auth-${token}`]);
+      // Pass token in protocols if available
+      const protocols = token ? [`auth-${token}`] : [];
+      const ws = new WebSocket(wsUrl, protocols);
       isIntentionalDisconnect.current = false;
 
       ws.onopen = () => {

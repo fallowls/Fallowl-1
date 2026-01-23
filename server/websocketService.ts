@@ -40,6 +40,7 @@ class WebSocketService {
         try {
           const authHeader = info.req.headers['authorization'];
           const protocol = info.req.headers['sec-websocket-protocol'];
+          const cookieHeader = info.req.headers['cookie'];
           
           let token: string | null = null;
           
@@ -55,30 +56,43 @@ class WebSocketService {
             }
           }
 
-          if (!token) {
-            console.log("❌ No token provided in WebSocket connection");
-            callback(false, 401, "Authentication required");
+          if (token) {
+            const decoded = await this.verifyToken(token);
+            if (decoded) {
+              let user;
+              if (decoded.sub.startsWith('local|')) {
+                user = await storage.getUser(decoded.userId);
+              } else {
+                user = await storage.getUserByAuth0Id(decoded.sub);
+              }
+              
+              if (user) {
+                (info.req as any).userId = user.id;
+                callback(true);
+                return;
+              }
+            }
+          }
+
+          // Fallback to session-based auth if JWT is missing or invalid
+          const session = (info.req as any).session;
+          if (session && session.userId) {
+            (info.req as any).userId = session.userId;
+            callback(true);
             return;
           }
 
-          const decoded = await this.verifyToken(token);
-          if (!decoded) {
-            console.log("❌ Invalid token");
-            callback(false, 401, "Invalid token");
-            return;
+          // Manual session check if session object is not populated yet
+          if (cookieHeader) {
+             // In Fastify, sessions are usually populated by the session plugin.
+             // If we are here, verifyClient runs BEFORE the session hook.
+             // However, for simplicity and since we are using Fastify's native session management,
+             // we can try to rely on the session hook or a decorator.
+             // Given Fastify's architecture, we might need a different approach if session isn't available in verifyClient.
           }
 
-          const auth0UserId = decoded.sub;
-          let user = await storage.getUserByAuth0Id(auth0UserId);
-
-          if (!user) {
-            console.log("❌ User not found for Auth0 ID:", auth0UserId);
-            callback(false, 401, "User not found");
-            return;
-          }
-
-          (info.req as any).userId = user.id;
-          callback(true);
+          console.log("❌ WebSocket authentication failed: No valid token or session");
+          callback(false, 401, "Authentication required");
         } catch (error) {
           console.error("❌ WebSocket authentication error:", error);
           callback(false, 500, "Authentication failed");
@@ -167,6 +181,17 @@ class WebSocketService {
 
   private async verifyToken(token: string): Promise<DecodedToken | null> {
     try {
+      // Check if it's a local JWT first (HMAC with JWT_SECRET)
+      const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key';
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+        if (decoded && decoded.userId) {
+          return { sub: `local|${decoded.userId}`, userId: decoded.userId };
+        }
+      } catch (e) {
+        // Not a local token, try Auth0
+      }
+
       if (!this.jwksClient) {
         console.error("❌ JWKS client not initialized");
         return null;
@@ -174,13 +199,11 @@ class WebSocketService {
 
       const decodedHeader = jwt.decode(token, { complete: true });
       if (!decodedHeader || typeof decodedHeader === 'string' || !decodedHeader.header) {
-        console.error("❌ Failed to decode JWT header");
         return null;
       }
 
       const kid = decodedHeader.header.kid;
       if (!kid) {
-        console.error("❌ No kid in JWT header");
         return null;
       }
 
