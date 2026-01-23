@@ -704,7 +704,7 @@ export const useTwilioDeviceV2 = () => {
     refetchInterval: 30000,
   });
 
-  const isConfigured = twilioStatus?.isConfigured ?? false;
+  const isConfigured = !!twilioStatus?.isConfigured;
   const phoneNumber = twilioStatus?.phoneNumber;
 
   // Query to get access token - only when needed
