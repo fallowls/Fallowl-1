@@ -601,38 +601,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserIdFromRequest(req);
       const credentials = await storage.getUserTwilioCredentials(userId);
       
-      const response = {
-        isConfigured: false,
-        hasCredentials: false,
-        phoneNumber: null,
-        connection: { status: 'unconfigured' },
-        registeredDevices: 0,
-        lastHealthCheck: new Date().toISOString()
-      };
+      const hasRequiredFields = !!(
+        credentials?.twilioAccountSid && 
+        credentials?.twilioAuthToken && 
+        credentials?.twilioPhoneNumber
+      );
 
-      if (credentials) {
-        response.hasCredentials = true;
-        response.phoneNumber = credentials.twilioPhoneNumber;
-        
-        // Check if all required fields are present
-        const isFullyConfigured = !!(
-          credentials.twilioAccountSid && 
-          credentials.twilioAuthToken && 
-          credentials.twilioPhoneNumber
-        );
-
-        // Auto-fix twilioConfigured flag if it's out of sync
-        if (isFullyConfigured && !credentials.twilioConfigured) {
-          await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
-          response.isConfigured = true;
-          response.connection.status = 'ready';
-        } else {
-          response.isConfigured = !!credentials.twilioConfigured && isFullyConfigured;
-          response.connection.status = response.isConfigured ? 'ready' : 'invalid';
-        }
+      // Auto-fix if credentials exist but flag is false
+      if (hasRequiredFields && !credentials?.twilioConfigured) {
+        await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
       }
 
-      return res.json(response);
+      // If we have the required fields, it is configured regardless of the database flag
+      const isConfigured = hasRequiredFields || !!credentials?.twilioConfigured;
+
+      return res.json({
+        isConfigured: isConfigured,
+        hasCredentials: !!(credentials?.twilioAccountSid && credentials?.twilioAuthToken),
+        phoneNumber: credentials?.twilioPhoneNumber || null,
+        connection: { status: isConfigured ? 'ready' : 'unconfigured' },
+        registeredDevices: 0,
+        lastHealthCheck: new Date().toISOString()
+      });
     } catch (error: any) {
       console.error('Error fetching Twilio status:', error);
       return res.status(500).json({ message: error.message });
