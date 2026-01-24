@@ -45,7 +45,7 @@ export default function Keypad() {
   const {
     isReady,
     isConnecting,
-    isConfigured,
+    isConfigured: deviceIsConfigured,
     deviceStatus,
     activeCall,
     incomingCall,
@@ -55,8 +55,19 @@ export default function Keypad() {
     hangupCall,
     sendDTMF,
     error,
-    phoneNumber
+    phoneNumber: devicePhoneNumber
   } = useTwilioDeviceV2();
+
+  const twilioStatus = useQuery<{
+    isConfigured: boolean;
+    phoneNumber: string | null;
+  }>({
+    queryKey: ['/api/user/twilio/status'],
+    refetchInterval: 5000,
+  });
+
+  const isConfigured = twilioStatus.data?.isConfigured ?? deviceIsConfigured;
+  const phoneNumber = twilioStatus.data?.phoneNumber ?? devicePhoneNumber;
 
   // Update display number when currentNumber changes
   useEffect(() => {
@@ -231,9 +242,14 @@ export default function Keypad() {
             autoFocus
           />
           <div className="flex justify-center mt-2">
-            {isConfigured ? (
+            {isConfigured && isReady ? (
               <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1">
                 <CheckCircle className="h-3 w-3" />
+                Ready
+              </Badge>
+            ) : isConfigured ? (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1">
+                <Settings className="h-3 w-3" />
                 Configured
               </Badge>
             ) : (
