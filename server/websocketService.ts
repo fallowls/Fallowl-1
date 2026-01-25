@@ -57,6 +57,7 @@ class WebSocketService {
 
           if (!token) {
             console.log("❌ No token provided in WebSocket connection");
+            console.log("Headers:", JSON.stringify(info.req.headers));
             callback(false, 401, "Authentication required");
             return;
           }
@@ -64,6 +65,7 @@ class WebSocketService {
           const decoded = await this.verifyToken(token);
           if (!decoded) {
             console.log("❌ Invalid token");
+            console.log("Token:", token);
             callback(false, 401, "Invalid token");
             return;
           }
@@ -275,6 +277,14 @@ class WebSocketService {
 
   broadcastSmsFailed(userId: number, smsData: any) {
     this.broadcastToUser(userId, "sms_failed", smsData);
+  }
+
+  broadcastNewVoicemail(userId: number, voicemailData: any) {
+    this.broadcastToUser(userId, "new_voicemail", voicemailData);
+  }
+
+  broadcastVoicemailUpdate(userId: number, voicemailData: any) {
+    this.broadcastToUser(userId, "voicemail_update", voicemailData);
   }
 }
 

@@ -7,17 +7,28 @@ import { wsService } from '../../websocketService';
 export async function getAllCalls(request: FastifyRequest, reply: FastifyReply) {
   const userId = (request as any).userId;
   const tenantId = (request as any).tenantId;
-  if (!tenantId || !userId) throw new UnauthorizedError();
+  console.log(`📞 Getting all calls for user ${userId} in tenant ${tenantId}`);
+  if (!tenantId || !userId) {
+    console.error("❌ Missing tenantId or userId in getAllCalls");
+    throw new UnauthorizedError();
+  }
 
   const { page, limit } = request.query as { page?: string; limit?: string };
   const pageNum = page ? parseInt(page) : 1;
   const limitNum = limit ? parseInt(limit) : 50;
+  console.log(`📄 Pagination: page ${pageNum}, limit ${limitNum}`);
 
-  const result = await storage.getAllCalls(tenantId, userId, { 
-    page: pageNum, 
-    limit: limitNum 
-  });
-  return reply.send(result);
+  try {
+    const result = await storage.getAllCalls(tenantId, userId, { 
+      page: pageNum, 
+      limit: limitNum 
+    });
+    console.log(`✅ Retrieved ${result.calls.length} calls`);
+    return reply.send(result);
+  } catch (error) {
+    console.error("❌ Error retrieving calls:", error);
+    return reply.status(500).send({ message: "Failed to retrieve calls" });
+  }
 }
 
 export async function getCallStats(request: FastifyRequest, reply: FastifyReply) {

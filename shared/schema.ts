@@ -601,7 +601,7 @@ export const recordings = pgTable("recordings", {
   // Quality and Status
   status: text("status").notNull().default("processing"), // processing, ready, error, downloading, transcribing
   quality: text("quality").default("standard"), // standard, high, premium
-  recordingSource: text("recording_source"), // conference, call, dial-verb
+  recordingSource: text("recording_source"), // conference, call, dial-verb, voicemail
   
   // Advanced Features
   transcript: text("transcript"), // Full call transcript
@@ -682,7 +682,12 @@ export const voicemails = pgTable("voicemails", {
   phone: text("phone").notNull(),
   duration: integer("duration").notNull(),
   fileUrl: text("file_url").notNull(),
+  recordingSid: text("recording_sid"),
+  transcription: text("transcription"),
+  transcriptionStatus: text("transcription_status").default("pending"),
   isRead: boolean("is_read").default(false),
+  isArchived: boolean("is_archived").default(false),
+  tags: text("tags").array().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1443,6 +1448,8 @@ export const insertRecordingSchema = createInsertSchema(recordings).omit({
 export const insertVoicemailSchema = createInsertSchema(voicemails).omit({
   id: true,
   createdAt: true,
+}).extend({
+  tags: z.array(z.string()).optional().default([]),
 });
 
 export const insertSettingSchema = createInsertSchema(settings).omit({

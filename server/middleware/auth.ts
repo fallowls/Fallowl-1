@@ -24,16 +24,34 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+      const user = await storage.getUser(decoded.userId);
+      if (!user) {
+        throw new UnauthorizedError("User not found");
+      }
 
-    const user = await storage.getUser(decoded.userId);
-    if (!user) {
-      throw new UnauthorizedError("User not found");
+      (request as any).userId = user.id;
+      const membership = await storage.ensureDefaultTenant(user.id);
+      if (membership) {
+        (request as any).tenantId = membership.tenantId;
+      }
+    } catch (jwtError) {
+      // If JWT verification fails, try session fallback before throwing
+      if ((request as any).session?.userId) {
+        const userId = (request as any).session.userId;
+        const user = await storage.getUser(userId);
+        if (user) {
+          (request as any).userId = user.id;
+          const membership = await storage.ensureDefaultTenant(user.id);
+          if (membership) {
+            (request as any).tenantId = membership.tenantId;
+          }
+          return;
+        }
+      }
+      throw new UnauthorizedError("Invalid or expired token");
     }
-
-    (request as any).userId = user.id;
-    const membership = await storage.ensureDefaultTenant(user.id);
-    (request as any).tenantId = membership.tenantId;
   } catch (error) {
     throw new UnauthorizedError("Invalid or expired token");
   }

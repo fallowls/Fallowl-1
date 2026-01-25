@@ -3,6 +3,25 @@ import { z } from "zod";
 // Call states for UI
 export type CallState = 'queued' | 'ringing' | 'connected' | 'completed' | 'failed' | 'busy' | 'voicemail' | 'no-answer' | 'canceled';
 
+export interface ParallelCallLine {
+  id: string;
+  contactId?: number;
+  phone: string;
+  name: string;
+  company?: string;
+  jobTitle?: string;
+  email?: string;
+  status: 'idle' | 'dialing' | 'ringing' | 'answered' | 'failed' | 'busy' | 'voicemail' | 'connected' | 'in-progress' | 'completed' | 'no-answer' | 'canceled' | 'human-detected' | 'machine-detected' | 'paused' | 'on-hold';
+  duration: number;
+  callSid?: string;
+  callId?: number;
+  startTime?: number;
+  isAnsweringMachine?: boolean;
+  answeredBy?: 'human' | 'machine' | 'fax' | 'unknown';
+  statsRecorded?: boolean;
+  disposition?: string;
+}
+
 // Dialer modes
 export type DialerMode = 'predictive' | 'power' | 'preview' | 'manual';
 

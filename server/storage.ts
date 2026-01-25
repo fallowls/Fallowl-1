@@ -253,6 +253,8 @@ export interface IStorage {
   getAllVoicemails(tenantId: number, userId: number): Promise<Voicemail[]>;
   getVoicemailsByContact(tenantId: number, userId: number, contactId: number): Promise<Voicemail[]>;
   getUnreadVoicemails(tenantId: number, userId: number): Promise<Voicemail[]>;
+  getUnreadVoicemailCount(tenantId: number, userId: number): Promise<number>;
+  getVoicemailByRecordingSid(recordingSid: string): Promise<Voicemail | undefined>;
 
   // Settings (tenant-scoped)
   getSetting(tenantId: number, key: string): Promise<Setting | undefined>;
@@ -1906,6 +1908,20 @@ export class DatabaseStorage implements IStorage {
       .from(voicemails)
       .where(and(eq(voicemails.isRead, false), eq(voicemails.tenantId, tenantId)))
       .orderBy(desc(voicemails.createdAt));
+  }
+
+  async getUnreadVoicemailCount(tenantId: number, userId: number): Promise<number> {
+    warnIfTenantScopedParamsInvalid('getUnreadVoicemailCount', { tenantId, userId });
+    const [result] = await db
+      .select({ count: count() })
+      .from(voicemails)
+      .where(and(eq(voicemails.isRead, false), eq(voicemails.tenantId, tenantId)));
+    return Number(result?.count || 0);
+  }
+
+  async getVoicemailByRecordingSid(recordingSid: string): Promise<Voicemail | undefined> {
+    const [voicemail] = await db.select().from(voicemails).where(eq(voicemails.recordingSid, recordingSid));
+    return voicemail || undefined;
   }
 
   // Settings (tenant-scoped)

@@ -23,21 +23,6 @@ export class TwilioService {
     // Note: Global TwilioService is deprecated - use userTwilioCache for per-user credentials
   }
 
-  // Deprecated: Global credentials are no longer used - use userTwilioCache for per-user credentials
-  private async loadCredentialsFromDatabase() {
-    console.warn('⚠️  loadCredentialsFromDatabase is deprecated - use userTwilioCache for per-user credentials');
-  }
-
-  // Deprecated: Global initialization is no longer used
-  public async initialize(): Promise<void> {
-    console.warn('⚠️  TwilioService.initialize() is deprecated - use userTwilioCache for per-user credentials');
-  }
-
-  // Deprecated: Global credentials are no longer used
-  public async reloadCredentialsFromDatabase(): Promise<void> {
-    console.warn('⚠️  reloadCredentialsFromDatabase is deprecated - use userTwilioCache for per-user credentials');
-  }
-
   public async updateCredentials(credentials: TwilioCredentials): Promise<void> {
     this.credentials = credentials;
     

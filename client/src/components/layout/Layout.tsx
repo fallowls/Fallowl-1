@@ -75,6 +75,14 @@ export default function Layout() {
 
   const CurrentPage = pageComponents[currentView as keyof typeof pageComponents] || DashboardPage;
 
+  // Debug logging for view rendering
+  useEffect(() => {
+    console.log(`[Layout] Rendering view: ${currentView}`);
+    if (!pageComponents[currentView as keyof typeof pageComponents]) {
+      console.warn(`[Layout] No component found for view: ${currentView}, defaulting to Dashboard`);
+    }
+  }, [currentView]);
+
   // Check if call notification bar should be shown
   const showCallBar = ['connecting', 'connected', 'on-hold'].includes(callStatus) && currentView !== 'dialer';
 

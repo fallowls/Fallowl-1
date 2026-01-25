@@ -4,6 +4,7 @@ import { userTwilioCache, clearTwilioCacheOnLogout } from '../../userTwilioServi
 import { wsService } from '../../websocketService';
 import twilio from 'twilio';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../utils/errors';
+import { getBaseUrl } from '../../utils/urlConfig';
 
 export async function saveCredentials(request: FastifyRequest, reply: FastifyReply) {
   const userId = (request as any).userId;
@@ -92,9 +93,7 @@ export async function getAccessToken(request: FastifyRequest, reply: FastifyRepl
   const user = await storage.getUser(userId);
   if (!user) throw new NotFoundError("User not found");
 
-  const baseUrl = process.env.REPLIT_DOMAINS 
-    ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-    : `https://${request.hostname}`;
+  const baseUrl = getBaseUrl();
 
   const accessToken = await userTwilioCache.generateAccessToken(userId, user.username, baseUrl);
   
@@ -106,14 +105,131 @@ export async function getAccessToken(request: FastifyRequest, reply: FastifyRepl
 }
 
 export async function handleVoice(request: FastifyRequest, reply: FastifyReply) {
-    // Logic for handling voice webhooks
-    // This often involves generating TwiML
-    // Adapting from main routes
     const { From, To, CallSid } = request.body as any;
-    
-    // ... simplified for example, full implementation would follow routes.ts logic ...
+    console.log(`🎯 Voice webhook called: From=${From}, To=${To}, CallSid=${CallSid}`);
+
+    const incomingUser = await storage.getUserByTwilioPhoneNumber(To);
+    if (!incomingUser) {
+        console.error(`❌ No user found with Twilio number: ${To}`);
+        const VoiceResponse = twilio.twiml.VoiceResponse;
+        const twiml = new VoiceResponse();
+        twiml.say("This number is not configured.");
+        reply.header('Content-Type', 'text/xml');
+        return reply.send(twiml.toString());
+    }
+
+    const baseUrl = getBaseUrl();
+    const VoiceResponse = twilio.twiml.VoiceResponse;
+    const twiml = new VoiceResponse();
+
+    const dial = twiml.dial({
+        timeout: 20,
+        action: `${baseUrl}/api/twilio/voice/dial-action`,
+        method: 'POST'
+    });
+    dial.client(incomingUser.username);
+
     reply.header('Content-Type', 'text/xml');
-    return reply.send('<?xml version="1.0" encoding="UTF-8"?><Response><Say>Hello</Say></Response>');
+    return reply.send(twiml.toString());
 }
 
-// ... other twilio methods would be refactored here ...
+export async function handleDialAction(request: FastifyRequest, reply: FastifyReply) {
+    const { DialCallStatus, To } = request.body as any;
+    const baseUrl = getBaseUrl();
+    const VoiceResponse = twilio.twiml.VoiceResponse;
+    const twiml = new VoiceResponse();
+
+    if (DialCallStatus !== 'completed') {
+        // Redirect to voicemail
+        twiml.redirect(`${baseUrl}/api/twilio/voice/voicemail?To=${encodeURIComponent(To)}`);
+    }
+
+    reply.header('Content-Type', 'text/xml');
+    return reply.send(twiml.toString());
+}
+
+export async function handleVoicemail(request: FastifyRequest, reply: FastifyReply) {
+    const { To } = request.query as { To: string };
+    const baseUrl = getBaseUrl();
+    const VoiceResponse = twilio.twiml.VoiceResponse;
+    const twiml = new VoiceResponse();
+
+    twiml.say("Please leave a message after the beep.");
+    twiml.record({
+        maxLength: 120,
+        playBeep: true,
+        transcribe: true,
+        transcribeCallback: `${baseUrl}/api/twilio/voice/transcription`,
+        action: `${baseUrl}/api/twilio/voice/voicemail-action?To=${encodeURIComponent(To)}`,
+        method: 'POST'
+    });
+
+    reply.header('Content-Type', 'text/xml');
+    return reply.send(twiml.toString());
+}
+
+export async function handleVoicemailAction(request: FastifyRequest, reply: FastifyReply) {
+    const { RecordingUrl, RecordingDuration, RecordingSid, From, CallSid } = request.body as any;
+    const { To } = request.query as { To: string };
+    console.log(`📼 Voicemail recorded: ${RecordingSid}, Duration: ${RecordingDuration}, To: ${To}`);
+
+    const user = await storage.getUserByTwilioPhoneNumber(To);
+    if (user) {
+        const membership = await storage.getDefaultTenantForUser(user.id);
+        const tenantId = membership?.tenantId || 1;
+        
+        const voicemail = await storage.createVoicemail(tenantId, user.id, {
+            userId: user.id,
+            phone: From,
+            duration: parseInt(RecordingDuration),
+            fileUrl: RecordingUrl,
+            recordingSid: RecordingSid,
+            isRead: false,
+            isArchived: false,
+            tags: []
+        });
+
+        wsService.broadcastNewVoicemail(user.id, voicemail);
+    }
+
+    const VoiceResponse = twilio.twiml.VoiceResponse;
+    const twiml = new VoiceResponse();
+    twiml.say("Thank you for your message. Goodbye.");
+    twiml.hangup();
+
+    reply.header('Content-Type', 'text/xml');
+    return reply.send(twiml.toString());
+}
+
+export async function handleTranscription(request: FastifyRequest, reply: FastifyReply) {
+    const { TranscriptionText, TranscriptionStatus, RecordingSid } = request.body as any;
+    console.log(`🎤 Transcription received for ${RecordingSid}: ${TranscriptionStatus}`);
+
+    if (TranscriptionStatus === 'completed' && RecordingSid) {
+        const voicemail = await storage.getVoicemailByRecordingSid(RecordingSid);
+        if (voicemail) {
+            const membership = await storage.getDefaultTenantForUser(voicemail.userId);
+            const tenantId = membership?.tenantId || 1;
+            
+            const updatedVoicemail = await storage.updateVoicemail(tenantId, voicemail.userId, voicemail.id, {
+                transcription: TranscriptionText,
+                transcriptionStatus: 'completed'
+            });
+            console.log(`✅ Updated transcription for voicemail ${voicemail.id}`);
+            wsService.broadcastVoicemailUpdate(voicemail.userId, updatedVoicemail);
+        }
+    } else if (TranscriptionStatus === 'failed' && RecordingSid) {
+        const voicemail = await storage.getVoicemailByRecordingSid(RecordingSid);
+        if (voicemail) {
+            const membership = await storage.getDefaultTenantForUser(voicemail.userId);
+            const tenantId = membership?.tenantId || 1;
+            
+            const updatedVoicemail = await storage.updateVoicemail(tenantId, voicemail.userId, voicemail.id, {
+                transcriptionStatus: 'failed'
+            });
+            wsService.broadcastVoicemailUpdate(voicemail.userId, updatedVoicemail);
+        }
+    }
+    
+    return reply.send({ success: true });
+}

@@ -547,7 +547,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   await fastify.register(import('./plugins/settingsRoutes'), { prefix: '/api' });
   await fastify.register(import('./api/twilio/twilio.routes'), { prefix: '/api' });
   await fastify.register(import('./api/users/users.routes'), { prefix: '/api' });
-  await fastify.register(import('./plugins/voicemailsRoutes'), { prefix: '/api' });
+  await fastify.register(import('./api/voicemails/voicemails.routes'), { prefix: '/api' });
   await fastify.register(import('./plugins/leadsRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/supportRoutes'), { prefix: '/api' });
   
