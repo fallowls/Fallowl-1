@@ -175,7 +175,7 @@ export default function LandingPage() {
       role: "Sales Director",
       company: "TechCorp",
       avatar: "/api/placeholder/60/60",
-      content: "Closo transformed our sales process. We increased call volume by 300% and improved conversion rates significantly.",
+      content: "DialPax transformed our sales process. We increased call volume by 300% and improved conversion rates significantly.",
       rating: 5
     },
     {

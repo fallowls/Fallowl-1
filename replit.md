@@ -1,8 +1,10 @@
-# Closo CRM Platform
+# DialPax CRM Platform
 
 ## Overview
-Closo is a cloud-based dialer and CRM Single Page Application (SPA) designed to provide a comprehensive platform for managing communication and customer relationships. It integrates features for calls, SMS, contacts, recordings, and system settings, aiming to be a scalable, full-stack solution for businesses. The platform focuses on enhancing business communication, streamlining CRM processes, and offering a robust, secure, and user-friendly experience.
+DialPax is a cloud-based dialer and CRM Single Page Application (SPA) designed to provide a comprehensive platform for managing communication and customer relationships. It integrates features for calls, SMS, contacts, recordings, and system settings, aiming to be a scalable, full-stack solution for businesses. The platform focuses on enhancing business communication, streamlining CRM processes, and offering a robust, secure, and user-friendly experience.
 
+- **January 26, 2026**:
+  - Rebranded platform from "Closo" to "DialPax" across all UI components, metadata, and documentation.
 - **January 15, 2026**:
   - Implemented multi-tenant data isolation across all core modules (Leads, Recordings, Calls)
   - Added `tenantId` filtering to storage layer and API endpoints
