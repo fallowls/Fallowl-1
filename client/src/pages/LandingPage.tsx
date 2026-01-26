@@ -264,7 +264,7 @@ export default function LandingPage() {
             <div className="flex items-center space-x-2 group">
               <img 
                 src={ClosoLogo} 
-                alt="Closo" 
+                alt="DialPax" 
                 className="h-8 w-auto brightness-0 dark:invert transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
               />
@@ -309,7 +309,7 @@ export default function LandingPage() {
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
               Transform Your Communication with{" "}
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Closo
+                DialPax
               </span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
@@ -566,7 +566,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-3 mb-4">
-                <img src={ClosoLogo} alt="Closo" className="h-8 w-auto brightness-0 invert" />
+                <img src={ClosoLogo} alt="DialPax" className="h-8 w-auto brightness-0 invert" />
               </div>
               <p className="text-gray-400 mb-4">
                 The most advanced cloud-based dialer and CRM platform for modern teams.
