@@ -44,6 +44,7 @@ export function useWebSocket() {
       const wsUrl = wsConfig.url;
 
       console.log(`🔌 Connecting to WebSocket: ${wsUrl} (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
+      console.log("🔑 WebSocket Token:", token ? "Token present" : "Token missing");
 
       // Pass token in protocols if available
       const protocols = token ? [`auth-${token}`] : [];
@@ -245,6 +246,20 @@ export function useWebSocket() {
               }
             });
             window.dispatchEvent(new CustomEvent("sms_failed", { detail: message.data }));
+            break;
+
+          case "new_voicemail":
+            console.log("🎙️ New voicemail received:", message.data);
+            queryClient.invalidateQueries({ queryKey: ["/api/voicemails"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/voicemails/unread/count"] });
+            window.dispatchEvent(new CustomEvent("new_voicemail", { detail: message.data }));
+            break;
+
+          case "voicemail_update":
+            console.log("🎙️ Voicemail updated:", message.data);
+            queryClient.invalidateQueries({ queryKey: ["/api/voicemails"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/voicemails/unread/count"] });
+            window.dispatchEvent(new CustomEvent("voicemail_update", { detail: message.data }));
             break;
 
           default:

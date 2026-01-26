@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
 import { canAccessView } from "@/lib/accessControl";
 import TwilioDeviceStatus from "@/components/TwilioDeviceStatus";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Phone, 
   MessageSquare, 
@@ -55,6 +56,12 @@ export default function Sidebar() {
   } = useStore();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+
+  const { data: unreadVoicemailsCount } = useQuery<{ count: number }>({
+    queryKey: ["/api/voicemails/unread/count"],
+    enabled: !!user,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
 
   const handleItemClick = (itemId: string) => {
     setCurrentView(itemId);
@@ -148,6 +155,14 @@ export default function Sidebar() {
                   )}>
                     {item.label}
                   </span>
+                  {item.id === 'voicemail' && unreadVoicemailsCount && unreadVoicemailsCount.count > 0 && (
+                    <div className={cn(
+                      "absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold",
+                      !(sidebarExpanded || isMobile) && "right-1 top-1"
+                    )}>
+                      {unreadVoicemailsCount.count > 99 ? '99+' : unreadVoicemailsCount.count}
+                    </div>
+                  )}
                 </button>
               );
             })}

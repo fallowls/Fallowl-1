@@ -166,13 +166,21 @@ export default function CallLogPage() {
   } = useInfiniteQuery({
     queryKey: ['/api/calls'],
     queryFn: async ({ pageParam = 1 }) => {
-      const res = await apiRequest('GET', `/api/calls?page=${pageParam}&limit=50`);
-      return res.json();
+      console.log(`🔄 Fetching calls page ${pageParam}`);
+      try {
+        const res = await apiRequest('GET', `/api/calls?page=${pageParam}&limit=50`);
+        const data = await res.json();
+        console.log(`✅ Fetched ${data.calls?.length || 0} calls for page ${pageParam}`);
+        return data;
+      } catch (error) {
+        console.error(`❌ Error fetching calls page ${pageParam}:`, error);
+        throw error;
+      }
     },
     getNextPageParam: (lastPage: any) => {
-      if (!lastPage || !lastPage.calls) return undefined;
+      if (!lastPage || !Array.isArray(lastPage.calls)) return undefined;
       const loadedCount = (lastPage.page || 1) * 50;
-      return loadedCount < lastPage.total ? (lastPage.page || 1) + 1 : undefined;
+      return loadedCount < (lastPage.total || 0) ? (lastPage.page || 1) + 1 : undefined;
     },
     initialPageParam: 1,
   });
@@ -186,7 +194,8 @@ export default function CallLogPage() {
   });
 
   const calls = useMemo(() => {
-    return paginatedData?.pages.flatMap(page => page.calls) || [];
+    if (!paginatedData?.pages) return [];
+    return paginatedData.pages.flatMap(page => Array.isArray(page.calls) ? page.calls : []) || [];
   }, [paginatedData]);
 
   const { data: statusData, refetch: refetchStatus } = useQuery<any>({

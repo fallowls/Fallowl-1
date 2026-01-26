@@ -82,15 +82,6 @@ class WebSocketService {
             return;
           }
 
-          // Manual session check if session object is not populated yet
-          if (cookieHeader) {
-             // In Fastify, sessions are usually populated by the session plugin.
-             // If we are here, verifyClient runs BEFORE the session hook.
-             // However, for simplicity and since we are using Fastify's native session management,
-             // we can try to rely on the session hook or a decorator.
-             // Given Fastify's architecture, we might need a different approach if session isn't available in verifyClient.
-          }
-
           console.log("❌ WebSocket authentication failed: No valid token or session");
           callback(false, 401, "Authentication required");
         } catch (error) {
@@ -298,6 +289,14 @@ class WebSocketService {
 
   broadcastSmsFailed(userId: number, smsData: any) {
     this.broadcastToUser(userId, "sms_failed", smsData);
+  }
+
+  broadcastNewVoicemail(userId: number, voicemailData: any) {
+    this.broadcastToUser(userId, "new_voicemail", voicemailData);
+  }
+
+  broadcastVoicemailUpdate(userId: number, voicemailData: any) {
+    this.broadcastToUser(userId, "voicemail_update", voicemailData);
   }
 }
 
