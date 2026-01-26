@@ -700,8 +700,8 @@ export const useTwilioDeviceV2 = () => {
   const { data: twilioStatus, isLoading: isLoadingStatus } = useQuery<TwilioStatusResponse>({
     queryKey: ['/api/user/twilio/status'],
     enabled: !!user,
-    staleTime: 30000,
-    refetchInterval: 30000,
+    staleTime: 2000,
+    refetchInterval: 5000,
   });
 
   const isConfigured = !!twilioStatus?.isConfigured;
@@ -947,15 +947,6 @@ export const useTwilioDeviceV2 = () => {
     };
   }, []);
 
-  const twilioStatusQuery = useQuery<TwilioStatusResponse>({
-    queryKey: ['/api/user/twilio/status'],
-    refetchInterval: 5000,
-    staleTime: 2000,
-  });
-
-  const isConfigured = twilioStatusQuery.data?.isConfigured === true;
-  const twilioPhoneNumber = twilioStatusQuery.data?.phoneNumber;
-
   return {
     // State
     ...state,
@@ -976,6 +967,6 @@ export const useTwilioDeviceV2 = () => {
     isMuted,
     
     // Utility
-    phoneNumber: twilioPhoneNumber || '',
+    phoneNumber: phoneNumber || '',
   };
 };
