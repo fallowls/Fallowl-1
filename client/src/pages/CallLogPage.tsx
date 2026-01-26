@@ -178,7 +178,7 @@ export default function CallLogPage() {
       }
     },
     getNextPageParam: (lastPage: any) => {
-      if (!lastPage || !lastPage.calls) return undefined;
+      if (!lastPage || !Array.isArray(lastPage.calls)) return undefined;
       const loadedCount = (lastPage.page || 1) * 50;
       return loadedCount < (lastPage.total || 0) ? (lastPage.page || 1) + 1 : undefined;
     },
@@ -194,7 +194,8 @@ export default function CallLogPage() {
   });
 
   const calls = useMemo(() => {
-    return paginatedData?.pages.flatMap(page => page.calls) || [];
+    if (!paginatedData?.pages) return [];
+    return paginatedData.pages.flatMap(page => Array.isArray(page.calls) ? page.calls : []) || [];
   }, [paginatedData]);
 
   const { data: statusData, refetch: refetchStatus } = useQuery<any>({

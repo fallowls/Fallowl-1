@@ -52,6 +52,14 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
       }
       throw new UnauthorizedError("Invalid or expired token");
     }
+<<<<<<< HEAD
+=======
+
+    (request as any).userId = user.id;
+    const membership = await storage.ensureDefaultTenant(user.id);
+    (request as any).tenantId = membership.tenantId;
+    (request as any).tenantRole = membership.role;
+>>>>>>> 43bdb2c406eeeb988434b3e253e5d0d7dfff8041
   } catch (error) {
     throw new UnauthorizedError("Invalid or expired token");
   }

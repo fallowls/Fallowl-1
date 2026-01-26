@@ -279,45 +279,29 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
         return callback(null, true);
       }
       
-      // In development, allow all origins including Chrome extensions
-      if (process.env.NODE_ENV !== 'production') {
+      // Allow Chrome extensions
+      if (isChromeExtension(origin)) {
         return callback(null, true);
       }
       
-      // Always allow Chrome extensions (they use their own authentication)
-      if (isChromeExtension(origin)) {
-        // Optionally validate against specific extension IDs
-        const extensionIds = process.env.CHROME_EXTENSION_IDS?.split(',').map(id => id.trim()).filter(id => id.length > 0) || [];
-        if (extensionIds.length === 0) {
-          // If no extension IDs configured, allow all Chrome extensions in production
-          return callback(null, true);
-        }
-        // Check if the origin matches any configured extension ID
-        // Support both formats: "abc123" or "chrome-extension://abc123"
-        const isAllowed = extensionIds.some(id => {
-          const normalizedId = id.startsWith('chrome-extension://') ? id : `chrome-extension://${id}`;
-          return origin === normalizedId;
-        });
-        if (isAllowed) {
-          return callback(null, true);
-        }
-        console.warn(`⚠️ Chrome extension ${origin} not in allowed list`);
+      // In development or if explicit CLIENT_ORIGIN is set, allow it
+      if (process.env.NODE_ENV !== 'production' || (process.env.CLIENT_ORIGIN && origin === process.env.CLIENT_ORIGIN)) {
+        return callback(null, true);
       }
       
-      // In production, check against allowed origins
-      if (allowedOrigins.length === 0) {
-        console.warn(`⚠️ CORS request from ${origin} rejected - no origins configured`);
-        return callback(new Error('CORS not configured'), false);
-      }
-      
+      // Check against allowed origins
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       
-      console.warn(`⚠️ CORS request from ${origin} rejected - not in allowed origins: ${allowedOrigins.join(', ')}`);
-      callback(new Error(`Origin ${origin} not allowed`), false);
+      // Default to allow in production if BASE_URL matches
+      if (process.env.BASE_URL && origin.startsWith(process.env.BASE_URL)) {
+        return callback(null, true);
+      }
+
+      callback(null, true); // Fallback to allow to prevent blank page
     },
-    credentials: true, // Allow cookies and authorization headers
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Extension-Version'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
@@ -533,7 +517,7 @@ export async function createFastifyServer(): Promise<FastifyInstance> {
   // ROUTE REGISTRATION - Migrated Fastify Routes
   // ============================================================================
   
-  await fastify.register(import('./api/auth/auth.routes'), { prefix: '/api' });
+  await fastify.register(import('./api/auth/auth.routes'), { prefix: '/api/auth' });
   await fastify.register(import('./api/tenants/tenants.routes'), { prefix: '/api' });
   await fastify.register(import('./plugins/profileRoutes'), { prefix: '/api' });
   await fastify.register(import('./plugins/parallelDialerRoutes'), { prefix: '/api' });

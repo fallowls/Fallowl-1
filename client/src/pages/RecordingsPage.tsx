@@ -72,7 +72,7 @@ export default function RecordingsPage() {
     refetchOnWindowFocus: true,
   });
 
-  const recordings = recordingsData?.recordings || [];
+  const recordings = Array.isArray(recordingsData?.recordings) ? recordingsData.recordings : [];
   const totalRecordings = recordingsData?.total || 0;
   const totalPages = recordingsData?.totalPages || 1;
 

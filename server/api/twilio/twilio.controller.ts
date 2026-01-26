@@ -105,6 +105,7 @@ export async function getAccessToken(request: FastifyRequest, reply: FastifyRepl
 }
 
 export async function handleVoice(request: FastifyRequest, reply: FastifyReply) {
+<<<<<<< HEAD
     const { From, To, CallSid } = request.body as any;
     console.log(`🎯 Voice webhook called: From=${From}, To=${To}, CallSid=${CallSid}`);
 
@@ -131,6 +132,56 @@ export async function handleVoice(request: FastifyRequest, reply: FastifyReply) 
 
     reply.header('Content-Type', 'text/xml');
     return reply.send(twiml.toString());
+=======
+    const { To, From, CallSid, Direction } = request.body as any;
+    
+    console.log(`📞 Incoming voice webhook: Direction=${Direction}, From=${From}, To=${To}, CallSid=${CallSid}`);
+
+    reply.header('Content-Type', 'text/xml');
+
+    // For outbound calls from browser client
+    if (To && To.startsWith('client:')) {
+        const clientName = To.replace('client:', '');
+        return reply.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Dial><Client>${clientName}</Client></Dial></Response>`);
+    }
+
+    // For calls to external numbers
+    if (To && To !== process.env.TWILIO_PHONE_NUMBER) {
+        // Find user by From if it's a client
+        let callerId = process.env.TWILIO_PHONE_NUMBER;
+        let userId: number | null = null;
+        
+        if (From && From.startsWith('client:')) {
+            const username = From.replace('client:', '');
+            const user = await storage.getUserByUsername(username);
+            if (user) {
+                userId = user.id;
+                const credentials = await storage.getUserTwilioCredentials(user.id);
+                if (credentials?.twilioPhoneNumber) {
+                    callerId = credentials.twilioPhoneNumber;
+                }
+            }
+        }
+
+        // Generate the Dial TwiML
+        const dialParams: any = { callerId };
+        
+        // Add recording if enabled for the user
+        if (userId) {
+            const { twilioService } = await import('../../twilioService');
+            const autoRecord = await twilioService.getAutoRecordingSetting(userId); // Assuming tenantId=userId for default
+            if (autoRecord) {
+                dialParams.record = 'record-from-answer';
+                dialParams.recordingStatusCallback = `${process.env.BASE_URL || ''}/api/twilio/recordings/status`;
+            }
+        }
+
+        return reply.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Dial${Object.entries(dialParams).map(([k,v]) => ` ${k}="${v}"`).join('')}>${To}</Dial></Response>`);
+    }
+
+    // Default response
+    return reply.send('<?xml version="1.0" encoding="UTF-8"?><Response><Say>Welcome to the platform. Please wait while we connect you.</Say><Dial><Client>admin</Client></Dial></Response>');
+>>>>>>> 43bdb2c406eeeb988434b3e253e5d0d7dfff8041
 }
 
 export async function handleDialAction(request: FastifyRequest, reply: FastifyReply) {

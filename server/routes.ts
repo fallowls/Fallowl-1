@@ -595,6 +595,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Twilio Configuration Status Route
+  app.get("/api/user/twilio/status", requireAuth, async (req, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const credentials = await storage.getUserTwilioCredentials(userId);
+      
+      if (!credentials) {
+        return res.json({
+          isConfigured: false,
+          hasCredentials: false,
+          phoneNumber: null,
+          connection: { status: 'unconfigured' },
+          registeredDevices: 0,
+          lastHealthCheck: new Date().toISOString()
+        });
+      }
+
+      // If credentials exist but isConfigured is false, try to auto-fix
+      if (!credentials.twilioConfigured && credentials.twilioAccountSid && credentials.twilioAuthToken) {
+        await storage.updateUserTwilioCredentials(userId, { twilio_configured: true });
+        credentials.twilioConfigured = true;
+      }
+
+      return res.json({
+        isConfigured: !!credentials.twilioConfigured,
+        hasCredentials: true,
+        phoneNumber: credentials.twilioPhoneNumber,
+        connection: { status: credentials.twilioConfigured ? 'ready' : 'invalid' },
+        registeredDevices: 0,
+        lastHealthCheck: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Error fetching Twilio status:', error);
+      return res.status(500).json({ message: error.message });
+    }
+  });
+
   // Profile Management Routes
   app.get("/api/profile", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
