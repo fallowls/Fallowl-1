@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/auth/login", credentials);
       return await res.json();
     },
-    onSuccess: (data: { token: string, user: SelectUser }) => {
+    onSuccess: (data: any) => {
       console.log("Login successful, user data:", data.user);
       localStorage.setItem("token", data.token);
       queryClient.setQueryData(["/api/user"], data.user);

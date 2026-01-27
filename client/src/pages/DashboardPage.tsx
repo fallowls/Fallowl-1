@@ -93,24 +93,24 @@ export default function DashboardPage() {
     totalContacts: contacts.length,
     totalRecordings: recordings.length,
     totalVoicemails: voicemails.length,
-    unreadVoicemails: voicemails.filter(vm => !vm.isRead).length,
-    callsToday: calls.filter(call => {
+    unreadVoicemails: voicemails.filter((vm: Voicemail) => !vm.isRead).length,
+    callsToday: calls.filter((call: Call) => {
       const today = new Date();
       const callDate = new Date(call.createdAt);
       return callDate.toDateString() === today.toDateString();
     }).length,
-    messagesThisWeek: messages.filter(msg => {
+    messagesThisWeek: messages.filter((msg: Message) => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       return new Date(msg.createdAt) >= weekAgo;
     }).length,
-    completedCalls: calls.filter(call => call.status === 'completed').length,
-    missedCalls: calls.filter(call => call.type === 'missed').length,
+    completedCalls: calls.filter((call: Call) => call.status === 'completed').length,
+    missedCalls: calls.filter((call: Call) => call.type === 'missed').length,
     averageCallDuration: calls.length > 0 
-      ? Math.round(calls.reduce((sum, call) => sum + (call.duration || 0), 0) / calls.length)
+      ? Math.round(calls.reduce((sum: number, call: Call) => sum + (call.duration || 0), 0) / calls.length)
       : 0,
     successRate: calls.length > 0 
-      ? Math.round((calls.filter(call => call.status === 'completed').length / calls.length) * 100)
+      ? Math.round((calls.filter((call: Call) => call.status === 'completed').length / calls.length) * 100)
       : 0
   };
 
