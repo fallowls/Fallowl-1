@@ -103,7 +103,7 @@ export default function Sidebar() {
             )}>
               <img 
                 src={ClosoIcon} 
-                alt="DialPax" 
+                alt="Closo" 
                 className="w-10 h-auto min-w-[40px] object-contain brightness-0 dark:invert"
                 style={{ filter: darkMode ? 'invert(1)' : 'brightness(0)' }}
                 loading="lazy"
@@ -112,8 +112,8 @@ export default function Sidebar() {
                 "overflow-hidden transition-all duration-500 ease-in-out whitespace-nowrap",
                 (sidebarExpanded || isMobile) ? "max-w-[150px] opacity-100 ml-2.5" : "max-w-0 opacity-0 ml-0"
               )}>
-                <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-                  DialPax
+                <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white hidden">
+                  Closo
                 </span>
               </div>
             </div>

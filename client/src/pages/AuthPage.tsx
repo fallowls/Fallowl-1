@@ -96,7 +96,7 @@ export default function AuthPage() {
       await register.mutateAsync({ email, ...data });
       toast({
         title: "Account created",
-        description: "Welcome to DialPax!",
+        description: "Welcome to Closo!",
       });
     } catch (error: any) {
       toast({
@@ -115,7 +115,7 @@ export default function AuthPage() {
             <div className="flex justify-center">
               <img 
                 src={ClosoLogo} 
-                alt="DialPax" 
+                alt="Closo" 
                 className="h-16 w-auto brightness-0 dark:invert opacity-90"
               />
             </div>
