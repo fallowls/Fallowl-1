@@ -195,7 +195,12 @@ export default function CallLogPage() {
 
   const calls = useMemo(() => {
     if (!paginatedData?.pages) return [];
-    return paginatedData.pages.flatMap(page => Array.isArray(page.calls) ? page.calls : []) || [];
+    try {
+      return paginatedData.pages.flatMap(page => (page && Array.isArray(page.calls)) ? page.calls : []) || [];
+    } catch (err) {
+      console.error("Error flattening calls:", err);
+      return [];
+    }
   }, [paginatedData]);
 
   const { data: statusData, refetch: refetchStatus } = useQuery<any>({
@@ -214,13 +219,16 @@ export default function CallLogPage() {
   }, [statusData]);
 
   const activeCalls = useMemo(() => {
+    if (!Array.isArray(calls)) return [];
     return calls.filter((call: any) => 
-      call.status === 'in-progress' || call.status === 'ringing'
+      call && (call.status === 'in-progress' || call.status === 'ringing')
     );
   }, [calls]);
 
   const filteredCalls = useMemo(() => {
+    if (!Array.isArray(calls)) return [];
     return calls.filter((call: any) => {
+      if (!call) return false;
       if (filters.quickFilter === 'active') return call.status === 'in-progress' || call.status === 'ringing';
       if (filters.quickFilter === 'completed') return call.status === 'completed';
       if (filters.quickFilter === 'failed') return ['failed', 'busy', 'no-answer', 'canceled'].includes(call.status);
@@ -832,7 +840,7 @@ export default function CallLogPage() {
                               Recordings
                             </p>
                             <div className="space-y-2">
-                              {call.recordings!.map((recording, idx) => (
+                              {(call.recordings as Recording[] | undefined)?.map((recording: Recording, idx: number) => (
                                 <div key={recording.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-violet-100 dark:bg-violet-950 rounded-full flex items-center justify-center">
@@ -970,11 +978,11 @@ export default function CallLogPage() {
               )}
 
               {/* Recordings */}
-              {selectedCall.recordings && selectedCall.recordings.length > 0 && (
+                    {selectedCall.recordings && selectedCall.recordings.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Recordings</p>
                   <div className="space-y-2">
-                    {selectedCall.recordings.map((recording, idx) => (
+                    {(selectedCall.recordings as Recording[]).map((recording: Recording, idx: number) => (
                       <div key={recording.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-violet-100 dark:bg-violet-950 rounded-full flex items-center justify-center">
