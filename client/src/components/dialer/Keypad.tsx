@@ -9,6 +9,7 @@ import { Link } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import { formatForDialing, formatForDisplay, cleanPhoneNumber } from "@/utils/phoneNumber";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 const keypadNumbers = [
   { number: '1', letters: '' },
