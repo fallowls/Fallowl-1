@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { storage } from '../storage';
 import { userTwilioCache } from '../userTwilioService';
 import { wsService } from '../websocketService';
-import { generateWebhookToken, verifyWebhookToken } from '../routes';
+import { generateWebhookToken, verifyWebhookToken } from '../utils/webhookAuth';
 import twilio from 'twilio';
 import { rateLimitConfigs } from './rateLimiters';
 

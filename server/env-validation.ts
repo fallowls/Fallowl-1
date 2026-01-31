@@ -42,6 +42,10 @@ export function validateEnvironment(): EnvValidationResult {
     errors.push('SESSION_SECRET is required for session security');
   }
   
+  if (!process.env.AUTH0_DOMAIN && !process.env.VITE_AUTH0_DOMAIN) {
+    errors.push('AUTH0_DOMAIN or VITE_AUTH0_DOMAIN is required for authentication');
+  }
+
   if (!process.env.DATABASE_URL) {
     // Check if we have parts to reconstruct it or if it's just missing
     if (process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE) {

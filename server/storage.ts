@@ -947,7 +947,10 @@ export class DatabaseStorage implements IStorage {
   async updateContact(tenantId: number, userId: number, id: number, updateData: Partial<InsertContact>): Promise<Contact> {
     warnIfTenantScopedParamsInvalid('updateContact', { tenantId, userId, id });
     // Normalize phone number if being updated
-    const normalizedUpdateData = { ...updateData };
+    const normalizedUpdateData = { 
+      ...updateData,
+      updatedAt: new Date()
+    };
     if (updateData.phone) {
       const normalized = normalizePhoneNumber(updateData.phone);
       normalizedUpdateData.phone = normalized.isValid ? normalized.normalized : updateData.phone;
@@ -1084,29 +1087,12 @@ export class DatabaseStorage implements IStorage {
       const [call] = await db
         .insert(calls)
         .values({
+          ...insertCall,
           tenantId,
           userId,
-          contactId: insertCall.contactId || null,
-          phone: insertCall.phone,
-          type: insertCall.type,
-          status: insertCall.status,
           duration: insertCall.duration || 0,
-          recordingUrl: insertCall.recordingUrl || null,
-          metadata: insertCall.metadata || {},
-          callQuality: insertCall.callQuality || null,
           cost: insertCall.cost || "0",
-          carrier: insertCall.carrier || null,
-          location: insertCall.location || null,
-          deviceType: insertCall.deviceType || null,
-          sipCallId: insertCall.sipCallId || null,
-          ringDuration: insertCall.ringDuration || null,
-          connectionTime: insertCall.connectionTime || null,
-          answeredBy: insertCall.answeredBy || null,
-          amdComment: insertCall.amdComment || null,
-          disposition: insertCall.disposition || null,
           isParallelDialer: insertCall.isParallelDialer || false,
-          lineId: insertCall.lineId || null,
-          droppedReason: insertCall.droppedReason || null,
         })
         .returning();
       return call;
@@ -1120,7 +1106,10 @@ export class DatabaseStorage implements IStorage {
     warnIfTenantScopedParamsInvalid('updateCall', { tenantId, userId, id });
     const [call] = await db
       .update(calls)
-      .set(updateData)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
       .where(and(eq(calls.id, id), eq(calls.tenantId, tenantId)))
       .returning();
     return call;
@@ -1214,6 +1203,26 @@ export class DatabaseStorage implements IStorage {
         sql`${calls.metadata}->>'twilioCallSid' = ${callSid}`,
         eq(calls.tenantId, tenantId)
       ))
+      .limit(1);
+    
+    return metadataResults.length > 0 ? metadataResults[0] : undefined;
+  }
+
+  async getCallByTwilioSidGlobal(callSid: string): Promise<Call | undefined> {
+    const results = await db
+      .select()
+      .from(calls)
+      .where(eq(calls.sipCallId, callSid))
+      .limit(1);
+    
+    if (results.length > 0) {
+      return results[0];
+    }
+    
+    const metadataResults = await db
+      .select()
+      .from(calls)
+      .where(sql`${calls.metadata}->>'twilioCallSid' = ${callSid}`)
       .limit(1);
     
     return metadataResults.length > 0 ? metadataResults[0] : undefined;
@@ -1317,6 +1326,13 @@ export class DatabaseStorage implements IStorage {
     return message || undefined;
   }
 
+  async getMessageByTwilioSidGlobal(twilioMessageSid: string): Promise<Message | undefined> {
+    const [message] = await db.select().from(messages).where(
+      sql`${messages.metadata}->>'twilioMessageSid' = ${twilioMessageSid}`
+    );
+    return message || undefined;
+  }
+
   async createMessage(tenantId: number, userId: number, insertMessage: InsertMessage): Promise<Message> {
     warnIfTenantScopedParamsInvalid('createMessage', { tenantId, userId });
     const messageData = {
@@ -1335,7 +1351,10 @@ export class DatabaseStorage implements IStorage {
     warnIfTenantScopedParamsInvalid('updateMessage', { tenantId, userId, id });
     const [message] = await db
       .update(messages)
-      .set(updateData)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
       .where(and(eq(messages.id, id), eq(messages.tenantId, tenantId)))
       .returning();
     return message;
@@ -1628,7 +1647,9 @@ export class DatabaseStorage implements IStorage {
     const recordingData = {
       ...insertRecording,
       userId: userId,
-      tenantId: tenantId
+      tenantId: tenantId,
+      duration: insertRecording.duration || 0,
+      fileSize: insertRecording.fileSize || 0,
     };
     const [recording] = await db
       .insert(recordings)
@@ -1879,7 +1900,8 @@ export class DatabaseStorage implements IStorage {
     const voicemailData = {
       ...insertVoicemail,
       userId: userId,
-      tenantId: tenantId
+      tenantId: tenantId,
+      duration: insertVoicemail.duration || 0,
     };
     const [voicemail] = await db
       .insert(voicemails)
@@ -1952,9 +1974,14 @@ export class DatabaseStorage implements IStorage {
     return setting || undefined;
   }
 
-  async setSetting(tenantId: number, key: string, value: any): Promise<Setting> {
+  async setSetting(tenantId: number, key: string, value: any): Promise<Setting | undefined> {
     warnIfTenantScopedParamsInvalid('setSetting', { tenantId });
     
+    if (value === null) {
+      await db.delete(settings).where(and(eq(settings.tenantId, tenantId), eq(settings.key, key)));
+      return undefined;
+    }
+
     // Log sensitive setting changes
     if (key.includes('sid') || key.includes('token') || key.includes('secret') || key.includes('key')) {
       logSecurityEvent({
