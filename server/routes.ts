@@ -1567,56 +1567,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserIdFromRequest(req);
       const membership = await storage.ensureDefaultTenant(userId);
       const tenantId = membership.tenantId;
-      const allCalls = await storage.getAllCalls(tenantId, userId);
       
-      const enrichedCalls = await Promise.all(allCalls.map(async (call) => {
-        let contactName = null;
-        let agentName = null;
-        
-        if (call.contactId) {
-          const contact = await storage.getContact(tenantId, userId, call.contactId);
-          if (contact) {
-            contactName = contact.name;
-          }
-        }
-        
-        const user = await storage.getUser(call.userId);
-        if (user) {
-          agentName = user.username || user.firstName || user.email;
-        }
-        
-        return {
-          ...call,
-          contactName,
-          agentName
-        };
-      }));
-      
-      const grouped = {
-        queued: enrichedCalls.filter(call => call.status === 'queued'),
-        initiated: enrichedCalls.filter(call => call.status === 'initiated'),
-        ringing: enrichedCalls.filter(call => call.status === 'ringing'),
-        inProgress: enrichedCalls.filter(call => call.status === 'in-progress'),
-        completed: enrichedCalls.filter(call => call.status === 'completed'),
-        busy: enrichedCalls.filter(call => call.status === 'busy'),
-        failed: enrichedCalls.filter(call => call.status === 'failed'),
-        noAnswer: enrichedCalls.filter(call => call.status === 'no-answer'),
-        voicemail: enrichedCalls.filter(call => call.outcome === 'voicemail' || call.status === 'voicemail'),
-        dropped: enrichedCalls.filter(call => call.status === 'call-dropped'),
-        canceled: enrichedCalls.filter(call => call.status === 'canceled')
-      };
+      const stats = await storage.getCallStats(tenantId, userId);
       
       const summary = {
-        totalCalls: enrichedCalls.length,
-        active: grouped.queued.length + grouped.initiated.length + grouped.ringing.length + grouped.inProgress.length,
-        connected: grouped.inProgress.length,
-        completed: grouped.completed.length,
-        failed: grouped.failed.length + grouped.busy.length + grouped.noAnswer.length,
-        voicemail: grouped.voicemail.length,
-        dropped: grouped.dropped.length
+        totalCalls: stats.totalCalls,
+        active: stats.activeCalls,
+        connected: stats.connectedCalls,
+        completed: stats.completedCalls,
+        failed: stats.missedCalls,
+        voicemail: stats.voicemailCalls,
+        dropped: stats.droppedCalls
       };
       
-      res.json({ grouped, summary });
+      res.json({ grouped: {}, summary });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

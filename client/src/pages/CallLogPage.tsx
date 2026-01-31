@@ -179,6 +179,11 @@ export default function CallLogPage() {
     },
     getNextPageParam: (lastPage: any) => {
       if (!lastPage || !Array.isArray(lastPage.calls)) return undefined;
+      // Use the pagination metadata from the backend if available
+      if (lastPage.page && lastPage.totalPages) {
+        return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
+      }
+      // Fallback to calculating based on count if metadata is missing (backward compatibility)
       const loadedCount = (lastPage.page || 1) * 50;
       return loadedCount < (lastPage.total || 0) ? (lastPage.page || 1) + 1 : undefined;
     },
@@ -318,7 +323,7 @@ export default function CallLogPage() {
     return () => clearInterval(interval);
   }, [activeCalls]);
 
-  if (callsLoading || (statsLoading && !stats)) {
+  if (callsLoading) {
     return <CallLogPageSkeleton />;
   }
 
