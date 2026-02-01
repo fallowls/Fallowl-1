@@ -148,9 +148,23 @@ export const queryClient = new QueryClient({
         if (error?.status >= 400 && error?.status < 500) return false;
         return failureCount < 2;
       },
+      onError: (error: any) => {
+        console.error("[ReactQuery] query error", {
+          message: error?.message,
+          status: error?.status,
+          stack: error?.stack
+        });
+      },
     },
     mutations: {
       retry: false,
+      onError: (error: any) => {
+        console.error("[ReactQuery] mutation error", {
+          message: error?.message,
+          status: error?.status,
+          stack: error?.stack
+        });
+      },
     },
   },
 });

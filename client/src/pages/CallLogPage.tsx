@@ -169,7 +169,20 @@ export default function CallLogPage() {
       console.log(`🔄 Fetching calls page ${pageParam}`);
       try {
         const res = await apiRequest('GET', `/api/calls?page=${pageParam}&limit=50`);
+        console.log('📡 /api/calls response', {
+          pageParam,
+          status: res.status,
+          statusText: res.statusText,
+          contentType: res.headers.get('content-type')
+        });
         const data = await res.json();
+        console.log('📦 /api/calls payload', {
+          keys: data ? Object.keys(data) : null,
+          callsLength: Array.isArray(data?.calls) ? data.calls.length : 'not-array',
+          page: data?.page,
+          totalPages: data?.totalPages,
+          total: data?.total
+        });
         console.log(`✅ Fetched ${data.calls?.length || 0} calls for page ${pageParam}`);
         return data;
       } catch (error) {
@@ -178,6 +191,11 @@ export default function CallLogPage() {
       }
     },
     getNextPageParam: (lastPage: any) => {
+      console.log('📌 getNextPageParam lastPage', {
+        hasLastPage: !!lastPage,
+        keys: lastPage ? Object.keys(lastPage) : null,
+        callsLength: Array.isArray(lastPage?.calls) ? lastPage.calls.length : 'not-array'
+      });
       if (!lastPage || !Array.isArray(lastPage.calls)) return undefined;
       // Use the pagination metadata from the backend if available
       if (lastPage.page && lastPage.totalPages) {
@@ -207,6 +225,17 @@ export default function CallLogPage() {
       return [];
     }
   }, [paginatedData]);
+
+  useEffect(() => {
+    console.log("[CallLog] paginatedData snapshot", {
+      hasData: !!paginatedData,
+      pagesIsArray: Array.isArray(paginatedData?.pages),
+      pagesLength: paginatedData?.pages?.length,
+      pageParams: paginatedData?.pageParams,
+      hasNextPage,
+      isFetchingNextPage
+    });
+  }, [paginatedData, hasNextPage, isFetchingNextPage]);
 
   const { data: statusData, refetch: refetchStatus } = useQuery<any>({
     queryKey: ['/api/calls/by-status'],

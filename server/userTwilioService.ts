@@ -1,7 +1,7 @@
 import twilio from 'twilio';
 import jwt from 'jsonwebtoken';
 import { storage } from './storage';
-import { generateWebhookToken } from './routes';
+import { generateWebhookToken } from './utils/webhookAuth';
 import { getBaseUrl, getUserTwilioWebhookUrls, isProductionUrl } from './utils/urlConfig';
 const { AccessToken } = twilio.jwt;
 const VoiceGrant = AccessToken.VoiceGrant;
