@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import {
   saveCredentials,
   getCredentials,
+  getStatus,
   deleteCredentials,
   getAccessToken,
   handleVoice,
@@ -16,6 +17,7 @@ const twilioRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
   fastify.post('/user/twilio/credentials', { preHandler: [requireAuth] }, saveCredentials);
   fastify.get('/user/twilio/credentials', { preHandler: [requireAuth] }, getCredentials);
+  fastify.get('/user/twilio/status', { preHandler: [requireAuth] }, getStatus);
   fastify.delete('/user/twilio/credentials', { preHandler: [requireAuth] }, deleteCredentials);
   fastify.get('/twilio/access-token', { preHandler: [requireAuth] }, getAccessToken);
   

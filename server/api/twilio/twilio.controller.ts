@@ -49,7 +49,7 @@ export async function getCredentials(request: FastifyRequest, reply: FastifyRepl
     
     if (!dbCredentials || (!dbCredentials.twilioAccountSid && !dbCredentials.twilioAuthToken)) {
       console.log(`⚠️ User ${userId} has no Twilio credentials configured.`);
-      return reply.send({ isConfigured: false, credentials: null });
+      return reply.send({ configured: false, isConfigured: false, credentials: null });
     }
 
     // Auto-fix configured status if credentials exist
@@ -60,6 +60,7 @@ export async function getCredentials(request: FastifyRequest, reply: FastifyRepl
     }
 
     return reply.send({
+      configured: true,
       isConfigured: true,
       phoneNumber: dbCredentials.twilioPhoneNumber,
       credentials: {
@@ -70,7 +71,41 @@ export async function getCredentials(request: FastifyRequest, reply: FastifyRepl
       }
     });
   } catch (error) {
-    return reply.send({ configured: false, credentials: null });
+    return reply.send({ configured: false, isConfigured: false, credentials: null });
+  }
+}
+
+export async function getStatus(request: FastifyRequest, reply: FastifyReply) {
+  const userId = (request as any).userId;
+  if (!userId) throw new UnauthorizedError();
+
+  try {
+    const credentials = await storage.getUserTwilioCredentials(userId);
+
+    const hasRequiredFields = !!(
+      credentials?.twilioAccountSid &&
+      credentials?.twilioAuthToken &&
+      credentials?.twilioPhoneNumber
+    );
+
+    // Auto-fix if credentials exist but flag is false
+    if (hasRequiredFields && !credentials?.twilioConfigured) {
+      await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
+    }
+
+    // If we have the required fields, it is configured regardless of the database flag
+    const isConfigured = hasRequiredFields || !!credentials?.twilioConfigured;
+
+    return reply.send({
+      isConfigured,
+      hasCredentials: !!(credentials?.twilioAccountSid && credentials?.twilioAuthToken),
+      phoneNumber: credentials?.twilioPhoneNumber || null,
+      connection: { status: isConfigured ? 'ready' : 'unconfigured' },
+      registeredDevices: 0,
+      lastHealthCheck: new Date().toISOString()
+    });
+  } catch (error: any) {
+    return reply.code(500).send({ message: error.message || "Failed to fetch Twilio status" });
   }
 }
 

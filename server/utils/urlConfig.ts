@@ -5,7 +5,7 @@
 
 /**
  * Get the base URL for the application
- * Priority: BASE_URL > REPLIT_DOMAINS > REPLIT_DEV_DOMAIN > localhost
+ * Priority: BASE_URL > CLIENT_ORIGIN > REPLIT_DOMAINS > REPLIT_DEV_DOMAIN > localhost
  */
 export function getBaseUrl(): string {
   // Custom BASE_URL (for AWS, custom deployments, etc.)
@@ -25,6 +25,21 @@ export function getBaseUrl(): string {
       }
     }
     
+    return url;
+  }
+
+  // Use CLIENT_ORIGIN if provided (common in deployed environments)
+  if (process.env.CLIENT_ORIGIN) {
+    let url = process.env.CLIENT_ORIGIN.trim();
+    url = url.replace(/\/+$/, '');
+    if (!url.includes('localhost') && !url.includes('127.0.0.1')) {
+      if (!url.startsWith('https://') && !url.startsWith('http://')) {
+        url = `https://${url}`;
+      } else if (url.startsWith('http://')) {
+        url = url.replace(/^http:\/\//, 'https://');
+        console.warn('⚠️ CLIENT_ORIGIN was HTTP, converted to HTTPS for production:', url);
+      }
+    }
     return url;
   }
   

@@ -9,7 +9,6 @@ import { Link } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import { formatForDialing, formatForDisplay, cleanPhoneNumber } from "@/utils/phoneNumber";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
 
 const keypadNumbers = [
   { number: '1', letters: '' },
@@ -50,25 +49,15 @@ export default function Keypad() {
     deviceStatus,
     activeCall,
     incomingCall,
+    initializeDeviceNow,
     makeCall,
     acceptCall,
     rejectCall,
     hangupCall,
     sendDTMF,
-    error,
-    phoneNumber: devicePhoneNumber
+    error
   } = useTwilioDeviceV2();
-
-  const twilioStatus = useQuery<{
-    isConfigured: boolean;
-    phoneNumber: string | null;
-  }>({
-    queryKey: ['/api/user/twilio/status'],
-    refetchInterval: 5000,
-  });
-
-  const isConfigured = twilioStatus.data?.isConfigured ?? deviceIsConfigured;
-  const phoneNumber = twilioStatus.data?.phoneNumber ?? devicePhoneNumber;
+  const isConfigured = deviceIsConfigured;
 
   // Update display number when currentNumber changes
   useEffect(() => {
@@ -96,7 +85,7 @@ export default function Keypad() {
         handleBackspace();
       }
       // Handle Enter to make call
-      else if (key === 'Enter' && currentNumber && isReady && isConfigured) {
+      else if (key === 'Enter' && currentNumber && isConfigured) {
         event.preventDefault();
         handleCall();
       }
@@ -137,7 +126,11 @@ export default function Keypad() {
   };
 
   const handleCall = async () => {
-    if (currentNumber && isReady && isConfigured) {
+    if (currentNumber && isConfigured) {
+      if (!isReady) {
+        const initialized = await initializeDeviceNow();
+        if (!initialized) return;
+      }
       // Format number for dialing (ensure E.164 format with country code)
       const dialableNumber = formatForDialing(currentNumber);
       
@@ -215,7 +208,7 @@ export default function Keypad() {
   return (
     <div className="max-w-xs mx-auto">
       {/* Configuration Alert */}
-      {error && error.includes('TwiML') || (!isReady && isConfigured && deviceStatus !== 'registered') ? (
+      {error && error.toLowerCase().includes('twiml') ? (
         <Alert className="mb-4 border-orange-200 bg-orange-50">
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
@@ -287,7 +280,7 @@ export default function Keypad() {
           {!activeCall ? (
             <button
               onClick={handleCall}
-              disabled={!currentNumber || !isReady || isConnecting}
+              disabled={!currentNumber || isConnecting || !isConfigured}
               className="w-16 h-16 bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-full shadow-lg hover:shadow-xl active:shadow-md transition-all duration-200 flex items-center justify-center border-none outline-none focus:outline-none"
             >
               <Phone className="w-6 h-6 text-white" />

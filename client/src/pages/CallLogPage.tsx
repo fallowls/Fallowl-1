@@ -126,15 +126,23 @@ const formatCost = (cost: number) => {
   }).format(cost);
 };
 
-const formatPhoneNumber = (phone: string) => {
-  const cleaned = phone.replace(/\D/g, '');
+const formatRelativeTime = (value?: string | number | Date | null) => {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return formatDistanceToNow(date, { addSuffix: true });
+};
+
+const formatPhoneNumber = (phone?: string | null) => {
+  if (!phone) return 'Unknown';
+  const cleaned = String(phone).replace(/\D/g, '');
   if (cleaned.length === 11 && cleaned.startsWith('1')) {
     const areaCode = cleaned.substring(1, 4);
     const prefix = cleaned.substring(4, 7);
     const lineNumber = cleaned.substring(7);
     return `+1 (${areaCode}) ${prefix}-${lineNumber}`;
   }
-  return phone;
+  return String(phone);
 };
 
 export default function CallLogPage() {
@@ -164,7 +172,8 @@ export default function CallLogPage() {
     isLoading: callsLoading,
     refetch: refetchCalls
   } = useInfiniteQuery({
-    queryKey: ['/api/calls'],
+    // Use a distinct key from the non-infinite /api/calls query to avoid cache shape conflicts
+    queryKey: ['/api/calls', 'infinite'],
     queryFn: async ({ pageParam = 1 }) => {
       console.log(`🔄 Fetching calls page ${pageParam}`);
       try {
@@ -814,7 +823,7 @@ export default function CallLogPage() {
                       {/* Time */}
                       <div className="col-span-4 lg:col-span-2">
                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {call.createdAt ? formatDistanceToNow(new Date(call.createdAt), { addSuffix: true }) : '—'}
+                          {formatRelativeTime(call.createdAt)}
                         </span>
                       </div>
 
