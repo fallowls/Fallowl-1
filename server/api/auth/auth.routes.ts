@@ -5,10 +5,12 @@ import {
   checkEmail, 
   signup, 
   logout, 
-  auth0Session 
+  auth0Session,
+  getCurrentUser
 } from './auth.controller';
 
 const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
+  fastify.get('/user', getCurrentUser);
   fastify.post('/check-email', checkEmail);
   fastify.post('/login', loginUser);
   fastify.post('/signup', signup);

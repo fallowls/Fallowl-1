@@ -77,59 +77,7 @@ const checkJwt = expressjwt({
   algorithms: ['RS256']
 });
 
-// Helper function to generate signed webhook tokens for user identification
-export function generateWebhookToken(userId: number): string {
-  if (!process.env.ENCRYPTION_KEY) {
-    throw new Error('ENCRYPTION_KEY environment variable must be set to generate secure webhook tokens');
-  }
-  
-  const timestamp = Date.now().toString();
-  const signature = crypto
-    .createHmac('sha256', process.env.ENCRYPTION_KEY)
-    .update(`${timestamp}:${userId}`)
-    .digest('hex');
-  return `${timestamp}:${userId}:${signature}`;
-}
-
-// Helper function to verify and decode webhook tokens
-export function verifyWebhookToken(token: string): number {
-  if (!process.env.ENCRYPTION_KEY) {
-    throw new Error('ENCRYPTION_KEY environment variable must be set');
-  }
-  
-  const parts = token.split(':');
-  if (parts.length !== 3) {
-    throw new Error('Invalid webhook token format');
-  }
-  
-  const [timestamp, userIdStr, signature] = parts;
-  const userId = parseInt(userIdStr);
-  
-  if (isNaN(userId)) {
-    throw new Error('Invalid user ID in token');
-  }
-  
-  // Verify signature
-  const expectedSignature = crypto
-    .createHmac('sha256', process.env.ENCRYPTION_KEY)
-    .update(`${timestamp}:${userId}`)
-    .digest('hex');
-  
-  if (signature !== expectedSignature) {
-    throw new Error('Invalid webhook token signature');
-  }
-  
-  // Optionally check token age (e.g., reject tokens older than 24 hours)
-  const tokenAge = Date.now() - parseInt(timestamp);
-  const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-  if (tokenAge > maxAge) {
-    throw new Error('Webhook token expired');
-  }
-  
-  return userId;
-}
-
-import { auditLogs } from "@shared/schema";
+import { generateWebhookToken, verifyWebhookToken } from "./utils/webhookAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Audit Log Route
@@ -199,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For calls with SID, find the user from call record using direct SID lookup
       if (!userId && CallSid) {
         try {
-          const call = await storage.getCallByTwilioSid(CallSid);
+          const call = await storage.getCallByTwilioSidGlobal(CallSid);
           if (call) {
             userId = call.userId;
             console.log('✅ User identified from CallSid:', userId);
@@ -212,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For messages with SID, find the user from message record using direct SID lookup
       if (!userId && MessageSid) {
         try {
-          const message = await storage.getMessageByTwilioSid(MessageSid);
+          const message = await storage.getMessageByTwilioSidGlobal(MessageSid);
           if (message) {
             userId = message.userId;
             console.log('✅ User identified from MessageSid:', userId);
@@ -444,31 +392,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     domain: auth0Domain,
     audience: auth0Audience,
     env: process.env.NODE_ENV
-  });
-
-  app.get("/api/user", async (req, res) => {
-    try {
-      let userId = (req as any).session?.userId;
-      
-      if (!userId) {
-        return res.status(401).json(null);
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(401).json(null);
-      }
-
-      res.json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        status: user.status
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
   });
 
   // Auth0 session creation endpoint
@@ -1603,56 +1526,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getUserIdFromRequest(req);
       const membership = await storage.ensureDefaultTenant(userId);
       const tenantId = membership.tenantId;
-      const allCalls = await storage.getAllCalls(tenantId, userId);
       
-      const enrichedCalls = await Promise.all(allCalls.map(async (call) => {
-        let contactName = null;
-        let agentName = null;
-        
-        if (call.contactId) {
-          const contact = await storage.getContact(tenantId, userId, call.contactId);
-          if (contact) {
-            contactName = contact.name;
-          }
-        }
-        
-        const user = await storage.getUser(call.userId);
-        if (user) {
-          agentName = user.username || user.firstName || user.email;
-        }
-        
-        return {
-          ...call,
-          contactName,
-          agentName
-        };
-      }));
-      
-      const grouped = {
-        queued: enrichedCalls.filter(call => call.status === 'queued'),
-        initiated: enrichedCalls.filter(call => call.status === 'initiated'),
-        ringing: enrichedCalls.filter(call => call.status === 'ringing'),
-        inProgress: enrichedCalls.filter(call => call.status === 'in-progress'),
-        completed: enrichedCalls.filter(call => call.status === 'completed'),
-        busy: enrichedCalls.filter(call => call.status === 'busy'),
-        failed: enrichedCalls.filter(call => call.status === 'failed'),
-        noAnswer: enrichedCalls.filter(call => call.status === 'no-answer'),
-        voicemail: enrichedCalls.filter(call => call.outcome === 'voicemail' || call.status === 'voicemail'),
-        dropped: enrichedCalls.filter(call => call.status === 'call-dropped'),
-        canceled: enrichedCalls.filter(call => call.status === 'canceled')
-      };
+      const stats = await storage.getCallStats(tenantId, userId);
       
       const summary = {
-        totalCalls: enrichedCalls.length,
-        active: grouped.queued.length + grouped.initiated.length + grouped.ringing.length + grouped.inProgress.length,
-        connected: grouped.inProgress.length,
-        completed: grouped.completed.length,
-        failed: grouped.failed.length + grouped.busy.length + grouped.noAnswer.length,
-        voicemail: grouped.voicemail.length,
-        dropped: grouped.dropped.length
+        totalCalls: stats.totalCalls,
+        active: stats.activeCalls,
+        connected: stats.connectedCalls,
+        completed: stats.completedCalls,
+        failed: stats.missedCalls,
+        voicemail: stats.voicemailCalls,
+        dropped: stats.droppedCalls
       };
       
-      res.json({ grouped, summary });
+      res.json({ grouped: {}, summary });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1749,8 +1636,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/calls", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+      const membership = await storage.ensureDefaultTenant(userId);
+      const tenantId = membership.tenantId;
       const callData = insertCallSchema.parse(req.body);
-      const call = await storage.createCall(userId, callData);
+      const call = await storage.createCall(tenantId, userId, callData);
       wsService.broadcastNewCall(userId, call);
       res.json(call);
     } catch (error: any) {
@@ -2091,6 +1980,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Ensure default tenant exists
+      const membership = await storage.ensureDefaultTenant(user.id);
+      const tenantId = membership.tenantId;
+
       const { contactId, phone, content, type = "sent" } = req.body;
       
       if (!phone || !content) {
@@ -2129,7 +2022,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
-      const message = await storage.createMessage(user.id, messageData);
+      const message = await storage.createMessage(tenantId, user.id, messageData);
       
       res.json({
         ...message,
@@ -7658,4 +7551,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-export { wsService };
+export { wsService, generateWebhookToken, verifyWebhookToken };

@@ -19,6 +19,15 @@ interface TwilioStatusResponse {
   };
 }
 
+interface TwilioCredentialsResponse {
+  configured?: boolean;
+  isConfigured?: boolean;
+  phoneNumber?: string | null;
+  credentials?: {
+    phoneNumber?: string | null;
+  } | null;
+}
+
 interface TwilioTokenResponse {
   accessToken: string;
   identity: string;
@@ -34,17 +43,35 @@ export const useTwilioDeviceV2 = () => {
   const globalStore = useStore();
   const { user } = useAuth();
 
-  const { data: twilioStatus, isLoading: isLoadingStatus } = useQuery<TwilioStatusResponse>({
+  const { data: twilioStatus } = useQuery<TwilioStatusResponse>({
     queryKey: ['/api/user/twilio/status'],
     enabled: !!user,
     staleTime: 2000,
     refetchInterval: 5000,
   });
 
+<<<<<<< HEAD
   const isConfigured = !!twilioStatus?.isConfigured;
   const connectionType = twilioStatus?.connectionType ?? null;
   const isSipMode = connectionType === 'sip';
   const phoneNumber = twilioStatus?.phoneNumber;
+=======
+  const { data: twilioCredentials } = useQuery<TwilioCredentialsResponse>({
+    queryKey: ['/api/user/twilio/credentials'],
+    enabled: !!user,
+    staleTime: 5000,
+    refetchInterval: 15000,
+  });
+
+  const isConfiguredFromStatus = !!twilioStatus?.isConfigured;
+  const isConfiguredFromCredentials = !!(twilioCredentials?.configured || twilioCredentials?.isConfigured);
+  const isConfigured = isConfiguredFromStatus || isConfiguredFromCredentials;
+
+  const phoneNumber =
+    twilioStatus?.phoneNumber ||
+    twilioCredentials?.phoneNumber ||
+    twilioCredentials?.credentials?.phoneNumber;
+>>>>>>> 3e4b8a194c64089b53b4dde61f47720d9b72efba
 
   // Query to get access token - only for Twilio mode (SIP doesn't use Twilio device)
   const { data: tokenData } = useQuery<TwilioTokenResponse>({
@@ -295,6 +322,60 @@ export const useTwilioDeviceV2 = () => {
   // (allowing re-initialization with the same token after a credential reset)
   }, [tokenData?.accessToken, twilioStatus?.isConfigured, state.deviceStatus, toast, queryClient, user?.id]);
 
+  // On-demand initialization for cases where the device hasn't registered yet
+  const initializeDeviceNow = useCallback(async (): Promise<boolean> => {
+    if (!user) {
+      toast({
+        title: 'Not authenticated',
+        description: 'Please log in again and try.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (!isConfigured) {
+      toast({
+        title: 'Not configured',
+        description: 'Twilio credentials are not configured yet.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    const manager = deviceManager.current;
+
+    if (manager.isDeviceReady() || manager.isDeviceInitializing()) {
+      return manager.isDeviceReady();
+    }
+
+    try {
+      let accessToken = tokenData?.accessToken;
+
+      if (!accessToken) {
+        const res = await apiRequest('GET', '/api/twilio/access-token');
+        const data = await res.json();
+        accessToken = data?.accessToken;
+      }
+
+      if (!accessToken) {
+        throw new Error('Failed to retrieve access token');
+      }
+
+      const success = await manager.initializeDevice(accessToken, user.id);
+      if (!success) {
+        throw new Error('Device initialization failed');
+      }
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Phone not ready',
+        description: error?.message || 'Unable to initialize phone',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [user, isConfigured, tokenData?.accessToken, toast]);
+
   // Destroy device on logout or user change
   useEffect(() => {
     const manager = deviceManager.current;
@@ -416,7 +497,11 @@ export const useTwilioDeviceV2 = () => {
 
     // Functions
     requestMicrophonePermission,
+<<<<<<< HEAD
     resetDevice,
+=======
+    initializeDeviceNow,
+>>>>>>> 3e4b8a194c64089b53b4dde61f47720d9b72efba
     makeCall,
     acceptCall,
     rejectCall,

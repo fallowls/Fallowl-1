@@ -947,7 +947,10 @@ export class DatabaseStorage implements IStorage {
   async updateContact(tenantId: number, userId: number, id: number, updateData: Partial<InsertContact>): Promise<Contact> {
     warnIfTenantScopedParamsInvalid('updateContact', { tenantId, userId, id });
     // Normalize phone number if being updated
-    const normalizedUpdateData = { ...updateData };
+    const normalizedUpdateData = { 
+      ...updateData,
+      updatedAt: new Date()
+    };
     if (updateData.phone) {
       const normalized = normalizePhoneNumber(updateData.phone);
       normalizedUpdateData.phone = normalized.isValid ? normalized.normalized : updateData.phone;
@@ -1084,29 +1087,12 @@ export class DatabaseStorage implements IStorage {
       const [call] = await db
         .insert(calls)
         .values({
+          ...insertCall,
           tenantId,
           userId,
-          contactId: insertCall.contactId || null,
-          phone: insertCall.phone,
-          type: insertCall.type,
-          status: insertCall.status,
           duration: insertCall.duration || 0,
-          recordingUrl: insertCall.recordingUrl || null,
-          metadata: insertCall.metadata || {},
-          callQuality: insertCall.callQuality || null,
           cost: insertCall.cost || "0",
-          carrier: insertCall.carrier || null,
-          location: insertCall.location || null,
-          deviceType: insertCall.deviceType || null,
-          sipCallId: insertCall.sipCallId || null,
-          ringDuration: insertCall.ringDuration || null,
-          connectionTime: insertCall.connectionTime || null,
-          answeredBy: insertCall.answeredBy || null,
-          amdComment: insertCall.amdComment || null,
-          disposition: insertCall.disposition || null,
           isParallelDialer: insertCall.isParallelDialer || false,
-          lineId: insertCall.lineId || null,
-          droppedReason: insertCall.droppedReason || null,
         })
         .returning();
       return call;
@@ -1120,7 +1106,10 @@ export class DatabaseStorage implements IStorage {
     warnIfTenantScopedParamsInvalid('updateCall', { tenantId, userId, id });
     const [call] = await db
       .update(calls)
-      .set(updateData)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
       .where(and(eq(calls.id, id), eq(calls.tenantId, tenantId)))
       .returning();
     return call;
@@ -1131,7 +1120,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(calls).where(and(eq(calls.id, id), eq(calls.tenantId, tenantId)));
   }
 
-  async getAllCalls(tenantId: number, userId: number, options: { page?: number; limit?: number } = {}): Promise<{ calls: Call[]; total: number }> {
+  async getAllCalls(tenantId: number, userId: number, options: { page?: number; limit?: number } = {}): Promise<{ calls: Call[]; total: number; page: number; limit: number; totalPages: number }> {
     warnIfTenantScopedParamsInvalid('getAllCalls', { tenantId, userId });
     const page = options.page || 1;
     const limit = options.limit || 50;
@@ -1143,6 +1132,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(calls.tenantId, tenantId), eq(calls.userId, userId)));
     
     const total = Number(totalResult?.count || 0);
+    const totalPages = Math.ceil(total / limit);
 
     const results = await db
       .select()
@@ -1152,7 +1142,7 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
 
-    return { calls: results, total };
+    return { calls: results, total, page, limit, totalPages };
   }
 
   async getCallsByContact(tenantId: number, userId: number, contactId: number): Promise<Call[]> {
@@ -1218,6 +1208,26 @@ export class DatabaseStorage implements IStorage {
     return metadataResults.length > 0 ? metadataResults[0] : undefined;
   }
 
+  async getCallByTwilioSidGlobal(callSid: string): Promise<Call | undefined> {
+    const results = await db
+      .select()
+      .from(calls)
+      .where(eq(calls.sipCallId, callSid))
+      .limit(1);
+    
+    if (results.length > 0) {
+      return results[0];
+    }
+    
+    const metadataResults = await db
+      .select()
+      .from(calls)
+      .where(sql`${calls.metadata}->>'twilioCallSid' = ${callSid}`)
+      .limit(1);
+    
+    return metadataResults.length > 0 ? metadataResults[0] : undefined;
+  }
+
   async getCallBySipCallId(tenantId: number, sipCallId: string): Promise<Call | null> {
     warnIfTenantScopedParamsInvalid('getCallBySipCallId', { tenantId });
     const results = await db
@@ -1239,36 +1249,47 @@ export class DatabaseStorage implements IStorage {
     outboundCalls: number;
     callSuccessRate: number;
     averageCallQuality: number;
+    activeCalls: number;
+    connectedCalls: number;
+    voicemailCalls: number;
+    droppedCalls: number;
   }> {
     warnIfTenantScopedParamsInvalid('getCallStats', { tenantId, userId });
-    const allCalls = await db
+    
+    const [stats] = await db
       .select({
-        status: calls.status,
-        type: calls.type,
-        duration: calls.duration,
-        cost: calls.cost,
-        callQuality: calls.callQuality,
+        totalCalls: count(),
+        completedCalls: sql<number>`sum(case when ${calls.status} = 'completed' then 1 else 0 end)`,
+        missedCalls: sql<number>`sum(case when ${calls.status} = 'missed' then 1 else 0 end)`,
+        totalDuration: sql<number>`coalesce(sum(${calls.duration}), 0)`,
+        totalCost: sql<number>`coalesce(sum(cast(${calls.cost} as numeric)), 0)`,
+        inboundCalls: sql<number>`sum(case when ${calls.type} = 'incoming' then 1 else 0 end)`,
+        outboundCalls: sql<number>`sum(case when ${calls.type} = 'outgoing' then 1 else 0 end)`,
+        averageCallQuality: sql<number>`avg(${calls.callQuality})`,
+        activeCalls: sql<number>`sum(case when ${calls.status} in ('queued', 'initiated', 'ringing', 'in-progress') then 1 else 0 end)`,
+        connectedCalls: sql<number>`sum(case when ${calls.status} = 'in-progress' then 1 else 0 end)`,
+        voicemailCalls: sql<number>`sum(case when ${calls.outcome} = 'voicemail' or ${calls.status} = 'voicemail' then 1 else 0 end)`,
+        droppedCalls: sql<number>`sum(case when ${calls.status} = 'call-dropped' then 1 else 0 end)`
       })
       .from(calls)
-      .where(eq(calls.tenantId, tenantId));
-    
-    const totalCalls = allCalls.length;
-    
-    const completedCalls = allCalls.filter(call => call.status === 'completed').length;
-    const missedCalls = allCalls.filter(call => call.status === 'missed').length;
-    const inboundCalls = allCalls.filter(call => call.type === 'incoming').length;
-    const outboundCalls = allCalls.filter(call => call.type === 'outgoing').length;
-    
-    const totalDuration = allCalls.reduce((sum, call) => sum + (call.duration || 0), 0);
+      .where(and(eq(calls.tenantId, tenantId), eq(calls.userId, userId)));
+
+    const totalCalls = Number(stats?.totalCalls || 0);
+    const completedCalls = Number(stats?.completedCalls || 0);
+    const missedCalls = Number(stats?.missedCalls || 0);
+    const totalDuration = Number(stats?.totalDuration || 0);
+    const totalCost = Number(stats?.totalCost || 0);
+    const inboundCalls = Number(stats?.inboundCalls || 0);
+    const outboundCalls = Number(stats?.outboundCalls || 0);
+    const averageCallQuality = Number(stats?.averageCallQuality || 0);
+    const activeCalls = Number(stats?.activeCalls || 0);
+    const connectedCalls = Number(stats?.connectedCalls || 0);
+    const voicemailCalls = Number(stats?.voicemailCalls || 0);
+    const droppedCalls = Number(stats?.droppedCalls || 0);
+
     const averageDuration = totalCalls > 0 ? totalDuration / totalCalls : 0;
-    
-    const totalCost = allCalls.reduce((sum, call) => sum + (Number(call.cost) || 0), 0);
     const callSuccessRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
-    
-    const callsWithQuality = allCalls.filter(call => call.callQuality !== null);
-    const averageCallQuality = callsWithQuality.length > 0 ? 
-      callsWithQuality.reduce((sum, call) => sum + (call.callQuality || 0), 0) / callsWithQuality.length : 0;
- 
+
     return {
       totalCalls,
       completedCalls,
@@ -1279,7 +1300,11 @@ export class DatabaseStorage implements IStorage {
       inboundCalls,
       outboundCalls,
       callSuccessRate,
-      averageCallQuality
+      averageCallQuality,
+      activeCalls,
+      connectedCalls,
+      voicemailCalls,
+      droppedCalls
     };
   }
 
@@ -1297,6 +1322,13 @@ export class DatabaseStorage implements IStorage {
         sql`${messages.metadata}->>'twilioMessageSid' = ${twilioMessageSid}`,
         eq(messages.tenantId, tenantId)
       )
+    );
+    return message || undefined;
+  }
+
+  async getMessageByTwilioSidGlobal(twilioMessageSid: string): Promise<Message | undefined> {
+    const [message] = await db.select().from(messages).where(
+      sql`${messages.metadata}->>'twilioMessageSid' = ${twilioMessageSid}`
     );
     return message || undefined;
   }
@@ -1319,7 +1351,10 @@ export class DatabaseStorage implements IStorage {
     warnIfTenantScopedParamsInvalid('updateMessage', { tenantId, userId, id });
     const [message] = await db
       .update(messages)
-      .set(updateData)
+      .set({
+        ...updateData,
+        updatedAt: new Date()
+      })
       .where(and(eq(messages.id, id), eq(messages.tenantId, tenantId)))
       .returning();
     return message;
@@ -1612,7 +1647,9 @@ export class DatabaseStorage implements IStorage {
     const recordingData = {
       ...insertRecording,
       userId: userId,
-      tenantId: tenantId
+      tenantId: tenantId,
+      duration: insertRecording.duration || 0,
+      fileSize: insertRecording.fileSize || 0,
     };
     const [recording] = await db
       .insert(recordings)
@@ -1863,7 +1900,8 @@ export class DatabaseStorage implements IStorage {
     const voicemailData = {
       ...insertVoicemail,
       userId: userId,
-      tenantId: tenantId
+      tenantId: tenantId,
+      duration: insertVoicemail.duration || 0,
     };
     const [voicemail] = await db
       .insert(voicemails)
@@ -1936,9 +1974,14 @@ export class DatabaseStorage implements IStorage {
     return setting || undefined;
   }
 
-  async setSetting(tenantId: number, key: string, value: any): Promise<Setting> {
+  async setSetting(tenantId: number, key: string, value: any): Promise<Setting | undefined> {
     warnIfTenantScopedParamsInvalid('setSetting', { tenantId });
     
+    if (value === null) {
+      await db.delete(settings).where(and(eq(settings.tenantId, tenantId), eq(settings.key, key)));
+      return undefined;
+    }
+
     // Log sensitive setting changes
     if (key.includes('sid') || key.includes('token') || key.includes('secret') || key.includes('key')) {
       logSecurityEvent({

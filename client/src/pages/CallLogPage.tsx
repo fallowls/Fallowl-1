@@ -126,15 +126,23 @@ const formatCost = (cost: number) => {
   }).format(cost);
 };
 
-const formatPhoneNumber = (phone: string) => {
-  const cleaned = phone.replace(/\D/g, '');
+const formatRelativeTime = (value?: string | number | Date | null) => {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return formatDistanceToNow(date, { addSuffix: true });
+};
+
+const formatPhoneNumber = (phone?: string | null) => {
+  if (!phone) return 'Unknown';
+  const cleaned = String(phone).replace(/\D/g, '');
   if (cleaned.length === 11 && cleaned.startsWith('1')) {
     const areaCode = cleaned.substring(1, 4);
     const prefix = cleaned.substring(4, 7);
     const lineNumber = cleaned.substring(7);
     return `+1 (${areaCode}) ${prefix}-${lineNumber}`;
   }
-  return phone;
+  return String(phone);
 };
 
 export default function CallLogPage() {
@@ -164,12 +172,26 @@ export default function CallLogPage() {
     isLoading: callsLoading,
     refetch: refetchCalls
   } = useInfiniteQuery({
-    queryKey: ['/api/calls'],
+    // Use a distinct key from the non-infinite /api/calls query to avoid cache shape conflicts
+    queryKey: ['/api/calls', 'infinite'],
     queryFn: async ({ pageParam = 1 }) => {
       console.log(`🔄 Fetching calls page ${pageParam}`);
       try {
         const res = await apiRequest('GET', `/api/calls?page=${pageParam}&limit=50`);
+        console.log('📡 /api/calls response', {
+          pageParam,
+          status: res.status,
+          statusText: res.statusText,
+          contentType: res.headers.get('content-type')
+        });
         const data = await res.json();
+        console.log('📦 /api/calls payload', {
+          keys: data ? Object.keys(data) : null,
+          callsLength: Array.isArray(data?.calls) ? data.calls.length : 'not-array',
+          page: data?.page,
+          totalPages: data?.totalPages,
+          total: data?.total
+        });
         console.log(`✅ Fetched ${data.calls?.length || 0} calls for page ${pageParam}`);
         return data;
       } catch (error) {
@@ -178,7 +200,17 @@ export default function CallLogPage() {
       }
     },
     getNextPageParam: (lastPage: any) => {
+      console.log('📌 getNextPageParam lastPage', {
+        hasLastPage: !!lastPage,
+        keys: lastPage ? Object.keys(lastPage) : null,
+        callsLength: Array.isArray(lastPage?.calls) ? lastPage.calls.length : 'not-array'
+      });
       if (!lastPage || !Array.isArray(lastPage.calls)) return undefined;
+      // Use the pagination metadata from the backend if available
+      if (lastPage.page && lastPage.totalPages) {
+        return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
+      }
+      // Fallback to calculating based on count if metadata is missing (backward compatibility)
       const loadedCount = (lastPage.page || 1) * 50;
       return loadedCount < (lastPage.total || 0) ? (lastPage.page || 1) + 1 : undefined;
     },
@@ -202,6 +234,17 @@ export default function CallLogPage() {
       return [];
     }
   }, [paginatedData]);
+
+  useEffect(() => {
+    console.log("[CallLog] paginatedData snapshot", {
+      hasData: !!paginatedData,
+      pagesIsArray: Array.isArray(paginatedData?.pages),
+      pagesLength: paginatedData?.pages?.length,
+      pageParams: paginatedData?.pageParams,
+      hasNextPage,
+      isFetchingNextPage
+    });
+  }, [paginatedData, hasNextPage, isFetchingNextPage]);
 
   const { data: statusData, refetch: refetchStatus } = useQuery<any>({
     queryKey: ['/api/calls/by-status'],
@@ -318,7 +361,7 @@ export default function CallLogPage() {
     return () => clearInterval(interval);
   }, [activeCalls]);
 
-  if (callsLoading || (statsLoading && !stats)) {
+  if (callsLoading) {
     return <CallLogPageSkeleton />;
   }
 
@@ -780,7 +823,7 @@ export default function CallLogPage() {
                       {/* Time */}
                       <div className="col-span-4 lg:col-span-2">
                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {call.createdAt ? formatDistanceToNow(new Date(call.createdAt), { addSuffix: true }) : '—'}
+                          {formatRelativeTime(call.createdAt)}
                         </span>
                       </div>
 

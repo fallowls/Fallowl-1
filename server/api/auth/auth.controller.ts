@@ -168,6 +168,31 @@ export async function auth0Session(request: FastifyRequest, reply: FastifyReply)
   });
 }
 
+export async function getCurrentUser(request: FastifyRequest, reply: FastifyReply) {
+  try {
+    let userId = (request as any).session?.userId;
+    
+    if (!userId) {
+      return reply.code(401).send(null);
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return reply.code(401).send(null);
+    }
+
+    return reply.send({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      status: user.status
+    });
+  } catch (error: any) {
+    return reply.code(500).send({ message: error.message });
+  }
+}
+
 // Keeping registerUser for backward compatibility or direct use if needed, 
 // though signup is preferred for "Smart Login"
 export async function registerUser(request: FastifyRequest, reply: FastifyReply) {
