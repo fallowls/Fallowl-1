@@ -10,7 +10,16 @@ export function setAccessTokenGetter(getter: (options?: any) => Promise<string>)
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // Try to parse JSON and extract the message field for a clean error
+    try {
+      const json = JSON.parse(text);
+      const message = json.message || json.error || text;
+      throw new Error(message);
+    } catch (e: any) {
+      // If the error is our own thrown Error, re-throw it
+      if (e instanceof SyntaxError === false) throw e;
+      throw new Error(text);
+    }
   }
 }
 

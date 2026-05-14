@@ -21,7 +21,15 @@ export async function saveCredentials(request: FastifyRequest, reply: FastifyRep
     const testClient = twilio(accountSid, authToken);
     await testClient.api.v2010.accounts(accountSid).fetch();
   } catch (error: any) {
-    throw new UnauthorizedError(`Invalid Twilio credentials: ${error.message}`);
+    const isAuthError = error.status === 401 || error.code === 20003 || 
+                        (error.message || '').toLowerCase().includes('authenticate') ||
+                        (error.message || '').toLowerCase().includes('unauthorized');
+    if (isAuthError) {
+      throw new UnauthorizedError(
+        "Invalid Twilio credentials. Please double-check your Account SID and Auth Token in your Twilio Console."
+      );
+    }
+    throw new UnauthorizedError(`Could not verify Twilio credentials: ${error.message}`);
   }
 
   await storage.updateUserTwilioCredentials(userId, {
