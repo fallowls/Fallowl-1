@@ -28,8 +28,10 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
       if (!userId) {
         return reply.code(401).send({ message: "User ID not found" });
       }
-      const settings = await storage.getAllSettings();
-      const userSettings = settings.filter(s => s.key.includes(`_user_${userId}`));
+      const membership = await storage.getDefaultTenantForUser(userId);
+      const tenantId = membership?.tenantId || 1;
+      const allSettings = await storage.getAllSettings(tenantId);
+      const userSettings = allSettings.filter((s: any) => typeof s.key === 'string' && s.key.includes(`_user_${userId}`));
       return reply.send(userSettings);
     } catch (error: any) {
       return reply.code(500).send({ message: error.message });
@@ -49,14 +51,16 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
         return reply.code(401).send({ message: "User ID not found" });
       }
       const { key } = request.params as { key: string };
+      const membership = await storage.getDefaultTenantForUser(userId);
+      const tenantId = membership?.tenantId || 1;
       
       // First try user-specific setting
       const userSpecificKey = `${key}_user_${userId}`;
-      let setting = await storage.getSetting(userSpecificKey);
+      let setting = await storage.getSetting(tenantId, userSpecificKey);
       
       // If not found, try global setting (for keys like 'system', 'parallel_dialer_greeting', etc)
       if (!setting) {
-        setting = await storage.getSetting(key);
+        setting = await storage.getSetting(tenantId, key);
       }
       
       if (!setting) {
@@ -85,9 +89,12 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ message: "Key and value are required" });
       }
       
+      const membership = await storage.getDefaultTenantForUser(userId);
+      const tenantId = membership?.tenantId || 1;
+
       // Support global settings (like parallel_dialer_greeting) if global=true
       const settingKey = global ? key : `${key}_user_${userId}`;
-      const setting = await storage.setSetting(settingKey, value);
+      const setting = await storage.setSetting(tenantId, settingKey, value);
       
       return reply.send(setting);
     } catch (error: any) {

@@ -3492,8 +3492,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/settings", checkJwt, requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserIdFromRequest(req);
-      const settings = await storage.getAllSettings();
-      const userSettings = settings.filter(s => s.key.includes(`_user_${userId}`));
+      const membership = await storage.getDefaultTenantForUser(userId);
+      const tenantId = membership?.tenantId || 1;
+      const allSettings = await storage.getAllSettings(tenantId);
+      const userSettings = allSettings.filter((s: any) => typeof s.key === 'string' && s.key.includes(`_user_${userId}`));
       res.json(userSettings);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3504,14 +3506,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = getUserIdFromRequest(req);
       const key = req.params.key;
+      const membership = await storage.getDefaultTenantForUser(userId);
+      const tenantId = membership?.tenantId || 1;
       
       // First try user-specific setting
       const userSpecificKey = `${key}_user_${userId}`;
-      let setting = await storage.getSetting(userSpecificKey);
+      let setting = await storage.getSetting(tenantId, userSpecificKey);
       
       // If not found, try global setting (for keys like 'system', 'parallel_dialer_greeting', etc)
       if (!setting) {
-        setting = await storage.getSetting(key);
+        setting = await storage.getSetting(tenantId, key);
       }
       
       if (!setting) {
@@ -3530,10 +3534,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!key || value === undefined) {
         return res.status(400).json({ message: "Key and value are required" });
       }
+      const membership = await storage.getDefaultTenantForUser(userId);
+      const tenantId = membership?.tenantId || 1;
       
       // Support global settings (like parallel_dialer_greeting) if global=true
       const settingKey = global ? key : `${key}_user_${userId}`;
-      const setting = await storage.setSetting(settingKey, value);
+      const setting = await storage.setSetting(tenantId, settingKey, value);
       
       res.json(setting);
     } catch (error: any) {
