@@ -280,7 +280,9 @@ export const useTwilioDeviceV2 = () => {
     };
 
     initializeDeviceWithValidation();
-  }, [tokenData?.accessToken, twilioStatus?.isConfigured, toast, queryClient, user?.id]);
+  // Include state.deviceStatus so the effect re-runs when the device is destroyed
+  // (allowing re-initialization with the same token after a credential reset)
+  }, [tokenData?.accessToken, twilioStatus?.isConfigured, state.deviceStatus, toast, queryClient, user?.id]);
 
   // Destroy device on logout or user change
   useEffect(() => {
@@ -312,6 +314,14 @@ export const useTwilioDeviceV2 = () => {
     
     return hasPermission;
   }, [toast]);
+
+  // Destroy and reinitialize the device — call this after credential changes
+  const resetDevice = useCallback(() => {
+    const manager = deviceManager.current;
+    manager.destroy();
+    // Invalidate the access token so it re-fetches with the new credentials
+    queryClient.invalidateQueries({ queryKey: ['/api/twilio/access-token'] });
+  }, [queryClient]);
 
   // Call functions
   const makeCall = useCallback(async (to: string) => {
@@ -388,6 +398,7 @@ export const useTwilioDeviceV2 = () => {
     
     // Functions
     requestMicrophonePermission,
+    resetDevice,
     makeCall,
     acceptCall,
     rejectCall,

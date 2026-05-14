@@ -215,13 +215,13 @@ export default function Keypad() {
   return (
     <div className="max-w-xs mx-auto">
       {/* Configuration Alert */}
-      {error && error.includes('TwiML') || (!isReady && isConfigured && deviceStatus !== 'registered') ? (
-        <Alert className="mb-4 border-orange-200 bg-orange-50">
-          <AlertTriangle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
-            TwiML Application required for calling.{" "}
+      {isConfigured && !isReady && deviceStatus === 'error' && error ? (
+        <Alert className="mb-4 border-red-200 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800 text-xs">
+            {error}{" "}
             <Link href="/settings" className="font-semibold underline hover:no-underline">
-              Configure in Settings
+              Review Settings
             </Link>
           </AlertDescription>
         </Alert>
@@ -248,10 +248,20 @@ export default function Keypad() {
                 <CheckCircle className="h-3 w-3" />
                 Ready
               </Badge>
-            ) : isConfigured ? (
+            ) : isConfigured && (deviceStatus === 'registering' || isConnecting) ? (
               <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1">
+                <div className="h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                Connecting...
+              </Badge>
+            ) : isConfigured && deviceStatus === 'error' ? (
+              <Badge variant="secondary" className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Error
+              </Badge>
+            ) : isConfigured ? (
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200 flex items-center gap-1">
                 <Settings className="h-3 w-3" />
-                Configured
+                Initializing...
               </Badge>
             ) : (
               <Badge variant="outline" className="text-gray-500 flex items-center gap-1">

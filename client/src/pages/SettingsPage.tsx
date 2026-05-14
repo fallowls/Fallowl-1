@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { TwilioDeviceManager } from "@/lib/twilio/DeviceManager";
 
 interface SystemSettingsFormData {
   connectionType: 'twilio' | 'sip';
@@ -22,9 +23,16 @@ interface SystemSettingsFormData {
   twilioPhoneNumber: string;
   sipUri: string;
   sipUsername: string;
+  sipAuthUsername: string;
   sipPassword: string;
+  sipDisplayName: string;
+  sipDomain: string;
+  sipRealm: string;
   sipProxyServer: string;
   sipPort: string;
+  sipTransport: string;
+  sipStunServer: string;
+  sipRegistrationExpiry: string;
 }
 
 interface AdminUser {
@@ -67,9 +75,16 @@ export default function SettingsPage() {
       twilioPhoneNumber: '',
       sipUri: '',
       sipUsername: '',
+      sipAuthUsername: '',
       sipPassword: '',
+      sipDisplayName: '',
+      sipDomain: '',
+      sipRealm: '',
       sipProxyServer: '',
       sipPort: '5060',
+      sipTransport: 'UDP',
+      sipStunServer: '',
+      sipRegistrationExpiry: '3600',
     }
   });
 
@@ -211,8 +226,8 @@ export default function SettingsPage() {
 
   // Auto-expand form if credentials are not configured
   useEffect(() => {
-    if (twilioSettings && typeof twilioSettings === 'object' && 'configured' in twilioSettings) {
-      setIsFormExpanded(!twilioSettings.configured);
+    if (twilioSettings && typeof twilioSettings === 'object' && 'isConfigured' in twilioSettings) {
+      setIsFormExpanded(!(twilioSettings as any).isConfigured);
     }
   }, [twilioSettings]);
 
@@ -295,10 +310,11 @@ export default function SettingsPage() {
     },
     onSuccess: (_, variables) => {
       if (variables.connectionType === 'twilio') {
-        // Invalidate user-specific Twilio queries
+        // Destroy existing device so it re-initializes with the new credentials
+        TwilioDeviceManager.getInstance().destroy();
         queryClient.invalidateQueries({ queryKey: ["/api/user/twilio/credentials"] });
         queryClient.invalidateQueries({ queryKey: ["/api/user/twilio/status"] });
-        // Collapse the form after successful save
+        queryClient.invalidateQueries({ queryKey: ["/api/twilio/access-token"] });
         setIsFormExpanded(false);
       }
       toast({
@@ -369,7 +385,7 @@ export default function SettingsPage() {
     }
   };
 
-  const isConfigured = twilioSettings && typeof twilioSettings === 'object' && 'configured' in twilioSettings && twilioSettings.configured;
+  const isConfigured = twilioSettings && typeof twilioSettings === 'object' && 'isConfigured' in twilioSettings && (twilioSettings as any).isConfigured;
   const credentialsData = twilioSettings && typeof twilioSettings === 'object' && 'credentials' in twilioSettings ? twilioSettings.credentials : null;
 
   return (
@@ -532,7 +548,7 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="twilioApiKeySid">API Key SID (Optional)</Label>
+                    <Label htmlFor="twilioApiKeySid">API Key SID <span className="text-red-500">*</span></Label>
                     <Input
                       id="twilioApiKeySid"
                       {...register("twilioApiKeySid")}
@@ -543,11 +559,11 @@ export default function SettingsPage() {
                       <p className="text-sm text-red-600 mt-1">{errors.twilioApiKeySid.message}</p>
                     )}
                     <p className="text-sm text-gray-500 mt-1">
-                      Optional: For enhanced security and token generation
+                      Required for the in-browser dialer. Create one in the Twilio Console under Account &rarr; API Keys.
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="twilioApiKeySecret">API Key Secret (Optional)</Label>
+                    <Label htmlFor="twilioApiKeySecret">API Key Secret <span className="text-red-500">*</span></Label>
                     <Input
                       id="twilioApiKeySecret"
                       type="password"
@@ -559,7 +575,7 @@ export default function SettingsPage() {
                       <p className="text-sm text-red-600 mt-1">{errors.twilioApiKeySecret.message}</p>
                     )}
                     <p className="text-sm text-gray-500 mt-1">
-                      Required when using API Key SID
+                      Shown once when the API Key is created — copy it now and paste here.
                     </p>
                   </div>
                   <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
@@ -577,59 +593,111 @@ export default function SettingsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">SIP Trunk Configuration</h3>
                 <div className="space-y-4">
+                  {/* SIP Server */}
                   <div>
-                    <Label htmlFor="sipUri">SIP URI</Label>
+                    <Label htmlFor="sipUri">SIP Server / URI <span className="text-red-500">*</span></Label>
                     <Input
                       id="sipUri"
-                      {...register("sipUri", { 
-                        required: connectionType === 'sip' ? "SIP URI is required" : false 
+                      {...register("sipUri", {
+                        required: connectionType === 'sip' ? "SIP URI is required" : false
                       })}
-                      placeholder="sip:your-domain.com"
+                      placeholder="sip:pbx.yourcompany.com  or  pbx.yourcompany.com"
                       className={errors.sipUri ? "border-red-300" : ""}
                     />
                     {errors.sipUri && (
                       <p className="text-sm text-red-600 mt-1">{errors.sipUri.message}</p>
                     )}
+                    <p className="text-xs text-gray-500 mt-1">The address of your SIP server or provider (e.g. sip:pbx.example.com)</p>
                   </div>
+
+                  {/* Identity fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="sipUsername">Username</Label>
+                      <Label htmlFor="sipUsername">Username / Extension <span className="text-red-500">*</span></Label>
                       <Input
                         id="sipUsername"
-                        {...register("sipUsername", { 
-                          required: connectionType === 'sip' ? "Username is required" : false 
+                        {...register("sipUsername", {
+                          required: connectionType === 'sip' ? "Username is required" : false
                         })}
-                        placeholder="Enter username"
+                        placeholder="1001"
                         className={errors.sipUsername ? "border-red-300" : ""}
                       />
                       {errors.sipUsername && (
                         <p className="text-sm text-red-600 mt-1">{errors.sipUsername.message}</p>
                       )}
+                      <p className="text-xs text-gray-500 mt-1">Your extension or account number on the SIP server</p>
                     </div>
                     <div>
-                      <Label htmlFor="sipPassword">Password</Label>
+                      <Label htmlFor="sipAuthUsername">Authentication Username</Label>
+                      <Input
+                        id="sipAuthUsername"
+                        {...register("sipAuthUsername")}
+                        placeholder="auth_1001 (if different from username)"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Used in SIP REGISTER/INVITE auth headers — leave blank if same as username</p>
+                    </div>
+                  </div>
+
+                  {/* Password and Display Name */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="sipPassword">Password <span className="text-red-500">*</span></Label>
                       <Input
                         id="sipPassword"
                         type="password"
-                        {...register("sipPassword", { 
-                          required: connectionType === 'sip' ? "Password is required" : false 
+                        {...register("sipPassword", {
+                          required: connectionType === 'sip' ? "Password is required" : false
                         })}
-                        placeholder="Enter password"
+                        placeholder="SIP account password"
                         className={errors.sipPassword ? "border-red-300" : ""}
                       />
                       {errors.sipPassword && (
                         <p className="text-sm text-red-600 mt-1">{errors.sipPassword.message}</p>
                       )}
                     </div>
+                    <div>
+                      <Label htmlFor="sipDisplayName">Display Name (Caller ID)</Label>
+                      <Input
+                        id="sipDisplayName"
+                        {...register("sipDisplayName")}
+                        placeholder="Company Support Line"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Name shown to call recipients (optional)</p>
+                    </div>
                   </div>
+
+                  {/* Domain and Realm */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="sipProxyServer">Proxy Server</Label>
+                      <Label htmlFor="sipDomain">SIP Domain</Label>
+                      <Input
+                        id="sipDomain"
+                        {...register("sipDomain")}
+                        placeholder="pbx.yourcompany.com"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">SIP domain or From header domain — leave blank to use server address</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="sipRealm">Authentication Realm</Label>
+                      <Input
+                        id="sipRealm"
+                        {...register("sipRealm")}
+                        placeholder="asterisk  or  pbx.yourcompany.com"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Realm returned by the server in 401/407 challenges (check provider docs)</p>
+                    </div>
+                  </div>
+
+                  {/* Server / Network */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="sipProxyServer">Outbound Proxy Server</Label>
                       <Input
                         id="sipProxyServer"
                         {...register("sipProxyServer")}
                         placeholder="proxy.example.com"
                       />
+                      <p className="text-xs text-gray-500 mt-1">Optional outbound proxy address</p>
                     </div>
                     <div>
                       <Label htmlFor="sipPort">Port</Label>
@@ -639,7 +707,52 @@ export default function SettingsPage() {
                         {...register("sipPort")}
                         placeholder="5060"
                       />
+                      <p className="text-xs text-gray-500 mt-1">Default: 5060 (5061 for TLS)</p>
                     </div>
+                    <div>
+                      <Label htmlFor="sipTransport">Transport</Label>
+                      <select
+                        id="sipTransport"
+                        {...register("sipTransport")}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <option value="UDP">UDP</option>
+                        <option value="TCP">TCP</option>
+                        <option value="TLS">TLS (port 5061)</option>
+                        <option value="WSS">WSS (WebSocket Secure)</option>
+                        <option value="WS">WS (WebSocket)</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Network transport protocol</p>
+                    </div>
+                  </div>
+
+                  {/* Advanced */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="sipStunServer">STUN Server (optional)</Label>
+                      <Input
+                        id="sipStunServer"
+                        {...register("sipStunServer")}
+                        placeholder="stun:stun.l.google.com:19302"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Used for NAT traversal behind firewalls</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="sipRegistrationExpiry">Registration Expiry (seconds)</Label>
+                      <Input
+                        id="sipRegistrationExpiry"
+                        type="number"
+                        {...register("sipRegistrationExpiry")}
+                        placeholder="3600"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">How often to re-register (default: 3600)</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Provider tip:</strong> "Username" is what appears in your SIP account — "Authentication Username" is only needed when your provider uses a separate credential for the 401/407 challenge (common with hosted PBX and VoIP.ms, Vonage, etc.). Check your provider's setup guide if unsure.
+                    </p>
                   </div>
                 </div>
               </div>
