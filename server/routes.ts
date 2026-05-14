@@ -595,36 +595,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
-  // Twilio Configuration Status Route
+  // Twilio/SIP Configuration Status Route
   app.get("/api/user/twilio/status", requireAuth, async (req, res) => {
     try {
       const userId = getUserIdFromRequest(req);
+
+      // --- Check Twilio credentials first ---
       const credentials = await storage.getUserTwilioCredentials(userId);
-      
       const hasRequiredFields = !!(
-        credentials?.twilioAccountSid && 
-        credentials?.twilioAuthToken && 
+        credentials?.twilioAccountSid &&
+        credentials?.twilioAuthToken &&
         credentials?.twilioPhoneNumber
       );
-
-      // Auto-fix if credentials exist but flag is false
       if (hasRequiredFields && !credentials?.twilioConfigured) {
         await storage.updateUserTwilioCredentials(userId, { twilioConfigured: true });
       }
+      const twilioConfigured = hasRequiredFields || !!credentials?.twilioConfigured;
 
-      // If we have the required fields, it is configured regardless of the database flag
-      const isConfigured = hasRequiredFields || !!credentials?.twilioConfigured;
+      if (twilioConfigured) {
+        return res.json({
+          isConfigured: true,
+          connectionType: 'twilio',
+          hasCredentials: true,
+          phoneNumber: credentials?.twilioPhoneNumber || null,
+          connection: { status: 'ready' },
+          registeredDevices: 0,
+          lastHealthCheck: new Date().toISOString()
+        });
+      }
+
+      // --- Fall back to SIP settings ---
+      try {
+        const membership = await storage.getDefaultTenantForUser(userId);
+        const tenantId = membership?.tenantId || 1;
+        const sipSetting = await storage.getSetting(tenantId, `system_user_${userId}`);
+        const sipValue = sipSetting?.value as any;
+
+        if (sipValue && sipValue.connectionType === 'sip' && sipValue.sipUri) {
+          return res.json({
+            isConfigured: true,
+            connectionType: 'sip',
+            hasCredentials: true,
+            phoneNumber: sipValue.sipUsername || sipValue.sipUri || null,
+            sipConfig: {
+              uri: sipValue.sipUri,
+              username: sipValue.sipUsername,
+              domain: sipValue.sipDomain,
+              transport: sipValue.sipTransport || 'UDP',
+            },
+            connection: { status: 'ready' },
+            registeredDevices: 0,
+            lastHealthCheck: new Date().toISOString()
+          });
+        }
+      } catch (_) { /* ignore settings read errors */ }
 
       return res.json({
-        isConfigured: isConfigured,
-        hasCredentials: !!(credentials?.twilioAccountSid && credentials?.twilioAuthToken),
-        phoneNumber: credentials?.twilioPhoneNumber || null,
-        connection: { status: isConfigured ? 'ready' : 'unconfigured' },
+        isConfigured: false,
+        connectionType: null,
+        hasCredentials: false,
+        phoneNumber: null,
+        connection: { status: 'unconfigured' },
         registeredDevices: 0,
         lastHealthCheck: new Date().toISOString()
       });
     } catch (error: any) {
-      console.error('Error fetching Twilio status:', error);
+      console.error('Error fetching phone status:', error);
       return res.status(500).json({ message: error.message });
     }
   });

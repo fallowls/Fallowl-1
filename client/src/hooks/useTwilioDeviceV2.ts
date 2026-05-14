@@ -9,7 +9,14 @@ import { TwilioDeviceManager, TwilioDeviceState, DeviceManagerEvent } from '@/li
 // Type definitions for API responses
 interface TwilioStatusResponse {
   isConfigured: boolean;
+  connectionType?: 'twilio' | 'sip' | null;
   phoneNumber?: string;
+  sipConfig?: {
+    uri: string;
+    username: string;
+    domain?: string;
+    transport?: string;
+  };
 }
 
 interface TwilioTokenResponse {
@@ -35,12 +42,14 @@ export const useTwilioDeviceV2 = () => {
   });
 
   const isConfigured = !!twilioStatus?.isConfigured;
+  const connectionType = twilioStatus?.connectionType ?? null;
+  const isSipMode = connectionType === 'sip';
   const phoneNumber = twilioStatus?.phoneNumber;
 
-  // Query to get access token - only when needed
+  // Query to get access token - only for Twilio mode (SIP doesn't use Twilio device)
   const { data: tokenData } = useQuery<TwilioTokenResponse>({
     queryKey: ['/api/twilio/access-token'],
-    enabled: isConfigured,
+    enabled: isConfigured && !isSipMode,
     staleTime: 50 * 60 * 1000, // 50 minutes
     refetchInterval: 55 * 60 * 1000, // 55 minutes
   });
@@ -230,9 +239,11 @@ export const useTwilioDeviceV2 = () => {
     globalStore.setIncomingCallInfo(null);
   };
 
-  // Initialize device when token is available
+  // Initialize device when token is available (Twilio mode only)
   useEffect(() => {
     const initializeDeviceWithValidation = async () => {
+      // SIP mode doesn't use the Twilio Voice SDK device
+      if (isSipMode) return;
       if (!tokenData?.accessToken || !twilioStatus?.isConfigured) {
         return;
       }
@@ -394,8 +405,15 @@ export const useTwilioDeviceV2 = () => {
     
     // Computed properties
     isConfigured,
+    connectionType,
+    isSipMode,
     hasToken: !!tokenData?.accessToken,
     
+    // For SIP mode: device is "ready" as soon as credentials are configured
+    // (no Twilio SDK registration required)
+    isReady: isSipMode ? isConfigured : state.isReady,
+    deviceStatus: isSipMode ? (isConfigured ? 'registered' : 'unregistered') : state.deviceStatus,
+
     // Functions
     requestMicrophonePermission,
     resetDevice,

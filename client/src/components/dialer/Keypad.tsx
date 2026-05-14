@@ -47,6 +47,8 @@ export default function Keypad() {
     isReady,
     isConnecting,
     isConfigured: deviceIsConfigured,
+    connectionType,
+    isSipMode,
     deviceStatus,
     activeCall,
     incomingCall,
@@ -61,6 +63,7 @@ export default function Keypad() {
 
   const twilioStatus = useQuery<{
     isConfigured: boolean;
+    connectionType?: string | null;
     phoneNumber: string | null;
   }>({
     queryKey: ['/api/user/twilio/status'],
@@ -243,7 +246,12 @@ export default function Keypad() {
             autoFocus
           />
           <div className="flex justify-center mt-2">
-            {isConfigured && isReady ? (
+            {isConfigured && isReady && isSipMode ? (
+              <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1">
+                <CheckCircle className="h-3 w-3" />
+                Ready (SIP)
+              </Badge>
+            ) : isConfigured && isReady ? (
               <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1">
                 <CheckCircle className="h-3 w-3" />
                 Ready
